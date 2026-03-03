@@ -38,6 +38,16 @@ export interface TeacherListResponse {
     teachers: Teacher[];
 }
 
+export interface TeacherAssignedGroupsResponse {
+    id: number;
+    user_id: number;
+    first_name: string;
+    last_name: string;
+    third_name: string;
+    full_name: string;
+    group_teachers: { group_id: number; group: { id: number; name: string } }[];
+}
+
 export const teacherService = {
     getTeachers: async (page = 1, limit = 10, full_name?: string) => {
         const response = await api.get<TeacherListResponse>('/teacher/', {
@@ -74,4 +84,10 @@ export const teacherService = {
         const response = await api.post('/teacher/assign_subjects', { teacher_id, subject_ids });
         return response.data;
     },
+
+    getAssignedGroups: async (userId: number): Promise<TeacherAssignedGroupsResponse> => {
+        const response = await api.get<TeacherAssignedGroupsResponse>(`/teacher/assigned_groups/by-user/${userId}`);
+        return response.data;
+    },
 };
+

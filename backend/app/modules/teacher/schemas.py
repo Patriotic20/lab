@@ -1,6 +1,6 @@
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, ConfigDict, field_validator
+from typing import Optional, Any
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 
 class TeacherKafedraInfo(BaseModel):
@@ -108,3 +108,23 @@ class TeacherAssignedSubjectsResponse(BaseModel):
     subject_teachers: list[TeacherSubjectTeacherInfo]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class TeacherAssignedGroupsResponse(BaseModel):
+    id: int
+    user_id: int
+    first_name: str
+    last_name: str
+    third_name: str
+    full_name: str
+    group_teachers: list[TeacherUserGroupTeacherInfo] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def extract_group_teachers(cls, data: Any) -> Any:
+        # When built from ORM object, groups are on teacher.user.group_teachers
+        if hasattr(data, "user") and data.user is not None:
+            data.__dict__["group_teachers"] = data.user.group_teachers
+        return data

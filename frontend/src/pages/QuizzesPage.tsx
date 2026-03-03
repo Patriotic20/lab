@@ -4,7 +4,6 @@ import { Pagination } from '@/components/ui/Pagination';
 import type { Quiz, QuizCreateRequest } from '@/services/quizService';
 import type { Subject } from '@/services/subjectService';
 import type { Group } from '@/services/groupService';
-import type { User } from '@/types/auth';
 import { Button } from '@/components/ui/Button';
 import {
     Table,
@@ -26,8 +25,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuizzes, useCreateQuiz, useUpdateQuiz, useDeleteQuiz } from '@/hooks/useQuizzes';
 import { useSubjects } from '@/hooks/useSubjects';
 import { useGroups } from '@/hooks/useGroups';
-import { useUsers } from '@/hooks/useUsers';
+import { useTeachers, useTeacherAssignedGroups } from '@/hooks/useTeachers';
+import { useTeacherAssignedSubjects } from '@/hooks/useSubjects';
 import { Combobox } from '@/components/ui/Combobox';
+import type { Teacher } from '@/services/teacherService';
 
 const quizSchema = z.object({
     title: z.string().min(3, 'Sarlavha kiritilishi shart'),
@@ -83,7 +84,7 @@ const QuizzesPage = () => {
     // Fetch data for filters (all items)
     const { data: allSubjectsData } = useSubjects(1, 100);
     const { data: allGroupsData } = useGroups(1, 100, '');
-    const { data: allUsersData } = useUsers(1, 100);
+    const { data: allTeachersData } = useTeachers(1, 200);
 
     const updateQuizMutation = useUpdateQuiz();
     const deleteQuizMutation = useDeleteQuiz();
@@ -92,7 +93,7 @@ const QuizzesPage = () => {
     const totalPages = quizzesData ? Math.ceil(quizzesData.total / pageSize) : 1;
     const allSubjects = allSubjectsData?.subjects || [];
     const allGroups = allGroupsData?.groups || [];
-    const allUsers = allUsersData?.users || [];
+    const allTeachers = allTeachersData?.teachers || [];
 
     const handleCreateQuiz = () => {
         setSelectedQuiz(null);
@@ -147,12 +148,6 @@ const QuizzesPage = () => {
         });
     };
 
-    const getUserDisplayName = (u: User) => {
-        if (u.teacher?.full_name) return u.teacher.full_name;
-        if (u.student?.full_name) return u.student.full_name;
-        return u.username;
-    };
-
     const getSubjectName = (id?: number) => allSubjects.find((s: Subject) => s.id === id)?.name || '-';
     const getGroupName = (id?: number) => allGroups.find((g: Group) => g.id === id)?.name || '-';
 
@@ -184,12 +179,10 @@ const QuizzesPage = () => {
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    {!isTeacher && (
-                        <Button onClick={handleCreateQuiz}>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Test yaratish
-                        </Button>
-                    )}
+                    <Button onClick={handleCreateQuiz}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Test yaratish
+                    </Button>
                 </div>
             </div>
 
@@ -218,13 +211,13 @@ const QuizzesPage = () => {
                             />
                         </div>
                         <div className="flex flex-col gap-2 min-w-[200px] flex-1">
-                            <label className="text-sm font-medium">Foydalanuvchi bo'yicha filtri</label>
+                            <label className="text-sm font-medium">O'qituvchi bo'yicha filtri</label>
                             <Combobox
-                                options={allUsers.map(u => ({ value: u.id.toString(), label: getUserDisplayName(u) }))}
+                                options={allTeachers.map(t => ({ value: t.user_id.toString(), label: t.full_name }))}
                                 value={filterUserId?.toString()}
                                 onChange={(val) => setFilterUserId(val ? parseInt(val) : undefined)}
-                                placeholder="Barcha foydalanuvchilar"
-                                searchPlaceholder="Foydalanuvchini qidirish..."
+                                placeholder="Barcha o'qituvchilar"
+                                searchPlaceholder="O'qituvchini qidirish..."
                             />
                         </div>
                         <div className="flex flex-col gap-2 w-[150px]">
@@ -345,7 +338,7 @@ const QuizzesPage = () => {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 quiz={selectedQuiz}
-                users={allUsers}
+                teachers={allTeachers}
                 onSuccess={handleSuccess}
             />
             <ConfirmDialog
@@ -365,15 +358,18 @@ const QuizModal = ({
     isOpen,
     onClose,
     quiz,
-    users,
+    teachers,
     onSuccess,
 }: {
     isOpen: boolean;
     onClose: () => void;
     quiz: Quiz | null;
-    users: User[];
+    teachers: Teacher[];
     onSuccess: () => void;
 }) => {
+    const { user } = useAuth();
+    const isTeacher = user?.roles?.some(r => r.name.toLowerCase() === 'teacher');
+
     const {
         register,
         handleSubmit,
@@ -397,20 +393,37 @@ const QuizModal = ({
     const isActive = watch('is_active');
     const selectedUserId = watch('user_id');
 
-    // Fetch dependent data based on selected user
-    const { data: userSubjectsData } = useSubjects(1, 100, '', selectedUserId ? parseInt(selectedUserId) : undefined);
-    const { data: allGroupsData } = useGroups(1, 100, '');
+    // For the teacher role: always use their own user_id
+    // For admin: use the selected teacher's user_id
+    const effectiveUserId = isTeacher ? user?.id?.toString() : selectedUserId;
 
-    const userSubjects = userSubjectsData?.subjects || [];
+    // Fetch ALL subjects and groups for admin/fallback
+    const { data: allSubjectsData } = useSubjects(1, 200);
+    const { data: allGroupsData } = useGroups(1, 200, '');
+
+    // Fetch the selected teacher's assigned subjects and groups
+    const { data: assignedSubjectsData } = useTeacherAssignedSubjects(
+        effectiveUserId ? parseInt(effectiveUserId) : undefined
+    );
+    const { data: assignedGroupsData } = useTeacherAssignedGroups(
+        effectiveUserId ? parseInt(effectiveUserId) : undefined
+    );
+
+    const allSubjects = allSubjectsData?.subjects || [];
     const allGroups = allGroupsData?.groups || [];
 
-    const getUserDisplayName = (u: User) => {
-        if (u.teacher?.full_name) return u.teacher.full_name;
-        if (u.student?.full_name) return u.student.full_name;
-        return u.username;
-    };
+    // When a teacher (or selected user) is known, filter to their assigned subjects/groups
+    // Otherwise show everything
+    const subjectOptions = effectiveUserId && assignedSubjectsData
+        ? assignedSubjectsData.subject_teachers.map(st => ({ value: st.subject_id.toString(), label: st.subject.name }))
+        : allSubjects.map(s => ({ value: s.id.toString(), label: s.name }));
+
+    const groupOptions = effectiveUserId && assignedGroupsData
+        ? assignedGroupsData.group_teachers.map(gt => ({ value: gt.group_id.toString(), label: gt.group.name }))
+        : allGroups.map(g => ({ value: g.id.toString(), label: g.name }));
 
     useEffect(() => {
+        if (!isOpen) return;
         if (quiz) {
             reset({
                 title: quiz.title,
@@ -428,30 +441,37 @@ const QuizModal = ({
                 question_number: '10',
                 duration: '30',
                 pin: Math.random().toString().slice(2, 6),
-                user_id: '',
+                // Auto-set teacher's own user_id if teacher role
+                user_id: isTeacher && user?.id ? user.id.toString() : '',
                 group_id: '',
                 subject_id: '',
                 is_active: false,
             });
         }
-    }, [quiz, reset, isOpen]);
+    }, [quiz, reset, isOpen, isTeacher, user]);
 
-    // Reset subject if user changes
+    // When the selected teacher changes (admin only), reset subject/group
     useEffect(() => {
-        if (isOpen && !quiz && selectedUserId) {
-            // Do not reset groups here since they no longer depend on the selected user
+        if (isOpen && !quiz && !isTeacher) {
+            setValue('subject_id', '');
+            setValue('group_id', '');
         }
-    }, [selectedUserId, isOpen, quiz]);
+    }, [selectedUserId, isOpen, quiz, isTeacher]);
 
     const onSubmit = (data: QuizFormValues) => {
+        // For teacher role, always use their own id
+        const resolvedUserId = isTeacher && user?.id
+            ? user.id
+            : (data.user_id && data.user_id !== '' ? parseInt(data.user_id, 10) : null);
+
         const payload: QuizCreateRequest = {
             title: data.title,
             question_number: parseInt(data.question_number, 10),
             duration: parseInt(data.duration, 10),
             pin: data.pin,
-            user_id: data.user_id && data.user_id !== "" ? parseInt(data.user_id, 10) : null,
-            group_id: data.group_id && data.group_id !== "" ? parseInt(data.group_id, 10) : null,
-            subject_id: data.subject_id && data.subject_id !== "" ? parseInt(data.subject_id, 10) : null,
+            user_id: resolvedUserId,
+            group_id: data.group_id && data.group_id !== '' ? parseInt(data.group_id, 10) : null,
+            subject_id: data.subject_id && data.subject_id !== '' ? parseInt(data.subject_id, 10) : null,
             is_active: data.is_active,
         };
 
@@ -520,27 +540,37 @@ const QuizModal = ({
                     </div>
                 </div>
 
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">O'qituvchi/Foydalanuvchi</label>
-                    <Controller
-                        name="user_id"
-                        control={control}
-                        render={({ field }) => (
-                            <Combobox
-                                options={users.map(u => ({ value: u.id.toString(), label: getUserDisplayName(u) }))}
-                                value={field.value}
-                                onChange={(val) => {
-                                    field.onChange(val);
-                                    // Reset child fields when user changes
-                                    setValue('subject_id', '');
-                                }}
-                                placeholder="Foydalanuvchini tanlang"
-                                searchPlaceholder="Qidirish..."
-                            />
-                        )}
-                    />
-                    {errors.user_id && <p className="text-sm text-red-500">{errors.user_id.message}</p>}
-                </div>
+                {/* Teacher selector: show for admins only. Teachers see their own name as read-only. */}
+                {isTeacher ? (
+                    <div className="space-y-1">
+                        <label className="text-sm font-medium">O'qituvchi</label>
+                        <p className="text-sm bg-muted rounded px-3 py-2">
+                            {teachers.find(t => t.user_id === user?.id)?.full_name || user?.username || '-'}
+                        </p>
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">O'qituvchi</label>
+                        <Controller
+                            name="user_id"
+                            control={control}
+                            render={({ field }) => (
+                                <Combobox
+                                    options={teachers.map(t => ({ value: t.user_id.toString(), label: t.full_name }))}
+                                    value={field.value}
+                                    onChange={(val) => {
+                                        field.onChange(val);
+                                        setValue('subject_id', '');
+                                        setValue('group_id', '');
+                                    }}
+                                    placeholder="O'qituvchini tanlang"
+                                    searchPlaceholder="Qidirish..."
+                                />
+                            )}
+                        />
+                        {errors.user_id && <p className="text-sm text-red-500">{errors.user_id.message}</p>}
+                    </div>
+                )}
 
                 <div className="space-y-2">
                     <label className="text-sm font-medium">Fan</label>
@@ -549,12 +579,11 @@ const QuizModal = ({
                         control={control}
                         render={({ field }) => (
                             <Combobox
-                                options={userSubjects.map(s => ({ value: s.id.toString(), label: s.name }))}
+                                options={subjectOptions}
                                 value={field.value}
                                 onChange={field.onChange}
-                                placeholder={selectedUserId ? "Fanni tanlang" : "Avval foydalanuvchini tanlang"}
+                                placeholder="Fanni tanlang"
                                 searchPlaceholder="Qidirish..."
-                                disabled={!selectedUserId}
                             />
                         )}
                     />
@@ -568,7 +597,7 @@ const QuizModal = ({
                         control={control}
                         render={({ field }) => (
                             <Combobox
-                                options={allGroups.map(g => ({ value: g.id.toString(), label: g.name }))}
+                                options={groupOptions}
                                 value={field.value}
                                 onChange={field.onChange}
                                 placeholder="Guruhni tanlang"

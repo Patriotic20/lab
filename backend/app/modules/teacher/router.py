@@ -16,6 +16,7 @@ from .schemas import (
     TeacherGroupAssignRequest,
     TeacherSubjectAssignRequest,
     TeacherAssignedSubjectsResponse,
+    TeacherAssignedGroupsResponse,
 )
 from app.models.user.model import User
 # from app.core.cache import clear_cache, custom_key_builder
@@ -117,12 +118,19 @@ async def assign_subjects(
 async def get_teacher_assigned_subjects(
     user_id: int,
     session: AsyncSession = Depends(db_helper.session_getter),
-    # Note: We can allow the user themselves to view their own subjects, or teachers/admins. 
-    # For now, require 'read:teacher' or 'read:subject'. 
-    # Assuming standard roles, let's just make sure they're authenticated.
-    # Often, a user needs this to view their own profile.
     current_user: User = Depends(PermissionRequired("read:teacher")),
 ):
     return await get_teacher_repository.get_assigned_subjects_by_user(
+        session=session, user_id=user_id
+    )
+
+
+@router.get("/assigned_groups/by-user/{user_id}", response_model=TeacherAssignedGroupsResponse)
+async def get_teacher_assigned_groups(
+    user_id: int,
+    session: AsyncSession = Depends(db_helper.session_getter),
+    current_user: User = Depends(PermissionRequired("read:teacher")),
+):
+    return await get_teacher_repository.get_assigned_groups_by_user(
         session=session, user_id=user_id
     )

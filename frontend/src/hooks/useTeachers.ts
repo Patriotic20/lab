@@ -70,3 +70,11 @@ export const useAssignSubjects = () => {
         },
     });
 };
+
+export const useTeacherAssignedGroups = (userId?: number) => {
+    return useQuery({
+        queryKey: ['teacherAssignedGroups', userId],
+        queryFn: () => teacherService.getAssignedGroups(userId!),
+        enabled: !!userId,
+    });
+};
