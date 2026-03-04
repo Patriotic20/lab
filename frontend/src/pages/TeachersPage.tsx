@@ -16,7 +16,8 @@ import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Combobox } from '@/components/ui/Combobox';
-import { useTeachers, useCreateTeacher, useUpdateTeacher, useDeleteTeacher, useAssignGroups, useAssignSubjects } from '@/hooks/useTeachers';
+import { useTeachers, useCreateTeacherWithUser, useUpdateTeacher, useDeleteTeacher, useAssignGroups, useAssignSubjects } from '@/hooks/useTeachers';
+import type { TeacherFullCreateRequest } from '@/services/teacherService';
 import { useKafedras } from '@/hooks/useReferenceData';
 import { useUsers } from '@/hooks/useUsers';
 import { useGroups } from '@/hooks/useGroups';
@@ -25,7 +26,16 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-const teacherSchema = z.object({
+const teacherCreateSchema = z.object({
+    first_name: z.string().min(1, 'Ism kiritilishi shart'),
+    last_name: z.string().min(1, 'Familiya kiritilishi shart'),
+    third_name: z.string().min(1, 'Otasining ismi kiritilishi shart'),
+    kafedra_id: z.number().min(1, 'Kafedra tanlanishi shart'),
+    username: z.string().min(3, 'Minimum 3 ta belgi'),
+    password: z.string().min(4, 'Minimum 4 ta belgi'),
+});
+
+const teacherUpdateSchema = z.object({
     first_name: z.string().min(1, 'Ism kiritilishi shart'),
     last_name: z.string().min(1, 'Familiya kiritilishi shart'),
     third_name: z.string().min(1, 'Otasining ismi kiritilishi shart'),
@@ -33,7 +43,8 @@ const teacherSchema = z.object({
     user_id: z.number().min(1, 'Foydalanuvchi tanlanishi shart'),
 });
 
-type TeacherFormValues = z.infer<typeof teacherSchema>;
+type TeacherCreateFormValues = z.infer<typeof teacherCreateSchema>;
+type TeacherUpdateFormValues = z.infer<typeof teacherUpdateSchema>;
 
 const TeachersPage = () => {
     const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
@@ -350,27 +361,34 @@ const TeacherDetail = ({ teacher, onBack }: { teacher: Teacher; onBack: () => vo
 const TeacherModal = ({ isOpen, onClose, teacher, onSuccess }: {
     isOpen: boolean; onClose: () => void; teacher: Teacher | null; onSuccess: () => void;
 }) => {
-    const { register, handleSubmit, reset, formState: { errors }, setValue, watch } = useForm<TeacherFormValues>({
-        resolver: zodResolver(teacherSchema),
-        defaultValues: { first_name: '', last_name: '', third_name: '', kafedra_id: 0, user_id: 0 },
-    });
-
     const { data: kafedrasData } = useKafedras();
     const { data: usersData } = useUsers(1, 100);
-
-    const createMutation = useCreateTeacher();
-    const updateMutation = useUpdateTeacher();
-    const isSubmitting = createMutation.isPending || updateMutation.isPending;
-
     const kafedras = kafedrasData?.kafedras || [];
     const users = usersData?.users || [];
 
-    const selectedKafedraId = watch('kafedra_id');
-    const selectedUserId = watch('user_id');
+    // --- CREATE form ---
+    const createForm = useForm<TeacherCreateFormValues>({
+        resolver: zodResolver(teacherCreateSchema),
+        defaultValues: { first_name: '', last_name: '', third_name: '', kafedra_id: 0, username: '', password: '' },
+    });
+
+    // --- UPDATE form ---
+    const updateForm = useForm<TeacherUpdateFormValues>({
+        resolver: zodResolver(teacherUpdateSchema),
+        defaultValues: { first_name: '', last_name: '', third_name: '', kafedra_id: 0, user_id: 0 },
+    });
+
+    const createMutation = useCreateTeacherWithUser();
+    const updateMutation = useUpdateTeacher();
+    const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
+    const selectedKafedraIdCreate = createForm.watch('kafedra_id');
+    const selectedKafedraIdUpdate = updateForm.watch('kafedra_id');
+    const selectedUserId = updateForm.watch('user_id');
 
     useEffect(() => {
         if (teacher) {
-            reset({
+            updateForm.reset({
                 first_name: teacher.first_name,
                 last_name: teacher.last_name,
                 third_name: teacher.third_name,
@@ -378,41 +396,74 @@ const TeacherModal = ({ isOpen, onClose, teacher, onSuccess }: {
                 user_id: teacher.user_id,
             });
         } else {
-            reset({ first_name: '', last_name: '', third_name: '', kafedra_id: 0, user_id: 0 });
+            createForm.reset({ first_name: '', last_name: '', third_name: '', kafedra_id: 0, username: '', password: '' });
         }
-    }, [teacher, reset]);
+    }, [teacher, isOpen]);
 
-    const onSubmit = (data: TeacherFormValues) => {
-        if (teacher) {
-            updateMutation.mutate({ id: teacher.id, data }, {
-                onSuccess: () => onSuccess(),
-                onError: () => alert("O'qituvchini yangilashda xatolik"),
-            });
-        } else {
-            createMutation.mutate(data, {
-                onSuccess: () => onSuccess(),
-                onError: () => alert("O'qituvchi yaratishda xatolik"),
-            });
-        }
+    const onCreateSubmit = (data: TeacherCreateFormValues) => {
+        createMutation.mutate(data as TeacherFullCreateRequest, {
+            onSuccess: () => onSuccess(),
+            onError: (err: any) => alert(err?.response?.data?.detail || "O'qituvchi yaratishda xatolik"),
+        });
     };
 
+    const onUpdateSubmit = (data: TeacherUpdateFormValues) => {
+        updateMutation.mutate({ id: teacher!.id, data }, {
+            onSuccess: () => onSuccess(),
+            onError: () => alert("O'qituvchini yangilashda xatolik"),
+        });
+    };
+
+    if (!teacher) {
+        // ── CREATE MODE ──
+        return (
+            <Modal isOpen={isOpen} onClose={onClose} title="O'qituvchi yaratish">
+                <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="space-y-4">
+                    <Input label="Familiya" {...createForm.register('last_name')} error={createForm.formState.errors.last_name?.message} placeholder="Familiyani kiriting" />
+                    <Input label="Ism" {...createForm.register('first_name')} error={createForm.formState.errors.first_name?.message} placeholder="Ismni kiriting" />
+                    <Input label="Otasining ismi" {...createForm.register('third_name')} error={createForm.formState.errors.third_name?.message} placeholder="Otasining ismini kiriting" />
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Kafedra</label>
+                        <Combobox
+                            options={kafedras.map(k => ({ value: k.id.toString(), label: k.name }))}
+                            value={selectedKafedraIdCreate ? selectedKafedraIdCreate.toString() : ""}
+                            onChange={(val) => createForm.setValue('kafedra_id', val ? Number(val) : 0)}
+                            placeholder="Kafedrani tanlang..."
+                            searchPlaceholder="Kafedrani qidirish..."
+                        />
+                        {createForm.formState.errors.kafedra_id && (
+                            <p className="mt-1 text-xs text-destructive">{createForm.formState.errors.kafedra_id.message}</p>
+                        )}
+                    </div>
+                    <Input label="Username" {...createForm.register('username')} error={createForm.formState.errors.username?.message} placeholder="Loginni kiriting" autoComplete="off" />
+                    <Input label="Parol" type="password" {...createForm.register('password')} error={createForm.formState.errors.password?.message} placeholder="Parolni kiriting" autoComplete="new-password" />
+                    <div className="flex justify-end gap-2">
+                        <Button type="button" variant="outline" onClick={onClose}>Bekor qilish</Button>
+                        <Button type="submit" isLoading={isSubmitting}>Yaratish</Button>
+                    </div>
+                </form>
+            </Modal>
+        );
+    }
+
+    // ── EDIT MODE ──
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={teacher ? "O'qituvchini tahrirlash" : "O'qituvchi yaratish"}>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <Input label="Familiya" {...register('last_name')} error={errors.last_name?.message} placeholder="Familiyani kiriting" />
-                <Input label="Ism" {...register('first_name')} error={errors.first_name?.message} placeholder="Ismni kiriting" />
-                <Input label="Otasining ismi" {...register('third_name')} error={errors.third_name?.message} placeholder="Otasining ismini kiriting" />
+        <Modal isOpen={isOpen} onClose={onClose} title="O'qituvchini tahrirlash">
+            <form onSubmit={updateForm.handleSubmit(onUpdateSubmit)} className="space-y-4">
+                <Input label="Familiya" {...updateForm.register('last_name')} error={updateForm.formState.errors.last_name?.message} placeholder="Familiyani kiriting" />
+                <Input label="Ism" {...updateForm.register('first_name')} error={updateForm.formState.errors.first_name?.message} placeholder="Ismni kiriting" />
+                <Input label="Otasining ismi" {...updateForm.register('third_name')} error={updateForm.formState.errors.third_name?.message} placeholder="Otasining ismini kiriting" />
                 <div className="space-y-2">
                     <label className="text-sm font-medium text-foreground">Kafedra</label>
                     <Combobox
                         options={kafedras.map(k => ({ value: k.id.toString(), label: k.name }))}
-                        value={selectedKafedraId ? selectedKafedraId.toString() : ""}
-                        onChange={(val) => setValue('kafedra_id', val ? Number(val) : 0)}
+                        value={selectedKafedraIdUpdate ? selectedKafedraIdUpdate.toString() : ""}
+                        onChange={(val) => updateForm.setValue('kafedra_id', val ? Number(val) : 0)}
                         placeholder="Kafedrani tanlang..."
                         searchPlaceholder="Kafedrani qidirish..."
                     />
-                    {errors.kafedra_id && (
-                        <p className="mt-1 text-xs text-destructive">{errors.kafedra_id.message}</p>
+                    {updateForm.formState.errors.kafedra_id && (
+                        <p className="mt-1 text-xs text-destructive">{updateForm.formState.errors.kafedra_id.message}</p>
                     )}
                 </div>
                 <div className="space-y-2">
@@ -420,17 +471,17 @@ const TeacherModal = ({ isOpen, onClose, teacher, onSuccess }: {
                     <Combobox
                         options={users.map(u => ({ value: u.id.toString(), label: u.username }))}
                         value={selectedUserId ? selectedUserId.toString() : ""}
-                        onChange={(val) => setValue('user_id', val ? Number(val) : 0)}
+                        onChange={(val) => updateForm.setValue('user_id', val ? Number(val) : 0)}
                         placeholder="Foydalanuvchini tanlang..."
                         searchPlaceholder="Foydalanuvchini qidirish..."
                     />
-                    {errors.user_id && (
-                        <p className="mt-1 text-xs text-destructive">{errors.user_id.message}</p>
+                    {updateForm.formState.errors.user_id && (
+                        <p className="mt-1 text-xs text-destructive">{updateForm.formState.errors.user_id.message}</p>
                     )}
                 </div>
                 <div className="flex justify-end gap-2">
                     <Button type="button" variant="outline" onClick={onClose}>Bekor qilish</Button>
-                    <Button type="submit" isLoading={isSubmitting}>{teacher ? 'Yangilash' : 'Yaratish'}</Button>
+                    <Button type="submit" isLoading={isSubmitting}>Yangilash</Button>
                 </div>
             </form>
         </Modal>

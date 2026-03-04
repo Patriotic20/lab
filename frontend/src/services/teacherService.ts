@@ -31,6 +31,15 @@ export interface TeacherCreateRequest {
     user_id: number;
 }
 
+export interface TeacherFullCreateRequest {
+    first_name: string;
+    last_name: string;
+    third_name: string;
+    kafedra_id: number;
+    username: string;
+    password: string;
+}
+
 export interface TeacherListResponse {
     total: number;
     page: number;
@@ -64,6 +73,26 @@ export const teacherService = {
     createTeacher: async (data: TeacherCreateRequest) => {
         const response = await api.post('/teacher/', data);
         return response.data;
+    },
+
+    createTeacherWithUser: async (data: TeacherFullCreateRequest) => {
+        // Step 1: Create user with Teacher role
+        const userResponse = await api.post('/user/', {
+            username: data.username,
+            password: data.password,
+            roles: [{ name: 'Teacher' }],
+        });
+        const user_id: number = userResponse.data.id;
+
+        // Step 2: Create teacher linked to that user
+        const teacherResponse = await api.post('/teacher/', {
+            first_name: data.first_name,
+            last_name: data.last_name,
+            third_name: data.third_name,
+            kafedra_id: data.kafedra_id,
+            user_id,
+        });
+        return teacherResponse.data;
     },
 
     updateTeacher: async (id: number, data: TeacherCreateRequest) => {
