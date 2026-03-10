@@ -201,28 +201,3 @@ export interface KafedraRankingResponse {
 }
 
 
-// ── Ranking types ────────────────────────────────────────────────────────
-export type RankingScope = 'overall' | 'faculty' | 'kafedra' | 'group';
-
-export interface TeacherRankItem {
-    rank: number;
-    teacher_id: number;
-    full_name: string;
-    kafedra_id: number | null;
-    kafedra_name: string | null;
-    faculty_id: number | null;
-    faculty_name: string | null;
-    group_id: number | null;
-    group_name: string | null;
-    student_count: number;
-    total_grade: number;
-    avg_grade: number;
-    weighted_rating: number;  // Bayesian weighted rating (2–5 scale)
-}
-
-export interface TeacherRankingResponse {
-    scope: TeacherRankingScope;
-    scope_id: number | null;
-    total: number;
-    teachers: TeacherRankItem[];
-}
