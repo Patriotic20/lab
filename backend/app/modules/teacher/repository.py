@@ -453,9 +453,11 @@ class TeacherRepository:
                 func.count(func.distinct(Result.user_id)).label("student_count"),
                 func.coalesce(func.avg(Result.grade), 0).label("avg_grade"),
             )
+            # Correct order: Faculty → Kafedra → Teacher → GroupTeacher → Result
+            # Teacher must appear before GroupTeacher (which references teacher.user_id)
             .join(Kafedra, Kafedra.faculty_id == Faculty.id)
-            .join(GroupTeacher, GroupTeacher.teacher_id == Teacher.user_id)
             .join(Teacher, Teacher.kafedra_id == Kafedra.id)
+            .join(GroupTeacher, GroupTeacher.teacher_id == Teacher.user_id)
             .join(Result, Result.group_id == GroupTeacher.group_id)
             .group_by(Faculty.id, Faculty.name)
         )
