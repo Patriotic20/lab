@@ -23,6 +23,7 @@ dependencies = [
     "redis>=7.1.0",
     "sqladmin>=0.22.0",
     "sqlalchemy>=2.0.46",
+    "xlrd>=2.0.1",
 ]
 
 [tool.pytest.ini_options]
