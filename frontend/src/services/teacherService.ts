@@ -157,6 +157,7 @@ export interface TeacherRankItem {
     student_count: number;
     total_grade: number;
     avg_grade: number;
+    weighted_rating: number;  // Bayesian weighted rating (2–5 scale)
 }
 
 export interface TeacherRankingResponse {

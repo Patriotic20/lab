@@ -147,6 +147,9 @@ class TeacherRankItem(BaseModel):
     student_count: int
     total_grade: float
     avg_grade: float
+    # Bayesian-weighted rating on the 2–5 scale
+    # Pulls low-sample teachers toward the global mean.
+    weighted_rating: float
 
     model_config = ConfigDict(from_attributes=True)
 

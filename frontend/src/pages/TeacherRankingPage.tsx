@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trophy, Loader2, Medal, Crown } from 'lucide-react';
+import { Trophy, Loader2, Medal, Crown, Star } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import {
     Table,
@@ -21,33 +21,36 @@ import { useFaculties, useKafedras } from '@/hooks/useReferenceData';
 import { useGroups } from '@/hooks/useGroups';
 import type { TeacherRankItem, RankingScope } from '@/services/teacherService';
 
-// ─── Scope tab labels ────────────────────────────────────────────────────────
+// ─── Scope tabs ───────────────────────────────────────────────────────────────
 const SCOPES: { value: RankingScope; label: string }[] = [
-    { value: 'overall', label: "Umumiy (Universitet)" },
-    { value: 'faculty', label: "Fakultet bo'yicha" },
-    { value: 'kafedra', label: "Kafedra bo'yicha" },
-    { value: 'group', label: "Guruh bo'yicha" },
+    { value: 'overall',  label: "Umumiy (Universitet)" },
+    { value: 'faculty',  label: "Fakultet bo'yicha" },
+    { value: 'kafedra',  label: "Kafedra bo'yicha" },
+    { value: 'group',    label: "Guruh bo'yicha" },
 ];
 
-// ─── Medal badge for top 3 ───────────────────────────────────────────────────
+// ─── Top-3 badge ──────────────────────────────────────────────────────────────
 const RankBadge = ({ rank }: { rank: number }) => {
-    if (rank === 1) return <Crown className="h-5 w-5 text-yellow-500" aria-label="#1" />;
-    if (rank === 2) return <Medal className="h-5 w-5 text-slate-400" aria-label="#2" />;
-    if (rank === 3) return <Medal className="h-5 w-5 text-amber-600" aria-label="#3" />;
+    if (rank === 1) return <Crown className="h-5 w-5 text-yellow-500" aria-label="1-o'rin" />;
+    if (rank === 2) return <Medal className="h-5 w-5 text-slate-400" aria-label="2-o'rin" />;
+    if (rank === 3) return <Medal className="h-5 w-5 text-amber-600" aria-label="3-o'rin" />;
     return <span className="text-sm font-semibold text-muted-foreground">#{rank}</span>;
 };
 
-// ─── Colour gradient cell for avg_grade ──────────────────────────────────────
-const GradeCell = ({ avg }: { avg: number }) => {
-    const pct = Math.min(avg / 100, 1);
-    const r = Math.round(220 - pct * 120);
-    const g = Math.round(80 + pct * 140);
+// ─── Star rating cell (2–5 scale) ────────────────────────────────────────────
+// Fill: ≥4.5 gold, ≥3.5 yellow, ≥2.5 orange, else red
+const StarRating = ({ value }: { value: number }) => {
+    const color =
+        value >= 4.5 ? '#f59e0b'   // gold
+      : value >= 3.5 ? '#fbbf24'   // yellow
+      : value >= 2.5 ? '#f97316'   // orange
+      :                '#ef4444';  // red
+
     return (
-        <span
-            className="inline-block rounded px-2 py-0.5 text-xs font-bold text-white"
-            style={{ backgroundColor: `rgb(${r},${g},80)` }}
-        >
-            {avg.toFixed(2)}
+        <span className="inline-flex items-center gap-1 font-bold" style={{ color }}>
+            <Star className="h-4 w-4 fill-current" />
+            {value.toFixed(2)}
+            <span className="text-xs font-normal text-muted-foreground">/ 5</span>
         </span>
     );
 };
@@ -73,8 +76,8 @@ const RankingTable = ({ items, showGroup }: { items: TeacherRankItem[]; showGrou
                     <TableHead>Fakultet</TableHead>
                     {showGroup && <TableHead>Guruh</TableHead>}
                     <TableHead className="text-right">Talabalar</TableHead>
-                    <TableHead className="text-right">Jami ball</TableHead>
-                    <TableHead className="text-right">O'rtacha ball</TableHead>
+                    <TableHead className="text-right">O'rtacha baho</TableHead>
+                    <TableHead className="text-right">Reyting ★</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -86,7 +89,12 @@ const RankingTable = ({ items, showGroup }: { items: TeacherRankItem[]; showGrou
                         <TableCell className="text-center">
                             <RankBadge rank={item.rank} />
                         </TableCell>
-                        <TableCell className="font-medium capitalize">{item.full_name}</TableCell>
+                        <TableCell>
+                            <div className="font-medium capitalize">{item.full_name}</div>
+                            <div className="text-xs text-muted-foreground">
+                                {item.student_count} talaba
+                            </div>
+                        </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                             {item.kafedra_name ?? '—'}
                         </TableCell>
@@ -98,10 +106,14 @@ const RankingTable = ({ items, showGroup }: { items: TeacherRankItem[]; showGrou
                                 {item.group_name ?? '—'}
                             </TableCell>
                         )}
-                        <TableCell className="text-right">{item.student_count}</TableCell>
-                        <TableCell className="text-right">{item.total_grade}</TableCell>
+                        <TableCell className="text-right text-sm">
+                            {item.student_count}
+                        </TableCell>
+                        <TableCell className="text-right text-sm text-muted-foreground">
+                            {item.avg_grade.toFixed(2)}
+                        </TableCell>
                         <TableCell className="text-right">
-                            <GradeCell avg={item.avg_grade} />
+                            <StarRating value={item.weighted_rating} />
                         </TableCell>
                     </TableRow>
                 ))}
@@ -110,7 +122,7 @@ const RankingTable = ({ items, showGroup }: { items: TeacherRankItem[]; showGrou
     );
 };
 
-// ─── Scope-specific panels ───────────────────────────────────────────────────
+// ─── Scope panels ─────────────────────────────────────────────────────────────
 const OverallRanking = () => {
     const { data, isLoading } = useTeacherRankingOverall();
     if (isLoading) return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -135,16 +147,10 @@ const FacultyRanking = () => {
                         searchPlaceholder="Qidirish..."
                     />
                 </div>
-                {facultyId && (
-                    <Button variant="ghost" size="sm" onClick={() => setFacultyId(undefined)}>
-                        Tozalash
-                    </Button>
-                )}
+                {facultyId && <Button variant="ghost" size="sm" onClick={() => setFacultyId(undefined)}>Tozalash</Button>}
             </div>
             {!facultyId ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                    Reytingni ko'rish uchun fakultetni tanlang.
-                </p>
+                <p className="py-8 text-center text-sm text-muted-foreground">Reytingni ko'rish uchun fakultetni tanlang.</p>
             ) : isLoading ? (
                 <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
             ) : (
@@ -172,16 +178,10 @@ const KafedraRanking = () => {
                         searchPlaceholder="Qidirish..."
                     />
                 </div>
-                {kafedraId && (
-                    <Button variant="ghost" size="sm" onClick={() => setKafedraId(undefined)}>
-                        Tozalash
-                    </Button>
-                )}
+                {kafedraId && <Button variant="ghost" size="sm" onClick={() => setKafedraId(undefined)}>Tozalash</Button>}
             </div>
             {!kafedraId ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                    Reytingni ko'rish uchun kafedrani tanlang.
-                </p>
+                <p className="py-8 text-center text-sm text-muted-foreground">Reytingni ko'rish uchun kafedrani tanlang.</p>
             ) : isLoading ? (
                 <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
             ) : (
@@ -209,16 +209,10 @@ const GroupRanking = () => {
                         searchPlaceholder="Qidirish..."
                     />
                 </div>
-                {groupId && (
-                    <Button variant="ghost" size="sm" onClick={() => setGroupId(undefined)}>
-                        Tozalash
-                    </Button>
-                )}
+                {groupId && <Button variant="ghost" size="sm" onClick={() => setGroupId(undefined)}>Tozalash</Button>}
             </div>
             {!groupId ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                    Reytingni ko'rish uchun guruhni tanlang.
-                </p>
+                <p className="py-8 text-center text-sm text-muted-foreground">Reytingni ko'rish uchun guruhni tanlang.</p>
             ) : isLoading ? (
                 <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
             ) : (
@@ -228,22 +222,35 @@ const GroupRanking = () => {
     );
 };
 
+// ─── Legend card ──────────────────────────────────────────────────────────────
+const RatingLegend = () => (
+    <div className="flex flex-wrap gap-4 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+        <span className="font-medium text-foreground">Reyting shkalasi:</span>
+        <span className="flex items-center gap-1"><Star className="h-3 w-3 fill-yellow-500 text-yellow-500" /> ≥ 4.5 — A'lo</span>
+        <span className="flex items-center gap-1"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" /> 3.5–4.5 — Yaxshi</span>
+        <span className="flex items-center gap-1"><Star className="h-3 w-3 fill-orange-500 text-orange-500" /> 2.5–3.5 — Qoniqarli</span>
+        <span className="flex items-center gap-1"><Star className="h-3 w-3 fill-red-500 text-red-500" /> &lt; 2.5 — Qoniqarsiz</span>
+        <span className="ml-auto italic">Reyting = Bayes o'rtacha (C=5, global o'rtacha)</span>
+    </div>
+);
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 const TeacherRankingPage = () => {
     const [scope, setScope] = useState<RankingScope>('overall');
 
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div>
                 <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-yellow-500" />
                     O'qituvchilar reytingi
                 </h1>
                 <p className="mt-0.5 text-sm text-muted-foreground">
-                    Talabalar o'rtacha bahosi bo'yicha o'qituvchilar reytingi
+                    Talabalar bahosi bo'yicha o'qituvchilar reytingi (1–5 shkalasi)
                 </p>
             </div>
+
+            <RatingLegend />
 
             {/* Scope tabs */}
             <div className="flex gap-2 flex-wrap">
@@ -259,7 +266,6 @@ const TeacherRankingPage = () => {
                 ))}
             </div>
 
-            {/* Ranking card */}
             <Card>
                 <CardHeader>
                     <CardTitle className="text-base">
@@ -267,10 +273,10 @@ const TeacherRankingPage = () => {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                    {scope === 'overall' && <OverallRanking />}
-                    {scope === 'faculty' && <FacultyRanking />}
-                    {scope === 'kafedra' && <KafedraRanking />}
-                    {scope === 'group' && <GroupRanking />}
+                    {scope === 'overall'  && <OverallRanking />}
+                    {scope === 'faculty'  && <FacultyRanking />}
+                    {scope === 'kafedra'  && <KafedraRanking />}
+                    {scope === 'group'    && <GroupRanking />}
                 </CardContent>
             </Card>
         </div>

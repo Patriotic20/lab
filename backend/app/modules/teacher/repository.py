@@ -307,7 +307,7 @@ class TeacherRepository:
         return teacher
 
     # ------------------------------------------------------------------
-    # Ranking
+    # Ranking  (Bayesian weighted, 2–5 grade scale)
     # ------------------------------------------------------------------
     async def get_ranking(
         self,
@@ -316,17 +316,29 @@ class TeacherRepository:
         scope_id: Optional[int] = None,
     ) -> TeacherRankingResponse:
         """
-        Return teachers ranked by average student grade.
+        Return teachers ranked by Bayesian-weighted student grade.
 
-        Ranking formula:
-            avg_grade = SUM(result.grade) / COUNT(DISTINCT result.user_id)
+        Grade scale (stored by quiz_process):
+            ≥ 86 % → 5   |   ≥ 72 % → 4   |   ≥ 56 % → 3   |   < 56 % → 2
 
-        Scope controls which results are included:
-            - "overall"  → all results in the system
-            - "faculty"  → results whose group belongs to the given faculty
-            - "kafedra"  → results whose teacher belongs to the given kafedra
-            - "group"    → results for a specific group
+        Bayesian weighted rating formula (same as IMDB / Letterboxd):
+            weighted_rating = (C × m + SUM(grades)) / (C + student_count)
+
+        Where:
+            m = global mean grade across ALL teachers in scope
+            C = confidence threshold = 5  (minimum students to fully trust a score)
+
+        Effect:
+            • A teacher with 1 student scoring 5 is pulled toward the global mean.
+            • A teacher with 50 students is barely affected — their real avg dominates.
+            • Result is always in the 2–5 range.
+
+        Tiebreaker: if two teachers have the same weighted_rating,
+        the one with MORE students ranks higher (more data = more reliable).
         """
+        # ---- C constant --------------------------------------------------
+        C = 5  # confidence threshold (minimum "virtual" sample size)
+
         include_group = scope == "group"
 
         columns = [
@@ -357,7 +369,7 @@ class TeacherRepository:
         if include_group:
             stmt = stmt.join(Group, GroupTeacher.group_id == Group.id)
 
-        # ---- scope filters ----
+        # ---- scope filters -----------------------------------------------
         if scope == "group":
             if scope_id is None:
                 raise HTTPException(
@@ -384,11 +396,7 @@ class TeacherRepository:
 
         # "overall" → no filter
 
-        # ---- group-by / order-by ----
-        student_sum = func.coalesce(func.sum(Result.grade), 0)
-        student_cnt = func.count(func.distinct(Result.user_id))
-        avg_expr = student_sum / func.nullif(student_cnt, 0)
-
+        # ---- group-by (no order_by yet — we sort in Python after Bayesian) -
         group_by_cols = [
             Teacher.id,
             Teacher.full_name,
@@ -400,16 +408,60 @@ class TeacherRepository:
         if include_group:
             group_by_cols += [Group.id, Group.name]
 
-        stmt = stmt.group_by(*group_by_cols).order_by(avg_expr.desc())
+        stmt = stmt.group_by(*group_by_cols)
 
         rows = (await session.execute(stmt)).mappings().all()
 
-        ranked: list[TeacherRankItem] = []
-        for rank, row in enumerate(rows, start=1):
-            total_grade = float(row["total_grade"])
-            student_count = int(row["student_count"])
-            avg_grade = total_grade / student_count if student_count else 0.0
+        if not rows:
+            return TeacherRankingResponse(
+                scope=scope,
+                scope_id=scope_id,
+                total=0,
+                teachers=[],
+            )
 
+        # ---- Phase 1: compute per-teacher avg and global mean ------------
+        # Build an intermediate list first so we can calculate global m.
+        intermediate = []
+        total_grades_all = 0.0
+        total_students_all = 0
+
+        for row in rows:
+            student_count = int(row["student_count"])
+            total_grade = float(row["total_grade"])
+            avg_grade = total_grade / student_count if student_count > 0 else 0.0
+            intermediate.append({
+                "row": row,
+                "student_count": student_count,
+                "total_grade": total_grade,
+                "avg_grade": avg_grade,
+            })
+            total_grades_all += total_grade
+            total_students_all += student_count
+
+        # Global mean m = (sum of all grades) / (total students across all teachers)
+        m: float = (
+            total_grades_all / total_students_all
+            if total_students_all > 0
+            else 3.0  # fallback neutral midpoint of 2–5 scale
+        )
+
+        # ---- Phase 2: compute Bayesian weighted_rating & sort ------------
+        for entry in intermediate:
+            v = entry["student_count"]
+            # weighted_rating = (C×m + total_grade) / (C + v)
+            entry["weighted_rating"] = (C * m + entry["total_grade"]) / (C + v)
+
+        # Sort: weighted_rating DESC, then student_count DESC (tiebreaker)
+        intermediate.sort(
+            key=lambda e: (e["weighted_rating"], e["student_count"]),
+            reverse=True,
+        )
+
+        # ---- Phase 3: build response objects ----------------------------
+        ranked: list[TeacherRankItem] = []
+        for rank, entry in enumerate(intermediate, start=1):
+            row = entry["row"]
             ranked.append(
                 TeacherRankItem(
                     rank=rank,
@@ -421,9 +473,10 @@ class TeacherRepository:
                     faculty_name=row["faculty_name"],
                     group_id=row.get("group_id"),
                     group_name=row.get("group_name"),
-                    student_count=student_count,
-                    total_grade=total_grade,
-                    avg_grade=avg_grade,
+                    student_count=entry["student_count"],
+                    total_grade=entry["total_grade"],
+                    avg_grade=round(entry["avg_grade"], 2),
+                    weighted_rating=round(entry["weighted_rating"], 2),
                 )
             )
 
