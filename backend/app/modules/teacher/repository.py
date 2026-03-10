@@ -23,7 +23,6 @@ from .schemas import (
     TeacherSubjectAssignRequest,
     TeacherRankItem,
     TeacherRankingResponse,
-    TeacherRankingScope,
     FacultyRankItem,
     FacultyRankingResponse,
     KafedraRankItem,
@@ -339,28 +338,25 @@ class TeacherRepository:
         return entries
 
     # ------------------------------------------------------------------
-    # Teacher ranking  (scope: overall or group)
+    # Teacher ranking  (optional filters: faculty, kafedra, group)
     # ------------------------------------------------------------------
     async def get_ranking(
         self,
         session: AsyncSession,
-        scope: TeacherRankingScope,
-        scope_id: int | None = None,
+        faculty_id: int | None = None,
+        kafedra_id: int | None = None,
+        group_id: int | None = None,
     ) -> TeacherRankingResponse:
         """
         Return teachers ranked by Bayesian-weighted average student grade.
 
-        Grade stored by quiz_process: 2 (fail) / 3 / 4 / 5 (excellent)
+        All filters are optional and can be combined:
+            faculty_id  – restrict to teachers in this faculty
+            kafedra_id  – restrict to teachers in this kafedra
+            group_id    – restrict to teachers assigned to this group
 
-        BUG fix: use AVG(result.grade) not SUM/COUNT(distinct user) which
-        inflated scores when students took many quizzes.
-
-        Scopes:
-            overall  – all teachers in the university
-            group    – teachers assigned to a specific group
+        No filters = rank ALL teachers (entire university).
         """
-        include_group = scope == "group"
-
         columns = [
             Teacher.id.label("teacher_id"),
             Teacher.full_name,
@@ -371,11 +367,6 @@ class TeacherRepository:
             func.count(func.distinct(Result.user_id)).label("student_count"),
             func.coalesce(func.avg(Result.grade), 0).label("avg_grade"),
         ]
-        if include_group:
-            columns += [
-                Group.id.label("group_id"),
-                Group.name.label("group_name"),
-            ]
 
         stmt = (
             select(*columns)
@@ -384,28 +375,26 @@ class TeacherRepository:
             .join(GroupTeacher, Teacher.user_id == GroupTeacher.teacher_id)
             .join(Result, GroupTeacher.group_id == Result.group_id)
         )
-        if include_group:
-            stmt = stmt.join(Group, GroupTeacher.group_id == Group.id)
 
-        if scope == "group":
-            if scope_id is None:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="scope_id (group_id) is required for scope='group'",
-                )
-            stmt = stmt.where(Result.group_id == scope_id)
+        # Apply optional filters
+        if faculty_id is not None:
+            stmt = stmt.where(Kafedra.faculty_id == faculty_id)
+        if kafedra_id is not None:
+            stmt = stmt.where(Teacher.kafedra_id == kafedra_id)
+        if group_id is not None:
+            stmt = stmt.where(Result.group_id == group_id)
 
-        group_by_cols = [
+        stmt = stmt.group_by(
             Teacher.id, Teacher.full_name, Teacher.kafedra_id,
             Kafedra.name, Kafedra.faculty_id, Faculty.name,
-        ]
-        if include_group:
-            group_by_cols += [Group.id, Group.name]
-        stmt = stmt.group_by(*group_by_cols)
+        )
 
         rows = (await session.execute(stmt)).mappings().all()
         if not rows:
-            return TeacherRankingResponse(scope=scope, scope_id=scope_id, total=0, teachers=[])
+            return TeacherRankingResponse(
+                total=0, teachers=[],
+                faculty_id=faculty_id, kafedra_id=kafedra_id, group_id=group_id,
+            )
 
         entries = [
             {
@@ -427,15 +416,18 @@ class TeacherRepository:
                 kafedra_name=e["row"]["kafedra_name"],
                 faculty_id=e["row"]["faculty_id"],
                 faculty_name=e["row"]["faculty_name"],
-                group_id=e["row"].get("group_id"),
-                group_name=e["row"].get("group_name"),
+                group_id=None,
+                group_name=None,
                 student_count=e["student_count"],
                 avg_grade=round(e["avg_grade"], 2),
                 weighted_rating=e["weighted_rating"],
             )
             for rank, e in enumerate(entries, start=1)
         ]
-        return TeacherRankingResponse(scope=scope, scope_id=scope_id, total=len(teachers), teachers=teachers)
+        return TeacherRankingResponse(
+            total=len(teachers), teachers=teachers,
+            faculty_id=faculty_id, kafedra_id=kafedra_id, group_id=group_id,
+        )
 
     # ------------------------------------------------------------------
     # Faculty ranking

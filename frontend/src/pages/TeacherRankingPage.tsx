@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trophy, Loader2, Medal, Crown, Star, Building2, Layers } from 'lucide-react';
+import { Trophy, Loader2, Medal, Crown, Star, Building2, Layers, X } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -7,29 +7,29 @@ import {
 import { Button } from '@/components/ui/Button';
 import { Combobox } from '@/components/ui/Combobox';
 import {
-    useTeacherRankingOverall,
-    useTeacherRankingByGroup,
+    useTeacherRanking,
     useFacultyRanking,
     useKafedraRanking,
 } from '@/hooks/useTeachers';
 import { useGroups } from '@/hooks/useGroups';
+import { useFaculties } from '@/hooks/useFaculties';
+import { useKafedras } from '@/hooks/useKafedras';
 import type { TeacherRankItem, FacultyRankItem, KafedraRankItem } from '@/services/teacherService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Tab = 'overall' | 'group' | 'faculty' | 'kafedra';
+type Tab = 'teachers' | 'faculty' | 'kafedra';
 
-const TABS: { value: Tab; label: string; icon: typeof Trophy }[] = [
-    { value: 'overall',  label: "Umumiy (O'qituvchilar)",  icon: Trophy },
-    { value: 'group',    label: "Guruh bo'yicha",           icon: Trophy },
-    { value: 'faculty',  label: "Fakultetlar reytingi",     icon: Building2 },
-    { value: 'kafedra',  label: "Kafedralar reytingi",      icon: Layers },
+const TABS: { value: Tab; label: string }[] = [
+    { value: 'teachers', label: "O'qituvchilar reytingi" },
+    { value: 'faculty',  label: "Fakultetlar reytingi" },
+    { value: 'kafedra',  label: "Kafedralar reytingi" },
 ];
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 const RankBadge = ({ rank }: { rank: number }) => {
-    if (rank === 1) return <Crown className="h-5 w-5 text-yellow-500" aria-label="1-o'rin" />;
-    if (rank === 2) return <Medal className="h-5 w-5 text-slate-400" aria-label="2-o'rin" />;
-    if (rank === 3) return <Medal className="h-5 w-5 text-amber-600" aria-label="3-o'rin" />;
+    if (rank === 1) return <Crown className="h-5 w-5 text-yellow-500" />;
+    if (rank === 2) return <Medal className="h-5 w-5 text-slate-400" />;
+    if (rank === 3) return <Medal className="h-5 w-5 text-amber-600" />;
     return <span className="text-sm font-semibold text-muted-foreground">#{rank}</span>;
 };
 
@@ -61,9 +61,80 @@ const Spinner = () => (
     </div>
 );
 
-// ─── Teacher table (overall + group) ────────────────────────────────────────
-const TeacherRankTable = ({ items, showGroup }: { items: TeacherRankItem[]; showGroup?: boolean }) => {
-    if (!items.length) return <EmptyState label="Ma'lumotlar topilmadi. O'qituvchilar uchun natijalar yo'q." />;
+// ─── Teacher filters ──────────────────────────────────────────────────────────
+type Filters = { faculty_id?: number; kafedra_id?: number; group_id?: number };
+
+const TeacherFilters = ({
+    filters, onChange,
+}: {
+    filters: Filters;
+    onChange: (f: Filters) => void;
+}) => {
+    const { data: facultyData } = useFaculties(1, 500, '');
+    const { data: kafedraData } = useKafedras(1, 500, '');
+    const { data: groupData } = useGroups(1, 500, '');
+
+    const faculties = facultyData?.faculties ?? [];
+    const kafedras = kafedraData?.kafedras ?? [];
+    const groups = groupData?.groups ?? [];
+
+    const hasFilters = filters.faculty_id || filters.kafedra_id || filters.group_id;
+
+    return (
+        <div className="flex flex-wrap items-center gap-2">
+            {/* Faculty filter */}
+            <div className="w-56">
+                <Combobox
+                    options={faculties.map((f) => ({ value: String(f.id), label: f.name }))}
+                    value={filters.faculty_id ? String(filters.faculty_id) : ''}
+                    onChange={(v) => onChange({ ...filters, faculty_id: v ? Number(v) : undefined })}
+                    placeholder="Fakultet bo'yicha..."
+                    searchPlaceholder="Fakultet qidirish..."
+                />
+            </div>
+            {/* Kafedra filter */}
+            <div className="w-56">
+                <Combobox
+                    options={kafedras.map((k) => ({ value: String(k.id), label: k.name }))}
+                    value={filters.kafedra_id ? String(filters.kafedra_id) : ''}
+                    onChange={(v) => onChange({ ...filters, kafedra_id: v ? Number(v) : undefined })}
+                    placeholder="Kafedra bo'yicha..."
+                    searchPlaceholder="Kafedra qidirish..."
+                />
+            </div>
+            {/* Group filter */}
+            <div className="w-48">
+                <Combobox
+                    options={groups.map((g) => ({ value: String(g.id), label: g.name }))}
+                    value={filters.group_id ? String(filters.group_id) : ''}
+                    onChange={(v) => onChange({ ...filters, group_id: v ? Number(v) : undefined })}
+                    placeholder="Guruh bo'yicha..."
+                    searchPlaceholder="Guruh qidirish..."
+                />
+            </div>
+            {hasFilters && (
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onChange({})}
+                    className="gap-1 text-muted-foreground"
+                >
+                    <X className="h-3.5 w-3.5" />
+                    Tozalash
+                </Button>
+            )}
+            {hasFilters && (
+                <span className="text-xs text-muted-foreground">— filtrlangan</span>
+            )}
+        </div>
+    );
+};
+
+// ─── Teacher table ────────────────────────────────────────────────────────────
+const TeacherRankTable = ({ items }: { items: TeacherRankItem[] }) => {
+    if (!items.length) return (
+        <EmptyState label="Tanlangan filtr bo'yicha o'qituvchilar topilmadi." />
+    );
     return (
         <Table>
             <TableHeader>
@@ -72,9 +143,8 @@ const TeacherRankTable = ({ items, showGroup }: { items: TeacherRankItem[]; show
                     <TableHead>O'qituvchi</TableHead>
                     <TableHead>Kafedra</TableHead>
                     <TableHead>Fakultet</TableHead>
-                    {showGroup && <TableHead>Guruh</TableHead>}
                     <TableHead className="text-right">Talabalar</TableHead>
-                    <TableHead className="text-right">O'rtacha</TableHead>
+                    <TableHead className="text-right">O'rtacha baho</TableHead>
                     <TableHead className="text-right">Reyting ★</TableHead>
                 </TableRow>
             </TableHeader>
@@ -88,7 +158,6 @@ const TeacherRankTable = ({ items, showGroup }: { items: TeacherRankItem[]; show
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{item.kafedra_name ?? '—'}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{item.faculty_name ?? '—'}</TableCell>
-                        {showGroup && <TableCell className="text-sm text-muted-foreground">{item.group_name ?? '—'}</TableCell>}
                         <TableCell className="text-right text-sm">{item.student_count}</TableCell>
                         <TableCell className="text-right text-sm text-muted-foreground">{item.avg_grade.toFixed(2)}</TableCell>
                         <TableCell className="text-right"><StarRating value={item.weighted_rating} /></TableCell>
@@ -163,38 +232,17 @@ const KafedraRankTable = ({ items }: { items: KafedraRankItem[] }) => {
     );
 };
 
-// ─── Tab content panels ───────────────────────────────────────────────────────
-const OverallPanel = () => {
-    const { data, isLoading } = useTeacherRankingOverall();
-    if (isLoading) return <Spinner />;
-    return <TeacherRankTable items={data?.teachers ?? []} />;
-};
-
-const GroupPanel = () => {
-    const { data: groupsData } = useGroups(1, 500, '');
-    const groups = groupsData?.groups ?? [];
-    const [groupId, setGroupId] = useState<number | undefined>();
-    const { data, isLoading } = useTeacherRankingByGroup(groupId);
+// ─── Tab panels ───────────────────────────────────────────────────────────────
+const TeachersPanel = () => {
+    const [filters, setFilters] = useState<Filters>({});
+    const { data, isLoading } = useTeacherRanking(
+        Object.keys(filters).length ? filters : undefined
+    );
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center gap-3">
-                <div className="w-72">
-                    <Combobox
-                        options={groups.map((g) => ({ value: String(g.id), label: g.name }))}
-                        value={groupId ? String(groupId) : ''}
-                        onChange={(v) => setGroupId(v ? Number(v) : undefined)}
-                        placeholder="Guruhni tanlang..."
-                        searchPlaceholder="Guruh qidirish..."
-                    />
-                </div>
-                {groupId && <Button variant="ghost" size="sm" onClick={() => setGroupId(undefined)}>Tozalash</Button>}
-            </div>
-            {!groupId
-                ? <p className="py-8 text-center text-sm text-muted-foreground">Reytingni ko'rish uchun guruhni tanlang.</p>
-                : isLoading ? <Spinner />
-                : <TeacherRankTable items={data?.teachers ?? []} showGroup />
-            }
+            <TeacherFilters filters={filters} onChange={setFilters} />
+            {isLoading ? <Spinner /> : <TeacherRankTable items={data?.teachers ?? []} />}
         </div>
     );
 };
@@ -211,10 +259,10 @@ const KafedraPanel = () => {
     return <KafedraRankTable items={data?.kafedras ?? []} />;
 };
 
-// ─── Legend ───────────────────────────────────────────────────────────────────
+// ─── Rating legend ────────────────────────────────────────────────────────────
 const RatingLegend = () => (
     <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">Reyting shkalasi (1–5):</span>
+        <span className="font-medium text-foreground">Reyting shkalasi (2–5):</span>
         <span className="flex items-center gap-1"><Star className="h-3 w-3 fill-yellow-500 text-yellow-500" /> ≥ 4.5 — A'lo</span>
         <span className="flex items-center gap-1"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" /> 3.5–4.5 — Yaxshi</span>
         <span className="flex items-center gap-1"><Star className="h-3 w-3 fill-orange-500 text-orange-500" /> 2.5–3.5 — Qoniqarli</span>
@@ -225,7 +273,7 @@ const RatingLegend = () => (
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 const TeacherRankingPage = () => {
-    const [tab, setTab] = useState<Tab>('overall');
+    const [tab, setTab] = useState<Tab>('teachers');
 
     return (
         <div className="space-y-5">
@@ -249,6 +297,9 @@ const TeacherRankingPage = () => {
                         size="sm"
                         onClick={() => setTab(value)}
                     >
+                        {value === 'faculty'  && <Building2 className="mr-1 h-3.5 w-3.5" />}
+                        {value === 'kafedra'  && <Layers     className="mr-1 h-3.5 w-3.5" />}
+                        {value === 'teachers' && <Trophy     className="mr-1 h-3.5 w-3.5" />}
                         {label}
                     </Button>
                 ))}
@@ -261,8 +312,7 @@ const TeacherRankingPage = () => {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                    {tab === 'overall'  && <OverallPanel />}
-                    {tab === 'group'    && <GroupPanel />}
+                    {tab === 'teachers' && <TeachersPanel />}
                     {tab === 'faculty'  && <FacultyPanel />}
                     {tab === 'kafedra'  && <KafedraPanel />}
                 </CardContent>

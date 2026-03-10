@@ -120,13 +120,12 @@ export const teacherService = {
     },
 
     // ── Ranking ────────────────────────────────────────────────────────────
-    getRankingOverall: async (): Promise<TeacherRankingResponse> => {
-        const response = await api.get<TeacherRankingResponse>('/teacher/ranking/overall');
-        return response.data;
-    },
-
-    getRankingByGroup: async (group_id: number): Promise<TeacherRankingResponse> => {
-        const response = await api.get<TeacherRankingResponse>(`/teacher/ranking/group/${group_id}`);
+    getRankingOverall: async (params?: {
+        faculty_id?: number;
+        kafedra_id?: number;
+        group_id?: number;
+    }): Promise<TeacherRankingResponse> => {
+        const response = await api.get<TeacherRankingResponse>('/teacher/ranking/overall', { params });
         return response.data;
     },
 
@@ -142,7 +141,6 @@ export const teacherService = {
 };
 
 // ── Teacher ranking types ────────────────────────────────────────────────────
-export type TeacherRankingScope = 'overall' | 'group';
 
 export interface TeacherRankItem {
     rank: number;
@@ -160,10 +158,11 @@ export interface TeacherRankItem {
 }
 
 export interface TeacherRankingResponse {
-    scope: TeacherRankingScope;
-    scope_id: number | null;
     total: number;
     teachers: TeacherRankItem[];
+    faculty_id: number | null;
+    kafedra_id: number | null;
+    group_id: number | null;
 }
 
 // ── Faculty ranking types ────────────────────────────────────────────────────

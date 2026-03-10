@@ -151,15 +151,13 @@ class TeacherRankItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# scope is limited to overall or group; faculty/kafedra have their own schemas
-TeacherRankingScope = Literal["overall", "group"]
-
-
 class TeacherRankingResponse(BaseModel):
-    scope: TeacherRankingScope
-    scope_id: Optional[int] = None
     total: int
     teachers: list[TeacherRankItem]
+    # active filters (None = no filter applied)
+    faculty_id: Optional[int] = None
+    kafedra_id: Optional[int] = None
+    group_id: Optional[int] = None
 
 
 # ── Faculty ranking schemas ───────────────────────────────────────────────────

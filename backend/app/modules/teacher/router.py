@@ -140,36 +140,31 @@ async def get_teacher_assigned_groups(
 
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Ranking endpoints
-# ─────────────────────────────────────────────────────────────────────────────
-
 @router.get(
     "/ranking/overall",
     response_model=TeacherRankingResponse,
-    summary="Teacher ranking — whole university",
+    summary="Teacher ranking — with optional filters",
 )
 async def teacher_ranking_overall(
+    faculty_id: int | None = None,
+    kafedra_id: int | None = None,
+    group_id: int | None = None,
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:teacher")),
 ):
-    """Return all teachers ranked by Bayesian weighted avg student grade."""
-    return await get_teacher_repository.get_ranking(session=session, scope="overall")
-
-
-@router.get(
-    "/ranking/group/{group_id}",
-    response_model=TeacherRankingResponse,
-    summary="Teacher ranking — by group",
-)
-async def teacher_ranking_by_group(
-    group_id: int,
-    session: AsyncSession = Depends(db_helper.session_getter),
-    _: PermissionRequired = Depends(PermissionRequired("read:teacher")),
-):
-    """Return teachers of a specific group ranked by Bayesian weighted avg grade."""
+    """
+    Return teachers ranked by Bayesian weighted avg student grade.
+    All query params are optional — omit all to get full university ranking.
+        ?faculty_id=1  → teachers of that faculty only
+        ?kafedra_id=3  → teachers of that kafedra only
+        ?group_id=7    → teachers assigned to that group only
+    Any combination of filters can be used together.
+    """
     return await get_teacher_repository.get_ranking(
-        session=session, scope="group", scope_id=group_id
+        session=session,
+        faculty_id=faculty_id,
+        kafedra_id=kafedra_id,
+        group_id=group_id,
     )
 
 

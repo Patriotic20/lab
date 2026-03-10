@@ -91,18 +91,16 @@ export const useTeacherAssignedGroups = (userId?: number) => {
 
 // ── Ranking hooks ─────────────────────────────────────────────────────────
 
-export const useTeacherRankingOverall = () => {
-    return useQuery({
-        queryKey: ['teacherRanking', 'overall'],
-        queryFn: () => teacherService.getRankingOverall(),
-    });
+type TeacherRankingFilters = {
+    faculty_id?: number;
+    kafedra_id?: number;
+    group_id?: number;
 };
 
-export const useTeacherRankingByGroup = (groupId?: number) => {
+export const useTeacherRanking = (filters?: TeacherRankingFilters) => {
     return useQuery({
-        queryKey: ['teacherRanking', 'group', groupId],
-        queryFn: () => teacherService.getRankingByGroup(groupId!),
-        enabled: !!groupId,
+        queryKey: ['teacherRanking', filters ?? {}],
+        queryFn: () => teacherService.getRankingOverall(filters),
     });
 };
 
