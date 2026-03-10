@@ -200,6 +200,11 @@ jobs:
       - name: Stop existing containers
         run: docker compose down --remove-orphans
 
+      - name: Configure Docker Mirror
+        run: |
+          echo '{"registry-mirrors": ["https://mirror.gcr.io", "https://daocloud.io", "https://huecker.io", "https://dockerhub.timeweb.cloud"]}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl restart docker
+
       - name: Pull & rebuild containers
         run: docker compose up -d --build
 
