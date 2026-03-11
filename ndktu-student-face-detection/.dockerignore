@@ -1,0 +1,28 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Git
+.git/
+.gitignore
+
+# Docs & config templates
+README.md
+.env.example
+*.md
+
+# Tests (not needed in production image)
+tests/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Duplicate model files
+*.tflite.1

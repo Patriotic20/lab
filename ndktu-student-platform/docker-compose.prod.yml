@@ -1,0 +1,40 @@
+# Production environment - with nginx reverse proxy
+# Run with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend
+      - backend
+      - pgadmin
+    networks:
+      - app_network
+
+  backend:
+    ports: []
+    expose:
+      - "8000"
+
+  frontend:
+    ports: []
+    expose:
+      - "80"
+
+  database:
+    ports: []
+
+  redis:
+    ports: []
+
+  pgadmin:
+    ports: []
+    expose:
+      - "5050"
