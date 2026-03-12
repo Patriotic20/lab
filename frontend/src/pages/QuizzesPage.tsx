@@ -82,9 +82,9 @@ const QuizzesPage = () => {
     );
 
     // Fetch data for filters (all items)
-    const { data: allSubjectsData } = useSubjects(1, 100);
-    const { data: allGroupsData } = useGroups(1, 100, '');
-    const { data: allTeachersData } = useTeachers(1, 600);
+    const { data: allSubjectsData } = useSubjects(1, 1000);
+    const { data: allGroupsData } = useGroups(1, 1000, '');
+    const { data: allTeachersData } = useTeachers(1, 1000); // Increased limit to fetch more teachers
 
     const updateQuizMutation = useUpdateQuiz();
     const deleteQuizMutation = useDeleteQuiz();
@@ -370,6 +370,17 @@ const QuizModal = ({
     const { user } = useAuth();
     const isTeacher = user?.roles?.some(r => r.name.toLowerCase() === 'teacher');
 
+    const [teacherSearch, setTeacherSearch] = useState('');
+    const [debouncedTeacherSearch, setDebouncedTeacherSearch] = useState('');
+
+    // Debounce teacher search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedTeacherSearch(teacherSearch);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [teacherSearch]);
+
     const {
         register,
         handleSubmit,
@@ -401,6 +412,9 @@ const QuizModal = ({
     const { data: allSubjectsData } = useSubjects(1, 200);
     const { data: allGroupsData } = useGroups(1, 200, '');
 
+    // Fetch teachers with search capability
+    const { data: searchTeachersData } = useTeachers(1, 100, debouncedTeacherSearch);
+
     // Fetch the selected teacher's assigned subjects and groups
     const { data: assignedSubjectsData } = useTeacherAssignedSubjects(
         effectiveUserId ? parseInt(effectiveUserId) : undefined
@@ -421,6 +435,12 @@ const QuizModal = ({
     const groupOptions = effectiveUserId && assignedGroupsData
         ? assignedGroupsData.group_teachers.map(gt => ({ value: gt.group_id.toString(), label: gt.group.name }))
         : allGroups.map(g => ({ value: g.id.toString(), label: g.name }));
+
+    // Use searched teachers if available, fallback to static teachers list
+    const teacherOptions = (searchTeachersData?.teachers || teachers).map(t => ({
+        value: t.user_id.toString(),
+        label: t.full_name
+    }));
 
     useEffect(() => {
         if (!isOpen) return;
@@ -556,7 +576,7 @@ const QuizModal = ({
                             control={control}
                             render={({ field }) => (
                                 <Combobox
-                                    options={teachers.map(t => ({ value: t.user_id.toString(), label: t.full_name }))}
+                                    options={teacherOptions}
                                     value={field.value}
                                     onChange={(val) => {
                                         field.onChange(val);
@@ -565,6 +585,7 @@ const QuizModal = ({
                                     }}
                                     placeholder="O'qituvchini tanlang"
                                     searchPlaceholder="Qidirish..."
+                                    onSearchChange={setTeacherSearch}
                                 />
                             )}
                         />

@@ -2,8 +2,7 @@ import logging
 
 from fastapi import HTTPException, status
 from app.models.group.model import Group
-from sqlalchemy import func, select
-from sqlalchemy import func, select
+from sqlalchemy import func, select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.group_teachers.model import GroupTeacher
 
@@ -64,13 +63,14 @@ class GroupRepository:
         if request.teacher_id:
              stmt = stmt.join(GroupTeacher, Group.id == GroupTeacher.group_id).where(GroupTeacher.teacher_id == request.teacher_id)
 
-        stmt = stmt.offset(request.offset).limit(request.limit)
-
         if request.name:
             stmt = stmt.where(Group.name.ilike(f"%{request.name}%"))
         
         if request.faculty_id:
             stmt = stmt.where(Group.faculty_id == request.faculty_id)
+
+        stmt = stmt.order_by(desc(Group.created_at))
+        stmt = stmt.offset(request.offset).limit(request.limit)
 
         result = await session.execute(stmt)
         groups = result.scalars().all()

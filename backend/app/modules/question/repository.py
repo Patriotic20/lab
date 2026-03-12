@@ -2,7 +2,7 @@ import logging
 
 from fastapi import HTTPException, status
 from app.models.question.model import Question
-from sqlalchemy import func, select
+from sqlalchemy import func, select, desc
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -68,7 +68,7 @@ class QuestionRepository:
         stmt = select(Question).options(
             selectinload(Question.subject),
             selectinload(Question.user),
-        ).offset(request.offset).limit(request.limit)
+        )
 
         if request.text:
             stmt = stmt.where(Question.text.ilike(f"%{request.text}%"))
@@ -78,6 +78,9 @@ class QuestionRepository:
 
         if request.user_id:
             stmt = stmt.where(Question.user_id == request.user_id)
+
+        stmt = stmt.order_by(desc(Question.created_at))
+        stmt = stmt.offset(request.offset).limit(request.limit)
 
         result = await session.execute(stmt)
         questions = result.scalars().all()

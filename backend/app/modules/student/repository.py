@@ -2,7 +2,7 @@ import logging
 
 from fastapi import HTTPException, status
 from app.models.student.model import Student
-from sqlalchemy import func, select
+from sqlalchemy import func, select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -56,8 +56,6 @@ class StudentRepository:
         stmt = (
             select(Student)
             .options(selectinload(Student.user), selectinload(Student.group))
-            .offset(request.offset)
-            .limit(request.limit)
         )
 
         if request.search:
@@ -72,6 +70,9 @@ class StudentRepository:
         
         if request.group_id is not None:
             stmt = stmt.where(Student.group_id == request.group_id)
+
+        stmt = stmt.order_by(desc(Student.created_at))
+        stmt = stmt.offset(request.offset).limit(request.limit)
 
         result = await session.execute(stmt)
         students = result.scalars().all()

@@ -64,11 +64,11 @@ const ResultsPage = () => {
     );
 
     // Groups: scoped to teacher's assigned groups when logged in as teacher
-    const { data: groupsData, isLoading: isGroupsLoading } = useGroups(1, 100, '', groupTeacherId);
+    const { data: groupsData, isLoading: isGroupsLoading } = useGroups(1, 1000, '', groupTeacherId);
     // Subjects: backend auto-filters by current user's role; also pass teacher_id for optional explicit filter
-    const { data: subjectsData } = useSubjects(1, 100, '', subjectTeacherId);
-    const { data: quizzesData } = useQuizzes(1, 100);
-
+    const { data: subjectsData } = useSubjects(1, 1000, '', subjectTeacherId);
+    const { data: quizzesData } = useQuizzes(1, 1000);
+    
     const groups = groupsData?.groups || [];
 
     const subjectOptions = subjectsData?.subjects.map(s => ({ value: String(s.id), label: s.name })) || [];

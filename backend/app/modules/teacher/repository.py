@@ -11,7 +11,7 @@ from app.models.subject_teacher.model import SubjectTeacher
 from app.models.kafedra.model import Kafedra
 from app.models.faculty.model import Faculty
 from app.models.results.model import Result
-from sqlalchemy import func, select
+from sqlalchemy import func, select, desc
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -103,13 +103,16 @@ class TeacherRepository:
             selectinload(Teacher.kafedra),
             selectinload(Teacher.user).selectinload(User.group_teachers).selectinload(GroupTeacher.group),
             selectinload(Teacher.subject_teachers).selectinload(SubjectTeacher.subject),
-        ).offset(request.offset).limit(request.limit)
+        )
 
         if request.full_name:
             stmt = stmt.where(Teacher.full_name.ilike(f"%{request.full_name}%"))
         
         if request.kafedra_id:
             stmt = stmt.where(Teacher.kafedra_id == request.kafedra_id)
+
+        stmt = stmt.order_by(desc(Teacher.created_at))
+        stmt = stmt.offset(request.offset).limit(request.limit)
 
         result = await session.execute(stmt)
         teachers = result.scalars().all()

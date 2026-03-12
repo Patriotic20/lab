@@ -3,7 +3,7 @@ import logging
 from fastapi import HTTPException, status
 from app.models.results.model import Result
 from app.models.user.model import User
-from sqlalchemy import func, select
+from sqlalchemy import func, select, desc
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.teacher.model import Teacher
@@ -46,7 +46,7 @@ class ResultRepository:
             selectinload(Result.quiz),
             selectinload(Result.subject),
             selectinload(Result.group),
-        ).offset(request.offset).limit(request.limit)
+        )
 
         is_teacher = any(role.name.lower() == "teacher" for role in current_user.roles)
         is_student = any(role.name.lower() == "student" for role in current_user.roles)
@@ -69,6 +69,7 @@ class ResultRepository:
             st_result = await session.execute(st_stmt)
             allowed_subject_ids = st_result.scalars().all()
 
+            teacher_filter = None
             if allowed_group_ids and allowed_subject_ids:
                 teacher_filter = (
                     Result.group_id.in_(allowed_group_ids)
@@ -81,7 +82,8 @@ class ResultRepository:
             else:
                 teacher_filter = Result.id == -1
 
-            stmt = stmt.where(teacher_filter)
+            if teacher_filter is not None:
+                stmt = stmt.where(teacher_filter)
 
         if request.user_id:
             stmt = stmt.where(Result.user_id == request.user_id)
@@ -97,6 +99,9 @@ class ResultRepository:
 
         if request.grade is not None:
             stmt = stmt.where(Result.grade == request.grade)
+
+        stmt = stmt.order_by(desc(Result.created_at))
+        stmt = stmt.offset(request.offset).limit(request.limit)
 
         result = await session.execute(stmt)
         results = result.scalars().all()

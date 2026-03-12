@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from app.models.quiz.model import Quiz
 from app.models.question.model import Question
 from app.models.quiz_questions.model import QuizQuestion
-from sqlalchemy import func, select, or_
+from sqlalchemy import func, select, or_, desc
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user.model import User
@@ -102,7 +102,7 @@ class QuizRepository:
     async def list_quizzes(
         self, session: AsyncSession, request: QuizListRequest, current_user: User
     ) -> QuizListResponse:
-        stmt = select(Quiz).offset(request.offset).limit(request.limit)
+        stmt = select(Quiz)
 
         is_teacher = any(role.name.lower() == "teacher" for role in current_user.roles)
         is_student = any(role.name.lower() == "student" for role in current_user.roles)
@@ -157,6 +157,9 @@ class QuizRepository:
 
         if request.is_active is not None:
              stmt = stmt.where(Quiz.is_active == request.is_active)
+
+        stmt = stmt.order_by(desc(Quiz.created_at))
+        stmt = stmt.offset(request.offset).limit(request.limit)
 
         result = await session.execute(stmt)
         quizzes = result.scalars().all()
