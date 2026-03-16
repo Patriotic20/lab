@@ -1,1 +1,0 @@
-# ndktu-student-platform

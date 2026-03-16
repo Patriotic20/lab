@@ -1,0 +1,32 @@
+# General
+.DS_Store
+Thumbs.db
+*.log
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project specific
+.env
+.venv/
+__pycache__/
+*.py[cod]
+node_modules/
+dist/
+
+# Docker data / Volumes
+postgres_data_quiz/
+redis_data/
+pgadmin_data/
+backups/
+ndktu-student-platform/backups/
+ndktu-student-platform/backend/logs/
+ndktu-student-platform/backend/uploads/
+ndktu-student-platform/backend/cheating_evidence/
+
+# Ignore sub-project specific local envs
+ndktu-student-platform/backend/.env
+ndktu-student-face-detection/.env
