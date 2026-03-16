@@ -26,11 +26,22 @@ fi
 
 BACKUP_DIR_BASE="${BACKUP_DIR_BASE:-$PROJECT_DIR/backups}"
 BACKUP_DIR="$BACKUP_DIR_BASE"
-ENV_FILE="$PROJECT_DIR/backend/.env"
+ROOT_MASTER_ENV="$(dirname "$PROJECT_DIR")/.env"
+ROOT_ENV="$PROJECT_DIR/.env"
+BACKEND_ENV="$PROJECT_DIR/backend/.env"
 DB_CONTAINER="database"
 
-if [ ! -f "$ENV_FILE" ]; then
-    echo "❌ .env file not found at $ENV_FILE"
+ENV_FILE=""
+if [ -f "$ROOT_MASTER_ENV" ]; then
+    ENV_FILE="$ROOT_MASTER_ENV"
+elif [ -f "$ROOT_ENV" ]; then
+    ENV_FILE="$ROOT_ENV"
+elif [ -f "$BACKEND_ENV" ]; then
+    ENV_FILE="$BACKEND_ENV"
+fi
+
+if [ -z "$ENV_FILE" ]; then
+    echo "❌ Error: Could not find any .env file"
     exit 1
 fi
 

@@ -1,11 +1,11 @@
 services:
   backend:
     build:
-      context: ./backend
+      context: ./ndktu-student-platform/backend
       dockerfile: Dockerfile
-    container_name: nusmt_test
+    container_name: nusmt_backend
     restart: always
-    env_file: ./backend/.env
+    env_file: .env
     depends_on:
       database:
         condition: service_healthy
@@ -30,11 +30,32 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./ndktu-student-platform/frontend
     container_name: frontend
     restart: always
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./ndktu-student-platform/nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - app_network
+
+  face-detection:
+    build:
+      context: ./ndktu-student-face-detection
+      dockerfile: Dockerfile
+    image: ndktu-face-detection:latest
+    container_name: face-detection
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - MODEL_PATH=/app/blaze_face_short_range.tflite
+      - LOG_LEVEL=INFO
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     networks:
       - app_network
 
@@ -42,7 +63,7 @@ services:
     image: postgres:17
     container_name: database
     restart: always
-    env_file: ./backend/.env
+    env_file: .env
     networks:
       - app_network
     healthcheck:
@@ -72,7 +93,7 @@ services:
     image: dpage/pgadmin4
     container_name: pgadmin
     restart: always
-    env_file: ./backend/.env
+    env_file: .env
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@admin.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}

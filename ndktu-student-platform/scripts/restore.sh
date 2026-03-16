@@ -8,13 +8,16 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+ROOT_MASTER_ENV="$(dirname "$PROJECT_DIR")/.env"
 ROOT_ENV="$PROJECT_DIR/.env"
 BACKEND_ENV="$PROJECT_DIR/backend/.env"
 DB_CONTAINER="database"
 
-# Try to load from root .env first, then backend .env
+# Try to load from master root .env first, then sub-project root, then backend .env
 ENV_FILE=""
-if [ -f "$ROOT_ENV" ]; then
+if [ -f "$ROOT_MASTER_ENV" ]; then
+    ENV_FILE="$ROOT_MASTER_ENV"
+elif [ -f "$ROOT_ENV" ]; then
     ENV_FILE="$ROOT_ENV"
 elif [ -f "$BACKEND_ENV" ]; then
     ENV_FILE="$BACKEND_ENV"
@@ -44,7 +47,13 @@ fi
 
 BACKUP_FILE="$1"
 if [[ "$BACKUP_FILE" != /* ]]; then
-    BACKUP_FILE="$PROJECT_DIR/$BACKUP_FILE"
+    # First try relative to current PWD
+    if [ -f "$BACKUP_FILE" ]; then
+        BACKUP_FILE="$(realpath "$BACKUP_FILE")"
+    else
+        # Fallback to PROJECT_DIR relative
+        BACKUP_FILE="$PROJECT_DIR/$BACKUP_FILE"
+    fi
 fi
 
 if [ ! -f "$BACKUP_FILE" ]; then
