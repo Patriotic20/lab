@@ -55,6 +55,9 @@ from starlette.requests import Request
 
 class ForceHTTPSMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        # Don't force HTTPS on localhost to allow local development without SSL
+        if request.url.hostname in ("localhost", "127.0.0.1"):
+            return await call_next(request)
         request.scope["scheme"] = "https"
         return await call_next(request)
 

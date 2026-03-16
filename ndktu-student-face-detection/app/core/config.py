@@ -1,11 +1,17 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # Face detection
-    model_path: str = "blaze_face_short_range.tflite"
+    model_path: str = str(BASE_DIR / "blaze_face_short_range.tflite")
     sample_fps: int = 2
     min_detection_confidence: float = 0.5
 
