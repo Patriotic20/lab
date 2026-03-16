@@ -30,3 +30,4 @@ ndktu-student-platform/backend/cheating_evidence/
 # Ignore sub-project specific local envs
 ndktu-student-platform/backend/.env
 ndktu-student-face-detection/.env
+.env

@@ -36,6 +36,7 @@ const QuizTestPage = () => {
     // Cheating detection
     const [cheatingDetected, setCheatingDetected] = useState(false);
     const [cheatingReason, setCheatingReason] = useState('Multiple faces detected');
+    const [cheatingImageUrl, setCheatingImageUrl] = useState<string | undefined>(undefined);
 
     // Results phase
     const [results, setResults] = useState<EndQuizResponse | null>(null);
@@ -88,11 +89,12 @@ const QuizTestPage = () => {
         setAnswers((prev: Record<number, string>) => ({ ...prev, [questionId]: option }));
     };
 
-    const handleSubmit = useCallback((isCheatingOverride?: boolean, reasonOverride?: string) => {
+    const handleSubmit = useCallback((isCheatingOverride?: boolean, reasonOverride?: string, imageUrlOverride?: string) => {
         if (!quizData || endQuizMutation.isPending) return;
 
         const isCurrentlyCheating = isCheatingOverride ?? cheatingDetected;
         const currentReason = reasonOverride ?? (isCurrentlyCheating ? cheatingReason : undefined);
+        const currentImageUrl = imageUrlOverride ?? (isCurrentlyCheating ? cheatingImageUrl : undefined);
 
         const answerList: AnswerDTO[] = quizData.questions.map((q) => {
             const selectedKey = answers[q.id];
@@ -115,6 +117,7 @@ const QuizTestPage = () => {
             answers: answerList,
             cheating_detected: isCurrentlyCheating,
             reason: isCurrentlyCheating ? currentReason : undefined,
+            cheating_image_url: currentImageUrl,
         }, {
             onSuccess: (data) => {
                 setResults(data);
@@ -181,17 +184,24 @@ const QuizTestPage = () => {
         
         if (quizData && user) {
             try {
-                await cheatingImageService.uploadCheatingImage({
+                const response = await cheatingImageService.uploadCheatingImage({
                     quiz_id: quizData.quiz_id,
                     user_id: user.id || null,
                     image_data: imageData,
                 });
+                if (response.success && response.image_url) {
+                    setCheatingImageUrl(response.image_url);
+                    handleSubmit(true, reason, response.image_url);
+                } else {
+                    handleSubmit(true, reason);
+                }
             } catch (error) {
                 console.error('Failed to upload cheating evidence:', error);
+                handleSubmit(true, reason);
             }
+        } else {
+            handleSubmit(true, reason);
         }
-        
-        handleSubmit(true, reason);
     }, [quizData, user, handleSubmit, cheatingDetected]);
 
     // ================================

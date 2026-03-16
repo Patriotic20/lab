@@ -32,6 +32,7 @@ export interface EndQuizRequest {
     answers: AnswerDTO[];
     cheating_detected?: boolean;
     reason?: string;
+    cheating_image_url?: string;
 }
 
 export interface EndQuizResponse {

@@ -48,7 +48,7 @@ services:
     env_file:
       - .env
     environment:
-      - MODEL_PATH=/app/blaze_face_short_range.tflite
+      - MODEL_PATH=/face/blaze_face_short_range.tflite
       - LOG_LEVEL=INFO
     healthcheck:
       test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')" ]

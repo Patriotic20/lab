@@ -220,7 +220,8 @@ class QuizProcessRepository:
             wrong_answers=wrong_count,
             grade=grade,
             cheating_detected=data.cheating_detected or False,
-            reason_for_stop=data.reason if data.cheating_detected else None
+            reason_for_stop=data.reason if data.cheating_detected else None,
+            cheating_image_url=data.cheating_image_url
         )
         session.add(result)
         

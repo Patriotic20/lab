@@ -26,6 +26,7 @@ class Result(Base, IdIntPk, TimestampMixin):
     # Cheating detection fields
     cheating_detected: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     reason_for_stop: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    cheating_image_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="results")
     quiz: Mapped["Quiz"] = relationship("Quiz", back_populates="results")

@@ -29,6 +29,7 @@ class EndQuizRequest(BaseModel):
     answers: list[AnswerDTO]
     cheating_detected: Optional[bool] = False
     reason: Optional[str] = None
+    cheating_image_url: Optional[str] = None
 
 class EndQuizResponse(BaseModel):
     total_questions: int

@@ -95,3 +95,9 @@ backup-images:
 restore:
 	@if [ -z "$(FILE)" ]; then echo "Usage: make restore FILE=path/to/backup.sql.gz"; exit 1; fi
 	./ndktu-student-platform/scripts/restore.sh $$(realpath $(FILE))
+
+# Run database migrations
+migrate:
+	docker exec nusmt_backend sh -c "cd /face/app && uv run alembic revision --autogenerate -m 'add_cheating_image_url'"
+	docker cp nusmt_backend:/face/app/migrations/versions/. ./ndktu-student-platform/backend/app/migrations/versions/
+	docker exec nusmt_backend sh -c "cd /face/app && uv run alembic upgrade head"
