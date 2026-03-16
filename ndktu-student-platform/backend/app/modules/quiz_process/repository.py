@@ -147,41 +147,6 @@ class QuizProcessRepository:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
             )
 
-        # If cheating is detected, create result with minimal data
-        if data.cheating_detected:
-            result = Result(
-                user_id=user.id,
-                quiz_id=quiz.id,
-                subject_id=quiz.subject_id,
-                group_id=quiz.group_id,
-                correct_answers=0,
-                wrong_answers=len(data.answers) if data.answers else 0,
-                grade=2,  # Failing grade
-                cheating_detected=True,
-                reason_for_stop=data.reason or "Multiple faces detected"
-            )
-            session.add(result)
-            
-            try:
-                await session.commit()
-                await session.refresh(result)
-            except Exception as e:
-                await session.rollback()
-                logger.error(f"Error saving cheating result: {e}", exc_info=True)
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Database error while saving result: {e}",
-                )
-
-            return EndQuizResponse(
-                total_questions=len(data.answers) if data.answers else 0,
-                correct_answers=0,
-                wrong_answers=len(data.answers) if data.answers else 0,
-                grade=2,
-                cheating_detected=True,
-                reason=data.reason or "Multiple faces detected"
-            )
-
         correct_count = 0
         wrong_count = 0
         
@@ -197,7 +162,6 @@ class QuizProcessRepository:
         questions_map = {q.id: q for q in q_result.scalars().all()}
         
         # Validate that all question IDs exist
-        # If any question_id from answers is not in questions_map, it's invalid
         for ans in data.answers:
             if ans.question_id not in questions_map:
                 raise HTTPException(
@@ -216,7 +180,6 @@ class QuizProcessRepository:
                 else:
                     wrong_count += 1
             else:
-                # Question not found? Count as wrong?
                 wrong_count += 1
             
             # Save user answer
@@ -230,9 +193,8 @@ class QuizProcessRepository:
             )
             session.add(user_answer)
         
-        total_questions = len(data.answers) # Or strictly correct + wrong
+        total_questions = len(data.answers)
         
-        # Calculate grade (0-100)
         # Calculate percentage (0-100)
         percentage = 0
         if total_questions > 0:
@@ -249,19 +211,16 @@ class QuizProcessRepository:
             grade = 2
 
         # Create Result
-        # Assuming user_id is passed or handled via auth in router (for now relying on request data)
-        
         result = Result(
-            user_id=user.id, # Use authenticated user ID
+            user_id=user.id,
             quiz_id=quiz.id,
             subject_id=quiz.subject_id,
-            group_id=quiz.group_id, # This takes group from quiz, but maybe should take from user? 
-                                    # Result model has group_id. Let's use quiz.group_id for now as context.
+            group_id=quiz.group_id,
             correct_answers=correct_count,
             wrong_answers=wrong_count,
             grade=grade,
-            cheating_detected=False,
-            reason_for_stop=None
+            cheating_detected=data.cheating_detected or False,
+            reason_for_stop=data.reason if data.cheating_detected else None
         )
         session.add(result)
         
@@ -281,8 +240,8 @@ class QuizProcessRepository:
             correct_answers=correct_count,
             wrong_answers=wrong_count,
             grade=float(grade),
-            cheating_detected=False,
-            reason=None
+            cheating_detected=data.cheating_detected or False,
+            reason=data.reason if data.cheating_detected else None
         )
 
     async def upload_cheating_evidence(

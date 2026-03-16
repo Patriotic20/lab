@@ -43,29 +43,6 @@ const QuizTestPage = () => {
     const startQuizMutation = useStartQuiz();
     const endQuizMutation = useEndQuiz();
 
-    // Timer
-    useEffect(() => {
-        if (phase !== 'quiz' || timeLeft <= 0) return;
-
-        const timer = setInterval(() => {
-            setTimeLeft((prev: number) => {
-                if (prev <= 1) {
-                    clearInterval(timer);
-                    handleSubmit();
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [phase, timeLeft]);
-
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
 
     const handleOpenStartModal = (quiz: { id: number; title: string }) => {
         setSelectedQuiz(quiz);
@@ -111,8 +88,11 @@ const QuizTestPage = () => {
         setAnswers((prev: Record<number, string>) => ({ ...prev, [questionId]: option }));
     };
 
-    const handleSubmit = useCallback(() => {
+    const handleSubmit = useCallback((isCheatingOverride?: boolean, reasonOverride?: string) => {
         if (!quizData || endQuizMutation.isPending) return;
+
+        const isCurrentlyCheating = isCheatingOverride ?? cheatingDetected;
+        const currentReason = reasonOverride ?? (isCurrentlyCheating ? cheatingReason : undefined);
 
         const answerList: AnswerDTO[] = quizData.questions.map((q) => {
             const selectedKey = answers[q.id];
@@ -133,38 +113,72 @@ const QuizTestPage = () => {
             quiz_id: quizData.quiz_id,
             user_id: user?.id || null,
             answers: answerList,
-            cheating_detected: cheatingDetected,
-            reason: cheatingDetected ? cheatingReason : undefined,
+            cheating_detected: isCurrentlyCheating,
+            reason: isCurrentlyCheating ? currentReason : undefined,
         }, {
             onSuccess: (data) => {
                 setResults(data);
                 setPhase('results');
             },
-            onError: (error: unknown) => {
+            onError: (error: any) => {
                 console.error('Failed to submit quiz', error);
-                alert('Testni yuborishda xatolik yuz berdi. Iltimos qayta urinib ko\'ring.');
+                
+                // If it was a cheating submission, we still want to show the results phase
+                // even if the backend call failed (e.g., due to duplicate submission)
+                if (isCurrentlyCheating) {
+                    setResults({
+                        total_questions: answerList.length,
+                        correct_answers: 0,
+                        wrong_answers: answerList.length,
+                        grade: 2,
+                        cheating_detected: true,
+                        reason: currentReason || 'Ko\'p juzli shaxs aniqlandi'
+                    });
+                    setPhase('results');
+                } else {
+                    alert('Testni yuborishda xatolik yuz berdi. Iltimos qayta urinib ko\'ring.');
+                }
             }
         });
     }, [quizData, answers, user, endQuizMutation, cheatingDetected, cheatingReason]);
 
-    const handleRestart = () => {
-        setPhase('start');
-        setSelectedQuiz(null);
-        setPin('');
-        setQuizData(null);
-        setAnswers({});
-        setResults(null);
-        setTimeLeft(0);
-        setCurrentQuestionIndex(0);
-        setCheatingDetected(false);
-        setCheatingReason('Multiple faces detected');
+    // Timer
+    useEffect(() => {
+        if (phase !== 'quiz' || timeLeft <= 0 || cheatingDetected) return;
+
+        const timer = setInterval(() => {
+            setTimeLeft((prev: number) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    handleSubmit();
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [phase, timeLeft, cheatingDetected, handleSubmit]);
+
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    const handleCheatingDetected = useCallback(async (imageData: string) => {
+    const handleRestart = useCallback(() => {
+        // We use window.location.reload() to ensure a completely fresh state 
+        // when starting a new quiz session, which solves issues with state lingering.
+        window.location.reload();
+    }, []);
+
+    const handleDifferentPersonDetected = useCallback(async (imageData: string) => {
+        if (cheatingDetected) return;
+
         setCheatingDetected(true);
-        setCheatingReason('Multiple faces detected');
+        const reason = 'Different person detected';
+        setCheatingReason(reason);
         
-        // Upload cheating evidence image
         if (quizData && user) {
             try {
                 await cheatingImageService.uploadCheatingImage({
@@ -174,15 +188,11 @@ const QuizTestPage = () => {
                 });
             } catch (error) {
                 console.error('Failed to upload cheating evidence:', error);
-                // Continue anyway - don't block the cheating detection
             }
         }
         
-        // Auto-submit quiz after brief delay
-        setTimeout(() => {
-            handleSubmit();
-        }, 500);
-    }, [quizData, user, handleSubmit]);
+        handleSubmit(true, reason);
+    }, [quizData, user, handleSubmit, cheatingDetected]);
 
     // ================================
     // START PHASE
@@ -374,7 +384,7 @@ const QuizTestPage = () => {
                                 </div>
                             )}
 
-                            <Button className="w-full" onClick={handleRestart}>
+                            <Button type="button" className="w-full" onClick={handleRestart}>
                                 <ArrowLeft className="mr-2 h-4 w-4" />
                                 Boshqa test ishlash
                             </Button>
@@ -412,7 +422,8 @@ const QuizTestPage = () => {
             {ENABLE_QUIZ_PROCTORING && (
                 <QuizVideoMonitoring
                     active={phase === 'quiz' && !cheatingDetected}
-                    onCheatingDetected={handleCheatingDetected}
+                    onCheatingDetected={handleDifferentPersonDetected} // Reuse or separate if needed
+                    onDifferentPersonDetected={handleDifferentPersonDetected}
                     faceDetectionServiceUrl={FACE_DETECTION_SERVICE_URL}
                 />
             )}
@@ -510,7 +521,7 @@ const QuizTestPage = () => {
                 <div className="flex gap-2">
                     {isLastQuestion ? (
                         <Button
-                            onClick={handleSubmit}
+                            onClick={() => handleSubmit()}
                             isLoading={endQuizMutation.isPending}
                             disabled={answeredCount === 0}
                         >

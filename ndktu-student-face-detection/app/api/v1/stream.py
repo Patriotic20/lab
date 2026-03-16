@@ -32,12 +32,16 @@ async def realtime_stream(websocket: WebSocket) -> None:
     detector = get_detector()
     logger.info("WebSocket client connected: %s", websocket.client)
 
+    reference_encoding = None
+    last_recognition_time = 0
+    import time
+
     try:
         while True:
             # 1. Receive base64 JPEG frame from browser
             data: str = await websocket.receive_text()
 
-            # Strip the data-URL header if present: "data:image/jpeg;base64,..."
+            # Strip the data-URL header if present
             if "," in data:
                 _, data = data.split(",", 1)
 
@@ -53,13 +57,36 @@ async def realtime_stream(websocket: WebSocket) -> None:
                 await websocket.send_json({"error": "invalid frame", "has_two_faces": False, "face_count": 0})
                 continue
 
-            # 3. Detect faces (runs sync — fast enough at ~10 FPS on CPU)
+            # 3. Detect and Compare faces
             face_count = detector.count_faces(frame)
+            is_different_person = False
+            current_time = time.time()
+
+            # Recognition logic: Frequent counting but infrequent identity check
+            if face_count == 1:
+                # 1. Check if we need to capture or verify identity (every 5 seconds)
+                if reference_encoding is None or (current_time - last_recognition_time >= 5.0):
+                    current_encoding = detector.get_face_encoding(frame)
+                    
+                    if reference_encoding is None and current_encoding is not None:
+                        # Capture the FIRST face as the owner
+                        reference_encoding = current_encoding
+                        last_recognition_time = current_time
+                        logger.info("Reference face captured for session.")
+                    elif reference_encoding is not None and current_encoding is not None:
+                        # Periodic identity verification
+                        is_match = detector.compare_faces(reference_encoding, current_encoding)
+                        last_recognition_time = current_time
+                        if not is_match:
+                            is_different_person = True
+                            logger.warning("Different person detected!")
 
             # 4. Reply
             await websocket.send_json({
                 "has_two_faces": face_count > 1,
                 "face_count": face_count,
+                "is_different_person": is_different_person,
+                "is_reference_captured": reference_encoding is not None
             })
 
     except WebSocketDisconnect:

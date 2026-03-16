@@ -5,17 +5,20 @@ import { useVideoMonitoring } from '@/hooks/useVideoMonitoring';
 export interface QuizVideoMonitoringProps {
     active: boolean;
     onCheatingDetected: (imageData: string) => void;
+    onDifferentPersonDetected: (imageData: string) => void;
     faceDetectionServiceUrl: string;
 }
 
 export function QuizVideoMonitoring({
     active,
     onCheatingDetected,
+    onDifferentPersonDetected,
     faceDetectionServiceUrl,
 }: QuizVideoMonitoringProps) {
     const { state, startMonitoring, stopMonitoring } = useVideoMonitoring({
         faceDetectionServiceUrl,
         onMultipleFacesDetected: onCheatingDetected,
+        onDifferentPersonDetected,
         frameInterval: 500, // Send frame every 500ms
     });
 
@@ -43,7 +46,7 @@ export function QuizVideoMonitoring({
                     </div>
                     <div className="flex items-center gap-1">
                         <Radio className="h-3 w-3 animate-pulse text-red-500" />
-                        <span className="text-xs text-red-500">Yashil</span>
+                        <span className="text-xs text-red-500">Jonli</span>
                     </div>
                 </div>
 
@@ -55,19 +58,20 @@ export function QuizVideoMonitoring({
                             <div className="text-xs">
                                 <p className="font-medium text-amber-900">Xatolik</p>
                                 <p className="text-amber-700">{state.error}</p>
-                                <p className="text-amber-600 mt-1 text-xs">
-                                    Iltimos kameraga ruxsat bering yoki qayta urinib ko'ring.
-                                </p>
                             </div>
                         </div>
                     </div>
                 ) : state.isConnected ? (
-                    <div className="bg-green-50 border border-green-200 rounded p-2 mb-3">
-                        <p className="text-xs text-green-700">
-                            <span className="font-medium">Holat:</span> Faol (Siz yagona bo'lishingiz kerak)
+                    <div className={`${state.isDifferentPerson ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'} border rounded p-2 mb-3`}>
+                        <p className={`text-xs ${state.isDifferentPerson ? 'text-red-700 font-bold' : 'text-green-700'}`}>
+                            {state.isDifferentPerson 
+                                ? 'OGOHLANTIRISH: Begona shaxs!' 
+                                : state.isReferenceCaptured 
+                                    ? 'Identifikatsiya: Tasdiqlandi' 
+                                    : 'Identifikatsiya qilinmoqda...'}
                         </p>
                         <p className="text-xs text-green-600 mt-1">
-                            Juzlar aniqlandi: {state.lastFaceCount}
+                            Juzlar: {state.lastFaceCount}
                         </p>
                     </div>
                 ) : state.isActive ? (
@@ -80,7 +84,7 @@ export function QuizVideoMonitoring({
                     </div>
                 )}
 
-                {/* Camera Preview - Small container */}
+                {/* Camera Preview */}
                 <div className="bg-black rounded h-40 flex items-center justify-center overflow-hidden relative mb-3">
                     {state.isActive && !state.error ? (
                         <div className="relative w-full h-full bg-black">
@@ -93,7 +97,7 @@ export function QuizVideoMonitoring({
                                     transform: 'scaleX(-1)',
                                 }}
                             />
-                            <div className="absolute inset-0 border-2 border-green-500 rounded pointer-events-none" />
+                            <div className={`absolute inset-0 border-2 ${state.isDifferentPerson ? 'border-red-500 animate-pulse' : 'border-green-500'} rounded pointer-events-none`} />
                         </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center text-gray-400">
@@ -105,11 +109,11 @@ export function QuizVideoMonitoring({
 
                 {/* Info Text */}
                 <div className="text-xs text-gray-600 bg-gray-50 rounded p-2">
-                    <p className="font-medium mb-1">Ogohlantirildi:</p>
+                    <p className="font-medium mb-1">Qoidalar:</p>
                     <ul className="space-y-0.5 text-gray-700">
-                        <li>• Yagona bo'lishingiz kerak</li>
-                        <li>• Ikki yoki ko'proq juz aniqlansa test to'xtatiladi</li>
-                        <li>• Kamera ijozisiz davom etin'you</li>
+                        <li>• Faqat siz bo'lishingiz kerak</li>
+                        <li>• Boshqa shaxs aniqlansa test to'xtatildi</li>
+                        <li>• Ikki yoki ko'proq juz taqiqlangan</li>
                     </ul>
                 </div>
             </div>

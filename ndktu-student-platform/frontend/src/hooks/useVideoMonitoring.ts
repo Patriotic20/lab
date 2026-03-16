@@ -3,8 +3,9 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 export interface VideoMonitoringConfig {
     faceDetectionServiceUrl: string;
     onMultipleFacesDetected: (imageData: string) => void;
+    onDifferentPersonDetected?: (imageData: string) => void;
     onError?: (error: string) => void;
-    frameInterval?: number; // milliseconds between frames sent (default: 1000)
+    frameInterval?: number;
 }
 
 export interface VideoMonitoringState {
@@ -12,6 +13,8 @@ export interface VideoMonitoringState {
     hasPermission: boolean;
     isConnected: boolean;
     lastFaceCount: number;
+    isDifferentPerson: boolean;
+    isReferenceCaptured: boolean;
     error: string | null;
 }
 
@@ -21,6 +24,8 @@ export function useVideoMonitoring(config: VideoMonitoringConfig) {
         hasPermission: false,
         isConnected: false,
         lastFaceCount: 0,
+        isDifferentPerson: false,
+        isReferenceCaptured: false,
         error: null,
     });
 
@@ -105,14 +110,26 @@ export function useVideoMonitoring(config: VideoMonitoringConfig) {
                 try {
                     const data = JSON.parse(event.data);
                     const faceCount = data.face_count || 0;
+                    const hasTwoFaces = data.has_two_faces || false;
+                    const isDifferentPerson = data.is_different_person || false;
+                    const isReferenceCaptured = data.is_reference_captured || false;
 
-                    setState((prev: VideoMonitoringState) => ({ ...prev, lastFaceCount: faceCount }));
+                    setState((prev: VideoMonitoringState) => ({ 
+                        ...prev, 
+                        lastFaceCount: faceCount,
+                        isDifferentPerson,
+                        isReferenceCaptured
+                    }));
 
-                    // Check if multiple faces detected
-                    if (faceCount >= 2) {
+                    // Check for violations
+                    if (hasTwoFaces) {
                         const imageData = lastImageCapture.current || captureAndEncodeFrame();
                         config.onMultipleFacesDetected(imageData);
-                        stopMonitoring();
+                    } else if (isDifferentPerson) {
+                        const imageData = lastImageCapture.current || captureAndEncodeFrame();
+                        if (config.onDifferentPersonDetected) {
+                            config.onDifferentPersonDetected(imageData);
+                        }
                     }
                 } catch (error) {
                     console.error('Error parsing face detection response:', error);
