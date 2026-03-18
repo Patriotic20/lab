@@ -11,7 +11,7 @@ from app.models.subject_teacher.model import SubjectTeacher
 from app.models.kafedra.model import Kafedra
 from app.models.faculty.model import Faculty
 from app.models.results.model import Result
-from sqlalchemy import func, select, desc
+from sqlalchemy import func, select, desc, case, cast, Float
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -351,15 +351,31 @@ class TeacherRepository:
         group_id: int | None = None,
     ) -> TeacherRankingResponse:
         """
-        Return teachers ranked by Bayesian-weighted average student grade.
-
-        All filters are optional and can be combined:
-            faculty_id  – restrict to teachers in this faculty
-            kafedra_id  – restrict to teachers in this kafedra
-            group_id    – restrict to teachers assigned to this group
-
-        No filters = rank ALL teachers (entire university).
+        Return teachers ranked by weighted rating and student performance.
+        Weighted Formula:
+            Grade 5: 1.2, Grade 4: 1.0, Grade 3: 0.5, Grade 2: -1.0
+        Volume Factor:
+            Adds a small bonus based on student count to favor teachers with more students.
         """
+        # Define Weighted Points logic
+        weighted_points = case(
+            (Result.grade == 5, 5 * 1.2), # 6.0
+            (Result.grade == 4, 4 * 1.0), # 4.0
+            (Result.grade == 3, 3 * 0.5), # 1.5
+            (Result.grade == 2, 2 * -1.0),# -2.0
+            else_=0
+        )
+
+        total_students = func.count(func.distinct(Result.user_id)).label("student_count")
+        # Use nullif to avoid division by zero and coalesce to provide a default 1.0 rating
+        raw_rating = func.sum(weighted_points) / cast(func.nullif(func.count(Result.id), 0), Float)
+        
+        # Clamp between 1.0 and 5.0 and ensure it's not NULL
+        clamped_rating = func.coalesce(func.least(5.0, func.greatest(1.0, raw_rating)), 0.0)
+        
+        # Rank score adds volume boost: 0.01 * Log10(Count + 1)
+        rank_score = (clamped_rating + (func.log(cast(total_students + 1, Float)) * 0.01)).label("rank_score")
+
         columns = [
             Teacher.id.label("teacher_id"),
             Teacher.full_name,
@@ -367,8 +383,10 @@ class TeacherRepository:
             Kafedra.name.label("kafedra_name"),
             Kafedra.faculty_id,
             Faculty.name.label("faculty_name"),
-            func.count(func.distinct(Result.user_id)).label("student_count"),
+            total_students,
             func.coalesce(func.avg(Result.grade), 0).label("avg_grade"),
+            clamped_rating.label("weighted_rating"),
+            rank_score
         ]
 
         stmt = (
@@ -390,43 +408,28 @@ class TeacherRepository:
         stmt = stmt.group_by(
             Teacher.id, Teacher.full_name, Teacher.kafedra_id,
             Kafedra.name, Kafedra.faculty_id, Faculty.name,
-        )
+        ).order_by(desc("rank_score"))
 
         rows = (await session.execute(stmt)).mappings().all()
-        if not rows:
-            return TeacherRankingResponse(
-                total=0, teachers=[],
-                faculty_id=faculty_id, kafedra_id=kafedra_id, group_id=group_id,
-            )
-
-        entries = [
-            {
-                "row": row,
-                "student_count": int(row["student_count"]),
-                "avg_grade": float(row["avg_grade"]),
-            }
-            for row in rows
-        ]
-        entries = self._bayesian(entries)
-        entries.sort(key=lambda e: (e["weighted_rating"], e["student_count"]), reverse=True)
-
+        
         teachers = [
             TeacherRankItem(
                 rank=rank,
-                teacher_id=e["row"]["teacher_id"],
-                full_name=e["row"]["full_name"],
-                kafedra_id=e["row"]["kafedra_id"],
-                kafedra_name=e["row"]["kafedra_name"],
-                faculty_id=e["row"]["faculty_id"],
-                faculty_name=e["row"]["faculty_name"],
+                teacher_id=row["teacher_id"],
+                full_name=row["full_name"],
+                kafedra_id=row["kafedra_id"],
+                kafedra_name=row["kafedra_name"],
+                faculty_id=row["faculty_id"],
+                faculty_name=row["faculty_name"],
                 group_id=None,
                 group_name=None,
-                student_count=e["student_count"],
-                avg_grade=round(e["avg_grade"], 2),
-                weighted_rating=e["weighted_rating"],
+                student_count=int(row["student_count"]),
+                avg_grade=round(float(row["avg_grade"]), 2),
+                weighted_rating=round(float(row["weighted_rating"]), 2),
             )
-            for rank, e in enumerate(entries, start=1)
+            for rank, row in enumerate(rows, start=1)
         ]
+
         return TeacherRankingResponse(
             total=len(teachers), teachers=teachers,
             faculty_id=faculty_id, kafedra_id=kafedra_id, group_id=group_id,
@@ -437,51 +440,50 @@ class TeacherRepository:
     # ------------------------------------------------------------------
     async def get_faculty_ranking(self, session: AsyncSession) -> FacultyRankingResponse:
         """
-        Rank faculties by the average grade of all their students.
-        Uses Bayesian weighting so smaller faculties are pulled toward the mean.
+        Rank faculties by weighted average student grade in a single pass.
         """
+        weighted_points = case(
+            (Result.grade == 5, 5 * 1.2),
+            (Result.grade == 4, 4 * 1.0),
+            (Result.grade == 3, 3 * 0.5),
+            (Result.grade == 2, 2 * -1.0),
+            else_=0
+        )
+        total_students = func.count(func.distinct(Result.user_id)).label("student_count")
+        raw_rating = func.sum(weighted_points) / cast(func.nullif(func.count(Result.id), 0), Float)
+        clamped_rating = func.coalesce(func.least(5.0, func.greatest(1.0, raw_rating)), 0.0).label("weighted_rating")
+        rank_score = (clamped_rating + (func.log(cast(total_students + 1, Float)) * 0.01)).label("rank_score")
+
         stmt = (
             select(
                 Faculty.id.label("faculty_id"),
                 Faculty.name.label("faculty_name"),
                 func.count(func.distinct(Kafedra.id)).label("kafedra_count"),
-                func.count(func.distinct(Result.user_id)).label("student_count"),
+                total_students,
                 func.coalesce(func.avg(Result.grade), 0).label("avg_grade"),
+                clamped_rating,
+                rank_score
             )
-            # Correct order: Faculty → Kafedra → Teacher → GroupTeacher → Result
-            # Teacher must appear before GroupTeacher (which references teacher.user_id)
             .join(Kafedra, Kafedra.faculty_id == Faculty.id)
             .join(Teacher, Teacher.kafedra_id == Kafedra.id)
             .join(GroupTeacher, GroupTeacher.teacher_id == Teacher.user_id)
             .join(Result, Result.group_id == GroupTeacher.group_id)
             .group_by(Faculty.id, Faculty.name)
+            .order_by(desc("rank_score"))
         )
         rows = (await session.execute(stmt)).mappings().all()
-        if not rows:
-            return FacultyRankingResponse(total=0, faculties=[])
-
-        entries = [
-            {
-                "row": row,
-                "student_count": int(row["student_count"]),
-                "avg_grade": float(row["avg_grade"]),
-            }
-            for row in rows
-        ]
-        entries = self._bayesian(entries)
-        entries.sort(key=lambda e: (e["weighted_rating"], e["student_count"]), reverse=True)
 
         faculties = [
             FacultyRankItem(
                 rank=rank,
-                faculty_id=e["row"]["faculty_id"],
-                faculty_name=e["row"]["faculty_name"],
-                kafedra_count=int(e["row"]["kafedra_count"]),
-                student_count=e["student_count"],
-                avg_grade=round(e["avg_grade"], 2),
-                weighted_rating=e["weighted_rating"],
+                faculty_id=row["faculty_id"],
+                faculty_name=row["faculty_name"],
+                kafedra_count=int(row["kafedra_count"]),
+                student_count=int(row["student_count"]),
+                avg_grade=round(float(row["avg_grade"]), 2),
+                weighted_rating=round(float(row["weighted_rating"]), 2),
             )
-            for rank, e in enumerate(entries, start=1)
+            for rank, row in enumerate(rows, start=1)
         ]
         return FacultyRankingResponse(total=len(faculties), faculties=faculties)
 
@@ -490,9 +492,20 @@ class TeacherRepository:
     # ------------------------------------------------------------------
     async def get_kafedra_ranking(self, session: AsyncSession) -> KafedraRankingResponse:
         """
-        Rank kafedras (chairs) by the average grade of all their students.
-        Uses Bayesian weighting so smaller kafedras are pulled toward the mean.
+        Rank kafedras by weighted average student grade in a single pass.
         """
+        weighted_points = case(
+            (Result.grade == 5, 5 * 1.2),
+            (Result.grade == 4, 4 * 1.0),
+            (Result.grade == 3, 3 * 0.5),
+            (Result.grade == 2, 2 * -1.0),
+            else_=0
+        )
+        total_students = func.count(func.distinct(Result.user_id)).label("student_count")
+        raw_rating = func.sum(weighted_points) / cast(func.nullif(func.count(Result.id), 0), Float)
+        clamped_rating = func.coalesce(func.least(5.0, func.greatest(1.0, raw_rating)), 0.0).label("weighted_rating")
+        rank_score = (clamped_rating + (func.log(cast(total_students + 1, Float)) * 0.01)).label("rank_score")
+
         stmt = (
             select(
                 Kafedra.id.label("kafedra_id"),
@@ -500,43 +513,33 @@ class TeacherRepository:
                 Kafedra.faculty_id,
                 Faculty.name.label("faculty_name"),
                 func.count(func.distinct(Teacher.id)).label("teacher_count"),
-                func.count(func.distinct(Result.user_id)).label("student_count"),
+                total_students,
                 func.coalesce(func.avg(Result.grade), 0).label("avg_grade"),
+                clamped_rating,
+                rank_score
             )
             .join(Faculty, Faculty.id == Kafedra.faculty_id)
             .join(Teacher, Teacher.kafedra_id == Kafedra.id)
             .join(GroupTeacher, GroupTeacher.teacher_id == Teacher.user_id)
             .join(Result, Result.group_id == GroupTeacher.group_id)
             .group_by(Kafedra.id, Kafedra.name, Kafedra.faculty_id, Faculty.name)
+            .order_by(desc("rank_score"))
         )
         rows = (await session.execute(stmt)).mappings().all()
-        if not rows:
-            return KafedraRankingResponse(total=0, kafedras=[])
-
-        entries = [
-            {
-                "row": row,
-                "student_count": int(row["student_count"]),
-                "avg_grade": float(row["avg_grade"]),
-            }
-            for row in rows
-        ]
-        entries = self._bayesian(entries)
-        entries.sort(key=lambda e: (e["weighted_rating"], e["student_count"]), reverse=True)
 
         kafedras = [
             KafedraRankItem(
                 rank=rank,
-                kafedra_id=e["row"]["kafedra_id"],
-                kafedra_name=e["row"]["kafedra_name"],
-                faculty_id=e["row"]["faculty_id"],
-                faculty_name=e["row"]["faculty_name"],
-                teacher_count=int(e["row"]["teacher_count"]),
-                student_count=e["student_count"],
-                avg_grade=round(e["avg_grade"], 2),
-                weighted_rating=e["weighted_rating"],
+                kafedra_id=row["kafedra_id"],
+                kafedra_name=row["kafedra_name"],
+                faculty_id=row["faculty_id"],
+                faculty_name=row["faculty_name"],
+                teacher_count=int(row["teacher_count"]),
+                student_count=int(row["student_count"]),
+                avg_grade=round(float(row["avg_grade"]), 2),
+                weighted_rating=round(float(row["weighted_rating"]), 2),
             )
-            for rank, e in enumerate(entries, start=1)
+            for rank, row in enumerate(rows, start=1)
         ]
         return KafedraRankingResponse(total=len(kafedras), kafedras=kafedras)
 
