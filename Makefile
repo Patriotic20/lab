@@ -110,17 +110,11 @@ deploy:
 	
 	# 1. Update Backend (Zero-Downtime)
 	@echo "Updating Backend..."
-	docker compose up -d --build --scale backend=2 --no-recreate backend
-	@echo "⏳ Waiting for the new backend instance..."
-	@sleep 20
-	docker compose up -d --scale backend=1 --no-recreate backend
+	docker compose up -d --build backend
 	
 	# 2. Update Frontend (Zero-Downtime)
 	@echo "Updating Frontend..."
-	docker compose up -d --build --scale frontend=2 --no-recreate frontend
-	@echo "⏳ Waiting for the new frontend instance..."
-	@sleep 10
-	docker compose up -d --scale frontend=1 --no-recreate frontend
+	docker compose up -d --build frontend
 	
 	@echo "✅ Deployment finished successfully!"
 	
