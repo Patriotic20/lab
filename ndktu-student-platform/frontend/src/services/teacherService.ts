@@ -124,18 +124,20 @@ export const teacherService = {
         faculty_id?: number;
         kafedra_id?: number;
         group_id?: number;
+        page?: number;
+        limit?: number;
     }): Promise<TeacherRankingResponse> => {
         const response = await api.get<TeacherRankingResponse>('/teacher/ranking/overall', { params });
         return response.data;
     },
 
-    getFacultyRanking: async (): Promise<FacultyRankingResponse> => {
-        const response = await api.get<FacultyRankingResponse>('/teacher/ranking/faculty');
+    getFacultyRanking: async (params?: { page?: number; limit?: number }): Promise<FacultyRankingResponse> => {
+        const response = await api.get<FacultyRankingResponse>('/teacher/ranking/faculty', { params });
         return response.data;
     },
 
-    getKafedraRanking: async (): Promise<KafedraRankingResponse> => {
-        const response = await api.get<KafedraRankingResponse>('/teacher/ranking/kafedra');
+    getKafedraRanking: async (params?: { page?: number; limit?: number }): Promise<KafedraRankingResponse> => {
+        const response = await api.get<KafedraRankingResponse>('/teacher/ranking/kafedra', { params });
         return response.data;
     },
 };
@@ -159,6 +161,8 @@ export interface TeacherRankItem {
 
 export interface TeacherRankingResponse {
     total: number;
+    page: number;
+    limit: number;
     teachers: TeacherRankItem[];
     faculty_id: number | null;
     kafedra_id: number | null;
@@ -178,6 +182,8 @@ export interface FacultyRankItem {
 
 export interface FacultyRankingResponse {
     total: number;
+    page: number;
+    limit: number;
     faculties: FacultyRankItem[];
 }
 
@@ -196,6 +202,8 @@ export interface KafedraRankItem {
 
 export interface KafedraRankingResponse {
     total: number;
+    page: number;
+    limit: number;
     kafedras: KafedraRankItem[];
 }
 

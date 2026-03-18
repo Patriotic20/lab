@@ -350,6 +350,8 @@ class TeacherRepository:
         faculty_id: int | None = None,
         kafedra_id: int | None = None,
         group_id: int | None = None,
+        page: int = 1,
+        limit: int = 10,
     ) -> TeacherRankingResponse:
         """
         Return teachers ranked by weighted rating and student performance.
@@ -411,11 +413,30 @@ class TeacherRepository:
             Kafedra.name, Kafedra.faculty_id, Faculty.name,
         ).order_by(desc("rank_score"))
 
+        # Calculate total count before pagination
+        count_stmt = select(func.count(func.distinct(Teacher.id))).select_from(Teacher)\
+            .join(Kafedra, Teacher.kafedra_id == Kafedra.id)\
+            .join(Faculty, Kafedra.faculty_id == Faculty.id)\
+            .join(GroupTeacher, Teacher.user_id == GroupTeacher.teacher_id)\
+            .join(Result, GroupTeacher.group_id == Result.group_id)
+        
+        if faculty_id is not None:
+            count_stmt = count_stmt.where(Kafedra.faculty_id == faculty_id)
+        if kafedra_id is not None:
+            count_stmt = count_stmt.where(Teacher.kafedra_id == kafedra_id)
+        if group_id is not None:
+            count_stmt = count_stmt.where(Result.group_id == group_id)
+            
+        total = (await session.execute(count_stmt)).scalar() or 0
+
+        # Apply pagination
+        stmt = stmt.offset((page - 1) * limit).limit(limit)
+        
         rows = (await session.execute(stmt)).mappings().all()
         
         teachers = [
             TeacherRankItem(
-                rank=rank,
+                rank=(page - 1) * limit + idx,
                 teacher_id=row["teacher_id"],
                 full_name=row["full_name"],
                 kafedra_id=row["kafedra_id"],
@@ -428,18 +449,18 @@ class TeacherRepository:
                 avg_grade=round(float(row["avg_grade"]), 2),
                 weighted_rating=round(float(row["weighted_rating"]), 2),
             )
-            for rank, row in enumerate(rows, start=1)
+            for idx, row in enumerate(rows, start=1)
         ]
 
         return TeacherRankingResponse(
-            total=len(teachers), teachers=teachers,
+            total=total, page=page, limit=limit, teachers=teachers,
             faculty_id=faculty_id, kafedra_id=kafedra_id, group_id=group_id,
         )
 
     # ------------------------------------------------------------------
     # Faculty ranking
     # ------------------------------------------------------------------
-    async def get_faculty_ranking(self, session: AsyncSession) -> FacultyRankingResponse:
+    async def get_faculty_ranking(self, session: AsyncSession, page: int = 1, limit: int = 10) -> FacultyRankingResponse:
         """
         Rank faculties by weighted average student grade in a single pass.
         """
@@ -472,11 +493,22 @@ class TeacherRepository:
             .group_by(Faculty.id, Faculty.name)
             .order_by(desc("rank_score"))
         )
+        total_stmt = select(func.count(func.distinct(Faculty.id)))\
+            .select_from(Faculty)\
+            .join(Kafedra, Kafedra.faculty_id == Faculty.id)\
+            .join(Teacher, Teacher.kafedra_id == Kafedra.id)\
+            .join(GroupTeacher, GroupTeacher.teacher_id == Teacher.user_id)\
+            .join(Result, Result.group_id == GroupTeacher.group_id)
+        
+        total = (await session.execute(total_stmt)).scalar() or 0
+        
+        stmt = stmt.offset((page - 1) * limit).limit(limit)
+        
         rows = (await session.execute(stmt)).mappings().all()
 
         faculties = [
             FacultyRankItem(
-                rank=rank,
+                rank=(page - 1) * limit + idx,
                 faculty_id=row["faculty_id"],
                 faculty_name=row["faculty_name"],
                 kafedra_count=int(row["kafedra_count"]),
@@ -484,14 +516,14 @@ class TeacherRepository:
                 avg_grade=round(float(row["avg_grade"]), 2),
                 weighted_rating=round(float(row["weighted_rating"]), 2),
             )
-            for rank, row in enumerate(rows, start=1)
+            for idx, row in enumerate(rows, start=1)
         ]
-        return FacultyRankingResponse(total=len(faculties), faculties=faculties)
+        return FacultyRankingResponse(total=total, page=page, limit=limit, faculties=faculties)
 
     # ------------------------------------------------------------------
     # Kafedra ranking
     # ------------------------------------------------------------------
-    async def get_kafedra_ranking(self, session: AsyncSession) -> KafedraRankingResponse:
+    async def get_kafedra_ranking(self, session: AsyncSession, page: int = 1, limit: int = 10) -> KafedraRankingResponse:
         """
         Rank kafedras by weighted average student grade in a single pass.
         """
@@ -526,11 +558,22 @@ class TeacherRepository:
             .group_by(Kafedra.id, Kafedra.name, Kafedra.faculty_id, Faculty.name)
             .order_by(desc("rank_score"))
         )
+        total_stmt = select(func.count(func.distinct(Kafedra.id)))\
+            .select_from(Kafedra)\
+            .join(Faculty, Faculty.id == Kafedra.faculty_id)\
+            .join(Teacher, Teacher.kafedra_id == Kafedra.id)\
+            .join(GroupTeacher, GroupTeacher.teacher_id == Teacher.user_id)\
+            .join(Result, Result.group_id == GroupTeacher.group_id)
+        
+        total = (await session.execute(total_stmt)).scalar() or 0
+        
+        stmt = stmt.offset((page - 1) * limit).limit(limit)
+        
         rows = (await session.execute(stmt)).mappings().all()
 
         kafedras = [
             KafedraRankItem(
-                rank=rank,
+                rank=(page - 1) * limit + idx,
                 kafedra_id=row["kafedra_id"],
                 kafedra_name=row["kafedra_name"],
                 faculty_id=row["faculty_id"],
@@ -540,9 +583,9 @@ class TeacherRepository:
                 avg_grade=round(float(row["avg_grade"]), 2),
                 weighted_rating=round(float(row["weighted_rating"]), 2),
             )
-            for rank, row in enumerate(rows, start=1)
+            for idx, row in enumerate(rows, start=1)
         ]
-        return KafedraRankingResponse(total=len(kafedras), kafedras=kafedras)
+        return KafedraRankingResponse(total=total, page=page, limit=limit, kafedras=kafedras)
 
 
 get_teacher_repository = TeacherRepository()

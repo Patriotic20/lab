@@ -153,6 +153,8 @@ class TeacherRankItem(BaseModel):
 
 class TeacherRankingResponse(BaseModel):
     total: int
+    page: int = 1
+    limit: int = 10
     teachers: list[TeacherRankItem]
     # active filters (None = no filter applied)
     faculty_id: Optional[int] = None
@@ -177,6 +179,8 @@ class FacultyRankItem(BaseModel):
 
 class FacultyRankingResponse(BaseModel):
     total: int
+    page: int = 1
+    limit: int = 10
     faculties: list[FacultyRankItem]
 
 
@@ -199,5 +203,7 @@ class KafedraRankItem(BaseModel):
 
 class KafedraRankingResponse(BaseModel):
     total: int
+    page: int = 1
+    limit: int = 10
     kafedras: list[KafedraRankItem]
 

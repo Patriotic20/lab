@@ -149,6 +149,8 @@ async def teacher_ranking_overall(
     faculty_id: int | None = None,
     kafedra_id: int | None = None,
     group_id: int | None = None,
+    page: int = 1,
+    limit: int = 10,
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:teacher")),
 ):
@@ -158,6 +160,7 @@ async def teacher_ranking_overall(
         ?faculty_id=1  → teachers of that faculty only
         ?kafedra_id=3  → teachers of that kafedra only
         ?group_id=7    → teachers assigned to that group only
+        ?page=1&limit=10 → pagination
     Any combination of filters can be used together.
     """
     return await get_teacher_repository.get_ranking(
@@ -165,6 +168,8 @@ async def teacher_ranking_overall(
         faculty_id=faculty_id,
         kafedra_id=kafedra_id,
         group_id=group_id,
+        page=page,
+        limit=limit,
     )
 
 
@@ -174,11 +179,13 @@ async def teacher_ranking_overall(
     summary="Faculty ranking — faculties ranked by avg student grade",
 )
 async def faculty_ranking(
+    page: int = 1,
+    limit: int = 10,
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:teacher")),
 ):
     """Return all faculties ranked by avg student grade (Bayesian weighted)."""
-    return await get_teacher_repository.get_faculty_ranking(session=session)
+    return await get_teacher_repository.get_faculty_ranking(session=session, page=page, limit=limit)
 
 
 @router.get(
@@ -187,8 +194,10 @@ async def faculty_ranking(
     summary="Kafedra ranking — chairs ranked by avg student grade",
 )
 async def kafedra_ranking(
+    page: int = 1,
+    limit: int = 10,
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:teacher")),
 ):
     """Return all kafedras (chairs) ranked by avg student grade (Bayesian weighted)."""
-    return await get_teacher_repository.get_kafedra_ranking(session=session)
+    return await get_teacher_repository.get_kafedra_ranking(session=session, page=page, limit=limit)

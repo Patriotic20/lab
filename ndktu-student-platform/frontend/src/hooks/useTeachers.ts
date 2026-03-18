@@ -97,23 +97,23 @@ type TeacherRankingFilters = {
     group_id?: number;
 };
 
-export const useTeacherRanking = (filters?: TeacherRankingFilters) => {
+export const useTeacherRanking = (filters?: TeacherRankingFilters & { page?: number; limit?: number }) => {
     return useQuery({
         queryKey: ['teacherRanking', filters ?? {}],
         queryFn: () => teacherService.getRankingOverall(filters),
     });
 };
 
-export const useFacultyRanking = () => {
+export const useFacultyRanking = (params?: { page?: number; limit?: number }) => {
     return useQuery({
-        queryKey: ['facultyRanking'],
-        queryFn: () => teacherService.getFacultyRanking(),
+        queryKey: ['facultyRanking', params ?? {}],
+        queryFn: () => teacherService.getFacultyRanking(params),
     });
 };
 
-export const useKafedraRanking = () => {
+export const useKafedraRanking = (params?: { page?: number; limit?: number }) => {
     return useQuery({
-        queryKey: ['kafedraRanking'],
-        queryFn: () => teacherService.getKafedraRanking(),
+        queryKey: ['kafedraRanking', params ?? {}],
+        queryFn: () => teacherService.getKafedraRanking(params),
     });
 };

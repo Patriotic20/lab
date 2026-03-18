@@ -11,6 +11,7 @@ import {
     useKafedraRanking,
 } from '@/hooks/useTeachers';
 import type { TeacherRankItem, FacultyRankItem, KafedraRankItem } from '@/services/teacherService';
+import { Pagination } from '@/components/ui/Pagination';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Tab = 'teachers' | 'faculty' | 'kafedra';
@@ -141,21 +142,66 @@ const KafedraRankTable = ({ items }: { items: KafedraRankItem[] }) => {
 
 // ─── Tab panels ───────────────────────────────────────────────────────────────
 const TeachersPanel = () => {
-    const { data, isLoading } = useTeacherRanking();
+    const [page, setPage] = useState(1);
+    const { data, isLoading } = useTeacherRanking({ page, limit: 10 });
+
     if (isLoading) return <Spinner />;
-    return <TeacherRankTable items={data?.teachers ?? []} />;
+
+    return (
+        <div className="space-y-4">
+            <TeacherRankTable items={data?.teachers ?? []} />
+            {data && data.total > 10 && (
+                <Pagination
+                    currentPage={page}
+                    totalPages={Math.ceil(data.total / 10)}
+                    onPageChange={setPage}
+                    isLoading={isLoading}
+                />
+            )}
+        </div>
+    );
 };
 
 const FacultyPanel = () => {
-    const { data, isLoading } = useFacultyRanking();
+    const [page, setPage] = useState(1);
+    const { data, isLoading } = useFacultyRanking({ page, limit: 10 });
+
     if (isLoading) return <Spinner />;
-    return <FacultyRankTable items={data?.faculties ?? []} />;
+
+    return (
+        <div className="space-y-4">
+            <FacultyRankTable items={data?.faculties ?? []} />
+            {data && data.total > 10 && (
+                <Pagination
+                    currentPage={page}
+                    totalPages={Math.ceil(data.total / 10)}
+                    onPageChange={setPage}
+                    isLoading={isLoading}
+                />
+            )}
+        </div>
+    );
 };
 
 const KafedraPanel = () => {
-    const { data, isLoading } = useKafedraRanking();
+    const [page, setPage] = useState(1);
+    const { data, isLoading } = useKafedraRanking({ page, limit: 10 });
+
     if (isLoading) return <Spinner />;
-    return <KafedraRankTable items={data?.kafedras ?? []} />;
+
+    return (
+        <div className="space-y-4">
+            <KafedraRankTable items={data?.kafedras ?? []} />
+            {data && data.total > 10 && (
+                <Pagination
+                    currentPage={page}
+                    totalPages={Math.ceil(data.total / 10)}
+                    onPageChange={setPage}
+                    isLoading={isLoading}
+                />
+            )}
+        </div>
+    );
 };
 
 // ─── Main page ────────────────────────────────────────────────────────────────
