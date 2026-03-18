@@ -11,11 +11,7 @@ from app.models.subject_teacher.model import SubjectTeacher
 from app.models.kafedra.model import Kafedra
 from app.models.faculty.model import Faculty
 from app.models.results.model import Result
-<<<<<<< HEAD:ndktu-student-platform/backend/app/modules/teacher/repository.py
-from sqlalchemy import func, select
-=======
-from sqlalchemy import func, select, desc, case, cast, Float
->>>>>>> cda14f0 (refactor: update teacher, faculty, and kafedra ranking calculations to use SQL-based weighted rating and volume factor instead of Python-side Bayesian weighting.):backend/app/modules/teacher/repository.py
+from sqlalchemy import func, select, desc, asc, case, cast, Float
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -401,47 +397,38 @@ class TeacherRepository:
             .join(Result, GroupTeacher.group_id == Result.group_id)
         )
 
-        # Apply optional filters
         if faculty_id is not None:
             stmt = stmt.where(Kafedra.faculty_id == faculty_id)
         if kafedra_id is not None:
             stmt = stmt.where(Teacher.kafedra_id == kafedra_id)
         if group_id is not None:
             stmt = stmt.where(Result.group_id == group_id)
-        if search:
-            stmt = stmt.where(Teacher.full_name.ilike(f"%{search}%"))
 
         stmt = stmt.group_by(
             Teacher.id, Teacher.full_name, Teacher.kafedra_id,
             Kafedra.name, Kafedra.faculty_id, Faculty.name,
-        ).order_by(desc("rank_score"))
+        )
 
-        # Calculate total count before pagination
-        count_stmt = select(func.count(func.distinct(Teacher.id))).select_from(Teacher)\
-            .join(Kafedra, Teacher.kafedra_id == Kafedra.id)\
-            .join(Faculty, Kafedra.faculty_id == Faculty.id)\
-            .join(GroupTeacher, Teacher.user_id == GroupTeacher.teacher_id)\
-            .join(Result, GroupTeacher.group_id == Result.group_id)
+        # Create subquery to calculate global rank WITHIN the specific institutional filters
+        subq = stmt.subquery()
+        rank_col = func.row_number().over(order_by=desc(subq.c.rank_score)).label("calculated_rank")
         
-        if faculty_id is not None:
-            count_stmt = count_stmt.where(Kafedra.faculty_id == faculty_id)
-        if kafedra_id is not None:
-            count_stmt = count_stmt.where(Teacher.kafedra_id == kafedra_id)
-        if group_id is not None:
-            count_stmt = count_stmt.where(Result.group_id == group_id)
+        # Outer selection from subquery — now we can filter by search without breaking stability
+        filtered_stmt = select(subq, rank_col)
         if search:
-            count_stmt = count_stmt.where(Teacher.full_name.ilike(f"%{search}%"))
-            
+            filtered_stmt = filtered_stmt.where(subq.c.full_name.ilike(f"%{search}%"))
+
+        # Calculate total based on search result
+        count_stmt = select(func.count()).select_from(filtered_stmt.subquery())
         total = (await session.execute(count_stmt)).scalar() or 0
 
-        # Apply pagination
-        stmt = stmt.offset((page - 1) * limit).limit(limit)
-        
-        rows = (await session.execute(stmt)).mappings().all()
+        # Apply final order and pagination
+        final_stmt = filtered_stmt.order_by(asc("calculated_rank")).offset((page - 1) * limit).limit(limit)
+        rows = (await session.execute(final_stmt)).mappings().all()
         
         teachers = [
             TeacherRankItem(
-                rank=(page - 1) * limit + idx,
+                rank=int(row["calculated_rank"]),
                 teacher_id=row["teacher_id"],
                 full_name=row["full_name"],
                 kafedra_id=row["kafedra_id"],
@@ -454,7 +441,7 @@ class TeacherRepository:
                 avg_grade=round(float(row["avg_grade"]), 2),
                 weighted_rating=round(float(row["weighted_rating"]), 2),
             )
-            for idx, row in enumerate(rows, start=1)
+            for row in rows
         ]
 
         return TeacherRankingResponse(
