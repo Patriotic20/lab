@@ -409,21 +409,24 @@ class TeacherRepository:
             Kafedra.name, Kafedra.faculty_id, Faculty.name,
         )
 
-        # Create subquery to calculate global rank WITHIN the specific institutional filters
-        subq = stmt.subquery()
-        rank_col = func.row_number().over(order_by=desc(subq.c.rank_score)).label("calculated_rank")
+        # Subquery 1: Calculate raw metrics and rank_score
+        subq1 = stmt.subquery()
         
-        # Outer selection from subquery — now we can filter by search without breaking stability
-        filtered_stmt = select(subq, rank_col)
+        # Subquery 2: Assign global rank across the whole category
+        rank_col = func.row_number().over(order_by=desc(subq1.c.rank_score)).label("calculated_rank")
+        subq2 = select(subq1, rank_col).subquery()
+        
+        # Outer selection: Apply search filter to the ALREADY ranked rows
+        filtered_stmt = select(subq2)
         if search:
-            filtered_stmt = filtered_stmt.where(subq.c.full_name.ilike(f"%{search}%"))
+            filtered_stmt = filtered_stmt.where(subq2.c.full_name.ilike(f"%{search}%"))
 
         # Calculate total based on search result
         count_stmt = select(func.count()).select_from(filtered_stmt.subquery())
         total = (await session.execute(count_stmt)).scalar() or 0
 
         # Apply final order and pagination
-        final_stmt = filtered_stmt.order_by(asc("calculated_rank")).offset((page - 1) * limit).limit(limit)
+        final_stmt = filtered_stmt.order_by(asc(subq2.c.calculated_rank)).offset((page - 1) * limit).limit(limit)
         rows = (await session.execute(final_stmt)).mappings().all()
         
         teachers = [

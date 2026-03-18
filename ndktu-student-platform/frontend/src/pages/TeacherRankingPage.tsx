@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Trophy, Loader2, Medal, Crown, Building2, Layers, Search, X } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import {
@@ -145,31 +145,42 @@ const KafedraRankTable = ({ items }: { items: KafedraRankItem[] }) => {
 const TeachersPanel = () => {
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     
-    const { data, isLoading } = useTeacherRanking({ 
+    // Debounce search input
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search.trim());
+            setPage(1);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    const { data, isLoading, isFetching } = useTeacherRanking({ 
         page, 
         limit: 10,
-        search: search.trim() || undefined
+        search: debouncedSearch || undefined
     });
-
-    const handleSearchChange = (val: string) => {
-        setSearch(val);
-        setPage(1); // Reset to first page on search
-    };
 
     return (
         <div className="space-y-4">
             <div className="relative max-w-sm">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                    {isFetching && search !== debouncedSearch ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    ) : (
+                        <Search className="h-4 w-4 text-muted-foreground" />
+                    )}
+                </div>
                 <Input
                     placeholder="F.I.O bo'yicha qidirish..."
                     value={search}
-                    onChange={(e) => handleSearchChange(e.target.value)}
+                    onChange={(e) => setSearch(e.target.value)}
                     className="pl-9 pr-8"
                 />
                 {search && (
                     <button
-                        onClick={() => handleSearchChange('')}
+                        onClick={() => setSearch('')}
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 hover:bg-accent"
                     >
                         <X className="h-3.5 w-3.5 text-muted-foreground" />
@@ -177,20 +188,20 @@ const TeachersPanel = () => {
                 )}
             </div>
 
-            {isLoading ? (
+            {isLoading && !data ? (
                 <Spinner />
             ) : (
-                <>
+                <div className={isFetching ? 'opacity-70 transition-opacity' : 'transition-opacity'}>
                     <TeacherRankTable items={data?.teachers ?? []} />
                     {data && data.total > 10 && (
                         <Pagination
                             currentPage={page}
                             totalPages={Math.ceil(data.total / 10)}
                             onPageChange={setPage}
-                            isLoading={isLoading}
+                            isLoading={isFetching}
                         />
                     )}
-                </>
+                </div>
             )}
         </div>
     );
