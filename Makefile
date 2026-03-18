@@ -97,7 +97,32 @@ restore:
 	./ndktu-student-platform/scripts/restore.sh $$(realpath $(FILE))
 
 # Run database migrations
+# Usage: make migrate MSG="your_migration_message"
 migrate:
-	docker exec nusmt_backend sh -c "cd /face/app && uv run alembic revision --autogenerate -m 'add_cheating_image_url'"
+	@if [ -z "$(MSG)" ]; then echo "Usage: make migrate MSG='your_migration_message'"; exit 1; fi
+	docker exec nusmt_backend sh -c "cd /face/app && uv run alembic revision --autogenerate -m '$(MSG)'"
 	docker cp nusmt_backend:/face/app/migrations/versions/. ./ndktu-student-platform/backend/app/migrations/versions/
 	docker exec nusmt_backend sh -c "cd /face/app && uv run alembic upgrade head"
+
+# Zero-Downtime Deployment
+deploy:
+	@echo "🚀 Starting Zero-Downtime Deployment..."
+	
+	# 1. Update Backend (Zero-Downtime)
+	@echo "Updating Backend..."
+	docker compose up -d --build --scale backend=2 --no-recreate backend
+	@echo "⏳ Waiting for the new backend instance..."
+	@sleep 20
+	docker compose up -d --scale backend=1 --no-recreate backend
+	
+	# 2. Update Frontend (Zero-Downtime)
+	@echo "Updating Frontend..."
+	docker compose up -d --build --scale frontend=2 --no-recreate frontend
+	@echo "⏳ Waiting for the new frontend instance..."
+	@sleep 10
+	docker compose up -d --scale frontend=1 --no-recreate frontend
+	
+	@echo "✅ Deployment finished successfully!"
+	
+	# Clean up old images
+	docker image prune -f
