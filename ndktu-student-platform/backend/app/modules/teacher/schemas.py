@@ -160,6 +160,7 @@ class TeacherRankingResponse(BaseModel):
     faculty_id: Optional[int] = None
     kafedra_id: Optional[int] = None
     group_id: Optional[int] = None
+    search: Optional[str] = None
 
 
 # ── Faculty ranking schemas ───────────────────────────────────────────────────

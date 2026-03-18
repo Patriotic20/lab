@@ -95,6 +95,7 @@ type TeacherRankingFilters = {
     faculty_id?: number;
     kafedra_id?: number;
     group_id?: number;
+    search?: string;
 };
 
 export const useTeacherRanking = (filters?: TeacherRankingFilters & { page?: number; limit?: number }) => {

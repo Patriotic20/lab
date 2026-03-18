@@ -350,6 +350,7 @@ class TeacherRepository:
         faculty_id: int | None = None,
         kafedra_id: int | None = None,
         group_id: int | None = None,
+        search: str | None = None,
         page: int = 1,
         limit: int = 10,
     ) -> TeacherRankingResponse:
@@ -407,6 +408,8 @@ class TeacherRepository:
             stmt = stmt.where(Teacher.kafedra_id == kafedra_id)
         if group_id is not None:
             stmt = stmt.where(Result.group_id == group_id)
+        if search:
+            stmt = stmt.where(Teacher.full_name.ilike(f"%{search}%"))
 
         stmt = stmt.group_by(
             Teacher.id, Teacher.full_name, Teacher.kafedra_id,
@@ -426,6 +429,8 @@ class TeacherRepository:
             count_stmt = count_stmt.where(Teacher.kafedra_id == kafedra_id)
         if group_id is not None:
             count_stmt = count_stmt.where(Result.group_id == group_id)
+        if search:
+            count_stmt = count_stmt.where(Teacher.full_name.ilike(f"%{search}%"))
             
         total = (await session.execute(count_stmt)).scalar() or 0
 
@@ -455,6 +460,7 @@ class TeacherRepository:
         return TeacherRankingResponse(
             total=total, page=page, limit=limit, teachers=teachers,
             faculty_id=faculty_id, kafedra_id=kafedra_id, group_id=group_id,
+            search=search,
         )
 
     # ------------------------------------------------------------------

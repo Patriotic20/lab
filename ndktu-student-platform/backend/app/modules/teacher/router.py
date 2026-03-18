@@ -149,6 +149,7 @@ async def teacher_ranking_overall(
     faculty_id: int | None = None,
     kafedra_id: int | None = None,
     group_id: int | None = None,
+    search: str | None = None,
     page: int = 1,
     limit: int = 10,
     session: AsyncSession = Depends(db_helper.session_getter),
@@ -160,6 +161,7 @@ async def teacher_ranking_overall(
         ?faculty_id=1  → teachers of that faculty only
         ?kafedra_id=3  → teachers of that kafedra only
         ?group_id=7    → teachers assigned to that group only
+        ?search=John   → teachers whose name contains "John"
         ?page=1&limit=10 → pagination
     Any combination of filters can be used together.
     """
@@ -168,6 +170,7 @@ async def teacher_ranking_overall(
         faculty_id=faculty_id,
         kafedra_id=kafedra_id,
         group_id=group_id,
+        search=search,
         page=page,
         limit=limit,
     )

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trophy, Loader2, Medal, Crown, Building2, Layers } from 'lucide-react';
+import { Trophy, Loader2, Medal, Crown, Building2, Layers, Search, X } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -11,6 +11,7 @@ import {
     useKafedraRanking,
 } from '@/hooks/useTeachers';
 import type { TeacherRankItem, FacultyRankItem, KafedraRankItem } from '@/services/teacherService';
+import { Input } from '@/components/ui/Input';
 import { Pagination } from '@/components/ui/Pagination';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -143,20 +144,53 @@ const KafedraRankTable = ({ items }: { items: KafedraRankItem[] }) => {
 // ─── Tab panels ───────────────────────────────────────────────────────────────
 const TeachersPanel = () => {
     const [page, setPage] = useState(1);
-    const { data, isLoading } = useTeacherRanking({ page, limit: 10 });
+    const [search, setSearch] = useState('');
+    
+    const { data, isLoading } = useTeacherRanking({ 
+        page, 
+        limit: 10,
+        search: search.trim() || undefined
+    });
 
-    if (isLoading) return <Spinner />;
+    const handleSearchChange = (val: string) => {
+        setSearch(val);
+        setPage(1); // Reset to first page on search
+    };
 
     return (
         <div className="space-y-4">
-            <TeacherRankTable items={data?.teachers ?? []} />
-            {data && data.total > 10 && (
-                <Pagination
-                    currentPage={page}
-                    totalPages={Math.ceil(data.total / 10)}
-                    onPageChange={setPage}
-                    isLoading={isLoading}
+            <div className="relative max-w-sm">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                    placeholder="F.I.O bo'yicha qidirish..."
+                    value={search}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="pl-9 pr-8"
                 />
+                {search && (
+                    <button
+                        onClick={() => handleSearchChange('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 hover:bg-accent"
+                    >
+                        <X className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                )}
+            </div>
+
+            {isLoading ? (
+                <Spinner />
+            ) : (
+                <>
+                    <TeacherRankTable items={data?.teachers ?? []} />
+                    {data && data.total > 10 && (
+                        <Pagination
+                            currentPage={page}
+                            totalPages={Math.ceil(data.total / 10)}
+                            onPageChange={setPage}
+                            isLoading={isLoading}
+                        />
+                    )}
+                </>
             )}
         </div>
     );

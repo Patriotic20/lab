@@ -124,6 +124,7 @@ export const teacherService = {
         faculty_id?: number;
         kafedra_id?: number;
         group_id?: number;
+        search?: string;
         page?: number;
         limit?: number;
     }): Promise<TeacherRankingResponse> => {
