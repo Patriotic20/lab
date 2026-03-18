@@ -42,10 +42,11 @@ const Spinner = () => (
     </div>
 );
 
+
 // ─── Teacher table ────────────────────────────────────────────────────────────
 const TeacherRankTable = ({ items }: { items: TeacherRankItem[] }) => {
     if (!items.length) return (
-        <EmptyState label="Tanlangan filtr bo'yicha o'qituvchilar topilmadi." />
+        <EmptyState label="Hozircha o'qituvchilar bo'yicha ma'lumotlar mavjud emas." />
     );
     return (
         <Table>
@@ -70,7 +71,7 @@ const TeacherRankTable = ({ items }: { items: TeacherRankItem[] }) => {
                         <TableCell className="text-sm text-muted-foreground">{item.kafedra_name ?? '—'}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{item.faculty_name ?? '—'}</TableCell>
                         <TableCell className="text-right text-sm">{item.student_count}</TableCell>
-                        <TableCell className="text-right text-sm text-muted-foreground">{item.avg_grade.toFixed(2)}</TableCell>
+                        <TableCell className="text-right text-sm font-medium tabular-nums">{item.avg_grade.toFixed(2)}</TableCell>
                     </TableRow>
                 ))}
             </TableBody>
@@ -99,7 +100,7 @@ const FacultyRankTable = ({ items }: { items: FacultyRankItem[] }) => {
                         <TableCell className="font-medium">{item.faculty_name}</TableCell>
                         <TableCell className="text-right text-sm">{item.kafedra_count}</TableCell>
                         <TableCell className="text-right text-sm">{item.student_count}</TableCell>
-                        <TableCell className="text-right text-sm text-muted-foreground">{item.avg_grade.toFixed(2)}</TableCell>
+                        <TableCell className="text-right text-sm font-medium tabular-nums">{item.avg_grade.toFixed(2)}</TableCell>
                     </TableRow>
                 ))}
             </TableBody>
@@ -130,7 +131,7 @@ const KafedraRankTable = ({ items }: { items: KafedraRankItem[] }) => {
                         <TableCell className="text-sm text-muted-foreground">{item.faculty_name}</TableCell>
                         <TableCell className="text-right text-sm">{item.teacher_count}</TableCell>
                         <TableCell className="text-right text-sm">{item.student_count}</TableCell>
-                        <TableCell className="text-right text-sm text-muted-foreground">{item.avg_grade.toFixed(2)}</TableCell>
+                        <TableCell className="text-right text-sm font-medium tabular-nums">{item.avg_grade.toFixed(2)}</TableCell>
                     </TableRow>
                 ))}
             </TableBody>
@@ -169,9 +170,10 @@ const TeacherRankingPage = () => {
                     Reyting
                 </h1>
                 <p className="mt-0.5 text-sm text-muted-foreground">
-                    Talabalar bahosi bo'yicha reyting (2–5 shkalasi)
+                    Talabalar bahosi bo'yicha umumiy reyting
                 </p>
             </div>
+
 
             <div className="flex flex-wrap gap-2">
                 {TABS.map(({ value, label }) => (
