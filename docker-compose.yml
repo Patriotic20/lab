@@ -31,7 +31,6 @@ services:
   frontend:
     build:
       context: ./ndktu-student-platform/frontend
-    container_name: frontend
     restart: always
     volumes:
       - ./ndktu-student-platform/nginx.conf:/etc/nginx/conf.d/default.conf
