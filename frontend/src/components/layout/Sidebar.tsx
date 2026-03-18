@@ -23,6 +23,7 @@ import {
     FileQuestion,
     PlayCircle,
     X,
+    Trophy,
 } from 'lucide-react';
 import { cn } from '@/utils/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -49,6 +50,7 @@ const adminSections: NavSection[] = [
         label: 'Umumiy',
         items: [
             { name: 'Dashboard', href: '/', icon: BarChart2 },
+            { name: 'Reyting', href: '/teacher-ranking', icon: Trophy },
         ],
     },
     {
@@ -84,6 +86,7 @@ const teacherSections: NavSection[] = [
         label: 'Fanlar',
         items: [
             { name: 'Mening fanlarim', href: '/teacher-subjects', icon: BookOpen },
+            { name: 'Reyting', href: '/teacher-ranking', icon: Trophy },
         ],
     },
     {

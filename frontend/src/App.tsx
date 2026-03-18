@@ -81,7 +81,7 @@ function App() {
                 <Route path="/dashboard" element={<RoleRoute allowedRoles={['admin']}><Dashboard /></RoleRoute>} />
                 <Route path="/users" element={<RoleRoute allowedRoles={['admin']}><UsersPage /></RoleRoute>} />
                 <Route path="/teachers" element={<RoleRoute allowedRoles={['admin']}><TeachersPage /></RoleRoute>} />
-                <Route path="/teacher-ranking" element={<RoleRoute allowedRoles={['admin']}><TeacherRankingPage /></RoleRoute>} />
+                <Route path="/teacher-ranking" element={<RoleRoute allowedRoles={['admin', 'teacher']}><TeacherRankingPage /></RoleRoute>} />
                 <Route path="/faculties" element={<RoleRoute allowedRoles={['admin']}><FacultyPage /></RoleRoute>} />
                 <Route path="/kafedras" element={<RoleRoute allowedRoles={['admin']}><KafedraPage /></RoleRoute>} />
                 <Route path="/groups" element={<RoleRoute allowedRoles={['admin']}><GroupsPage /></RoleRoute>} />
