@@ -29,7 +29,6 @@ const RankBadge = ({ rank }: { rank: number }) => {
     return <span className="text-sm font-semibold text-muted-foreground">#{rank}</span>;
 };
 
-
 const EmptyState = ({ label }: { label: string }) => (
     <div className="py-16 text-center text-muted-foreground">
         <Trophy className="mx-auto mb-3 h-10 w-10 opacity-30" />
@@ -142,12 +141,8 @@ const KafedraRankTable = ({ items }: { items: KafedraRankItem[] }) => {
 // ─── Tab panels ───────────────────────────────────────────────────────────────
 const TeachersPanel = () => {
     const { data, isLoading } = useTeacherRanking();
-
-    return (
-        <div className="space-y-4">
-            {isLoading ? <Spinner /> : <TeacherRankTable items={data?.teachers ?? []} />}
-        </div>
-    );
+    if (isLoading) return <Spinner />;
+    return <TeacherRankTable items={data?.teachers ?? []} />;
 };
 
 const FacultyPanel = () => {
@@ -162,8 +157,6 @@ const KafedraPanel = () => {
     return <KafedraRankTable items={data?.kafedras ?? []} />;
 };
 
-// ─── Rating legend ────────────────────────────────────────────────────────────
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 const TeacherRankingPage = () => {
     const [tab, setTab] = useState<Tab>('teachers');
@@ -173,10 +166,10 @@ const TeacherRankingPage = () => {
             <div>
                 <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
                     <Trophy className="h-5 w-5 text-yellow-500" />
-                    O'qituvchilar reytingi
+                    Reyting
                 </h1>
                 <p className="mt-0.5 text-sm text-muted-foreground">
-                    Talabalar bahosi bo'yicha umumiy reyting
+                    Talabalar bahosi bo'yicha reyting (2–5 shkalasi)
                 </p>
             </div>
 
