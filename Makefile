@@ -84,19 +84,21 @@ restore:
 deploy:
 	@echo "🚀 Starting Zero-Downtime Deployment..."
 	
-	# 1. Собираем новый образ и запускаем вторую копию бэкенда рядом со старой
-	# --scale backend=2 создает второй контейнер
-	# --no-recreate гарантирует, что база данных и nginx не перезагрузятся
+	# 1. Update Backend (Zero-Downtime)
+	@echo "Updating Backend..."
 	docker compose up -d --build --scale backend=2 --no-recreate backend
-	
-	@echo "⏳ Waiting for the new instance to pass healthchecks..."
-	# Ждем 20 секунд, чтобы FastAPI успел запуститься и пройти healthcheck
+	@echo "⏳ Waiting for the new backend instance..."
 	@sleep 20
-	
-	# 2. Убираем старый контейнер, оставляя только один новый
 	docker compose up -d --scale backend=1 --no-recreate backend
+	
+	# 2. Update Frontend (Zero-Downtime)
+	@echo "Updating Frontend..."
+	docker compose up -d --build --scale frontend=2 --no-recreate frontend
+	@echo "⏳ Waiting for the new frontend instance..."
+	@sleep 10
+	docker compose up -d --scale frontend=1 --no-recreate frontend
 	
 	@echo "✅ Deployment finished successfully!"
 	
-	# Очистка старых неиспользуемых образов, чтобы не забивать диск
+	# Clean up old images
 	docker image prune -f
