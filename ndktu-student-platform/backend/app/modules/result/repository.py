@@ -48,12 +48,15 @@ class ResultRepository:
             selectinload(Result.group),
         ).offset(request.offset).limit(request.limit)
 
+        is_admin = any(role.name.lower() == "admin" for role in current_user.roles)
         is_teacher = any(role.name.lower() == "teacher" for role in current_user.roles)
         is_student = any(role.name.lower() == "student" for role in current_user.roles)
         
-        # Students always see only their own results — even if they also have a Teacher role
-        if is_student:
-            stmt = stmt.where(Result.user_id == current_user.id)
+        teacher_filter = None
+
+        if is_admin:
+            # Admins see everything, no role-based filter applied
+            pass
         elif is_teacher:
             # Get teacher's assigned groups (group_teachers.teacher_id = users.id)
             gt_stmt = select(GroupTeacher.group_id).where(GroupTeacher.teacher_id == current_user.id)
@@ -79,9 +82,13 @@ class ResultRepository:
             elif allowed_subject_ids:
                 teacher_filter = Result.subject_id.in_(allowed_subject_ids)
             else:
+                # If a teacher has no assigned groups/subjects, they see nothing
                 teacher_filter = Result.id == -1
 
             stmt = stmt.where(teacher_filter)
+        elif is_student:
+            # Students only see their own results
+            stmt = stmt.where(Result.user_id == current_user.id)
 
         if request.user_id:
             stmt = stmt.where(Result.user_id == request.user_id)
@@ -103,10 +110,13 @@ class ResultRepository:
 
         count_stmt = select(func.count()).select_from(Result)
 
-        if is_student:
-            count_stmt = count_stmt.where(Result.user_id == current_user.id)
+        if is_admin:
+            # Admins see everything
+            pass
         elif is_teacher and teacher_filter is not None:
             count_stmt = count_stmt.where(teacher_filter)
+        elif is_student:
+            count_stmt = count_stmt.where(Result.user_id == current_user.id)
 
         if request.user_id:
             count_stmt = count_stmt.where(Result.user_id == request.user_id)

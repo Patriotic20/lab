@@ -62,10 +62,13 @@ class SubjectRepository:
     ) -> SubjectListResponse:
         stmt = select(Subject)
 
+        is_admin = any(role.name.lower() == "admin" for role in current_user.roles)
         is_teacher = any(role.name.lower() == "teacher" for role in current_user.roles)
         teacher_filter = None
 
-        if is_teacher:
+        if is_admin:
+            pass
+        elif is_teacher:
             st_stmt = select(SubjectTeacher.subject_id).join(Teacher, Teacher.id == SubjectTeacher.teacher_id).where(Teacher.user_id == current_user.id)
             st_result = await session.execute(st_stmt)
             allowed_subject_ids = st_result.scalars().all()
@@ -91,7 +94,9 @@ class SubjectRepository:
 
         count_stmt = select(func.count()).select_from(Subject)
 
-        if teacher_filter is not None:
+        if is_admin:
+            pass
+        elif teacher_filter is not None:
             count_stmt = count_stmt.where(teacher_filter)
 
         if request.teacher_id:
