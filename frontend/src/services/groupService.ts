@@ -61,6 +61,11 @@ export const groupService = {
         await api.delete(`/group/${id}`);
     },
 
+    getDeleteInfo: async (id: number): Promise<{ students_count: number; results_count: number }> => {
+        const response = await api.get<{ students_count: number; results_count: number }>(`/group/${id}/delete-info`);
+        return response.data;
+    },
+
     getGroupStudents: async (groupId: number, page = 1, limit = 200, search?: string): Promise<GroupStudentListResponse> => {
         const params: Record<string, unknown> = { page, limit };
         if (search) params.search = search;

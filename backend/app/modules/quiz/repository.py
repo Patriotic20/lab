@@ -229,8 +229,14 @@ class QuizRepository:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
             )
 
+        # Cascade-delete all results linked to this quiz before deleting the quiz
+        from app.models.results.model import Result
+        from sqlalchemy import delete as sa_delete
+        await session.execute(sa_delete(Result).where(Result.quiz_id == quiz_id))
+
         await session.delete(quiz)
         await session.commit()
+
 
     async def repeat_quiz(
         self, session: AsyncSession, quiz_id: int

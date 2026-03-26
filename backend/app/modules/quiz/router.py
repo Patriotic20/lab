@@ -92,6 +92,22 @@ async def delete_quiz(
     # await clear_cache(list_quizzes)
     # await clear_cache(get_quiz, quiz_id=quiz_id)
 
+
+@router.get("/{quiz_id}/delete-info")
+async def get_quiz_delete_info(
+    quiz_id: int,
+    session: AsyncSession = Depends(db_helper.session_getter),
+    _: PermissionRequired = Depends(PermissionRequired("read:quiz")),
+):
+    """Returns counts of related data that will be deleted along with the quiz."""
+    from sqlalchemy import func, select
+    from app.models.results.model import Result
+    result_count = (
+        await session.execute(select(func.count()).select_from(Result).where(Result.quiz_id == quiz_id))
+    ).scalar() or 0
+    return {"results_count": result_count}
+
+
 @router.post("/{quiz_id}/repeat", response_model=QuizCreateResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
 async def repeat_quiz(
     quiz_id: int,

@@ -107,3 +107,24 @@ async def delete_group(
     )
     # await clear_cache(list_groups)
     # await clear_cache(get_group, group_id=group_id)
+
+
+@router.get("/{group_id}/delete-info")
+async def get_group_delete_info(
+    group_id: int,
+    session: AsyncSession = Depends(db_helper.session_getter),
+    _: PermissionRequired = Depends(PermissionRequired("read:group")),
+):
+    """Returns counts of related data affected when this group is deleted."""
+    from sqlalchemy import func, select
+    from app.models.student.model import Student
+    from app.models.results.model import Result
+
+    student_count = (
+        await session.execute(select(func.count()).select_from(Student).where(Student.group_id == group_id))
+    ).scalar() or 0
+    result_count = (
+        await session.execute(select(func.count()).select_from(Result).where(Result.group_id == group_id))
+    ).scalar() or 0
+    return {"students_count": student_count, "results_count": result_count}
+

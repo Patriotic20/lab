@@ -147,8 +147,38 @@ class UserRepository:
                 status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
+        # Guard: check for results linked to this user
+        from app.models.results.model import Result
+        from app.models.quiz.model import Quiz as QuizModel
+        result_count_stmt = select(func.count()).select_from(Result).where(
+            Result.user_id == user_id
+        )
+        result_count = (await session.execute(result_count_stmt)).scalar() or 0
+
+        quiz_count_stmt = select(func.count()).select_from(QuizModel).where(
+            QuizModel.user_id == user_id
+        )
+        quiz_count = (await session.execute(quiz_count_stmt)).scalar() or 0
+
+        issues = []
+        if result_count > 0:
+            issues.append(f"{result_count} ta natija")
+        if quiz_count > 0:
+            issues.append(f"{quiz_count} ta test")
+
+        if issues:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"'{user.username}' foydalanuvchisini o'chirib bo'lmaydi. "
+                    f"Unga bog'liq: {', '.join(issues)}. "
+                    f"Avval bog'liq ma'lumotlarni o'chiring."
+                ),
+            )
+
         await session.delete(user)
         await session.commit()
+
 
 
     async def assign_roles(

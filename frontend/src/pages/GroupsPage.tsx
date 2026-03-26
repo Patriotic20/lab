@@ -16,6 +16,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useGroups, useCreateGroup, useUpdateGroup, useDeleteGroup } from '@/hooks/useGroups';
 import { useFaculties } from '@/hooks/useReferenceData';
+import { groupService } from '@/services/groupService';
 
 const groupSchema = z.object({
     name: z.string().min(1, 'Group name is required'),
@@ -29,6 +30,8 @@ const GroupsPage = () => {
     const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
+    const [groupDeleteInfo, setGroupDeleteInfo] = useState<{ students_count: number; results_count: number } | null>(null);
+    const [isLoadingDeleteInfo, setIsLoadingDeleteInfo] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -50,18 +53,28 @@ const GroupsPage = () => {
     const totalPages = groupsData ? Math.ceil(groupsData.total / pageSize) : 1;
     const faculties = facultiesData?.faculties || [];
 
-    const handleDeleteClick = (group: Group) => {
+    const handleDeleteClick = async (group: Group) => {
         setGroupToDelete(group);
+        setGroupDeleteInfo(null);
         setIsDeleteModalOpen(true);
+        setIsLoadingDeleteInfo(true);
+        try {
+            const info = await groupService.getDeleteInfo(group.id);
+            setGroupDeleteInfo(info);
+        } catch {
+            setGroupDeleteInfo({ students_count: 0, results_count: 0 });
+        } finally {
+            setIsLoadingDeleteInfo(false);
+        }
     };
 
     const handleConfirmDelete = async () => {
         if (!groupToDelete) return;
-
         deleteGroupMutation.mutate(groupToDelete.id, {
             onSuccess: () => {
                 setIsDeleteModalOpen(false);
                 setGroupToDelete(null);
+                setGroupDeleteInfo(null);
             },
         });
     };
@@ -162,10 +175,23 @@ const GroupsPage = () => {
                 faculties={faculties} onSuccess={handleSuccess} />
             <ConfirmDialog
                 isOpen={isDeleteModalOpen}
-                onClose={() => setIsDeleteModalOpen(false)}
+                onClose={() => { setIsDeleteModalOpen(false); setGroupDeleteInfo(null); }}
                 onConfirm={handleConfirmDelete}
                 title="Guruhni o'chirish"
-                description={`Siz haqiqatan ham "${groupToDelete?.name}" guruhini o'chirmoqchimisiz? Bu amalni bekor qilib bo'lmaydi.`}
+                description={
+                    isLoadingDeleteInfo
+                        ? "Ma'lumot yuklanmoqda..."
+                        : (() => {
+                            const parts: string[] = [];
+                            if (groupDeleteInfo && groupDeleteInfo.students_count > 0)
+                                parts.push(`${groupDeleteInfo.students_count} ta talabaning guruhi bo'sh qoladi`);
+                            if (groupDeleteInfo && groupDeleteInfo.results_count > 0)
+                                parts.push(`${groupDeleteInfo.results_count} ta natijadan guruh ma'lumoti o'chadi`);
+                            return parts.length > 0
+                                ? `⚠️ "${groupToDelete?.name}" guruhini o'chirsangiz: ${parts.join(', ')}. Davom etasizmi?`
+                                : `"${groupToDelete?.name}" guruhini o'chirishni xohlaysizmi? Bu amalni ortga qaytarib bo'lmaydi.`;
+                        })()
+                }
                 confirmText="O'chirish"
                 cancelText="Bekor qilish"
             />

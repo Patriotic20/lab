@@ -183,6 +183,8 @@ class GroupRepository:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Group not found"
             )
 
+        # FK ondelete="SET NULL" on Student.group_id and Result.group_id means
+        # linked students/results lose their group reference but are NOT deleted.
         await session.delete(group)
         await session.commit()
 
