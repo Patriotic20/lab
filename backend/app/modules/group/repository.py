@@ -3,8 +3,9 @@ import logging
 from fastapi import HTTPException, status
 from app.models.group.model import Group
 from sqlalchemy import func, select
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.results.model import Result
+from app.models.user.model import User
 from app.models.group_teachers.model import GroupTeacher
 
 from .schemas import (
@@ -57,11 +58,31 @@ class GroupRepository:
         return group
 
     async def list_groups(
-        self, session: AsyncSession, request: GroupListRequest
+        self, session: AsyncSession, request: GroupListRequest, current_user: User
     ) -> GroupListResponse:
         stmt = select(Group)
         
+        is_admin = any(role.name.lower() == "admin" for role in current_user.roles)
+        is_teacher = any(role.name.lower() == "teacher" for role in current_user.roles)
+        is_student = any(role.name.lower() == "student" for role in current_user.roles)
+
+        if is_admin:
+            pass
+        elif is_teacher:
+            stmt = stmt.join(GroupTeacher, Group.id == GroupTeacher.group_id).where(GroupTeacher.teacher_id == current_user.id)
+        elif is_student:
+             from app.models.student.model import Student
+             # Try to get student's group
+             student_stmt = select(Student.group_id).where(Student.user_id == current_user.id)
+             student_result = await session.execute(student_stmt)
+             assigned_group_id = student_result.scalar_one_or_none()
+             if assigned_group_id:
+                 stmt = stmt.where(Group.id == assigned_group_id)
+             else:
+                 stmt = stmt.where(Group.id == -1)
+        
         if request.teacher_id:
+             # Explicit teacher filter if provided
              stmt = stmt.join(GroupTeacher, Group.id == GroupTeacher.group_id).where(GroupTeacher.teacher_id == request.teacher_id)
 
         stmt = stmt.offset(request.offset).limit(request.limit)
@@ -76,6 +97,17 @@ class GroupRepository:
         groups = result.scalars().all()
 
         count_stmt = select(func.count()).select_from(Group)
+
+        if is_admin:
+            pass
+        elif is_teacher:
+            count_stmt = count_stmt.join(GroupTeacher, Group.id == GroupTeacher.group_id).where(GroupTeacher.teacher_id == current_user.id)
+        elif is_student:
+             if assigned_group_id:
+                 count_stmt = count_stmt.where(Group.id == assigned_group_id)
+             else:
+                 count_stmt = count_stmt.where(Group.id == -1)
+
         if request.teacher_id:
             count_stmt = count_stmt.join(GroupTeacher, Group.id == GroupTeacher.group_id).where(GroupTeacher.teacher_id == request.teacher_id)
         if request.name:

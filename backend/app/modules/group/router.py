@@ -59,10 +59,10 @@ async def get_group(
 async def list_groups(
     data: GroupListRequest = Depends(),
     session: AsyncSession = Depends(db_helper.session_getter),
-    _: PermissionRequired = Depends(PermissionRequired("read:group")),
+    current_user: User = Depends(PermissionRequired("read:group")),
 ):
     return await get_group_repository.list_groups(
-        session=session, request=data
+        session=session, request=data, current_user=current_user
     )
 
 

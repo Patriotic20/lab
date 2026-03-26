@@ -26,7 +26,6 @@ const ResultsPage = () => {
     const navigate = useNavigate();
 
     const isStudent = user?.roles?.some(role => role.name.toLowerCase() === 'student');
-    const isTeacher = user?.roles?.some(role => role.name.toLowerCase() === 'teacher');
 
     const [viewMode, setViewMode] = useState<'groups' | 'results'>('groups');
     const [currentPage, setCurrentPage] = useState(1);
@@ -38,14 +37,6 @@ const ResultsPage = () => {
             setViewMode('results');
         }
     }, [isAuthLoading, isStudent]);
-
-    // For student: filter results to their own data
-    const userId = isStudent ? user?.id : undefined;
-
-    // group_teachers.teacher_id = users.id
-    const groupTeacherId = isTeacher ? user?.id : undefined;
-    // subject_teachers.teacher_id = teachers.id (the Teacher row id, not User.id)
-    const subjectTeacherId = isTeacher ? user?.teacher?.id : undefined;
 
     const [selectedGroup, setSelectedGroup] = useState<string>('');
     const [selectedSubject, setSelectedSubject] = useState<string>('');
@@ -59,14 +50,13 @@ const ResultsPage = () => {
     const parsedGrade = selectedGrade ? parseInt(selectedGrade, 10) : undefined;
 
     const { data: resultsData, isLoading: isResultsLoading } = useResults(
-        currentPage, pageSize, userId, parsedGrade, parsedGroup, parsedSubject, parsedQuiz,
+        currentPage, pageSize, undefined, parsedGrade, parsedGroup, parsedSubject, parsedQuiz,
         !isAuthLoading  // only run query once auth is resolved
     );
 
-    // Groups: scoped to teacher's assigned groups when logged in as teacher
-    const { data: groupsData, isLoading: isGroupsLoading } = useGroups(1, 100, '', groupTeacherId);
-    // Subjects: backend auto-filters by current user's role; also pass teacher_id for optional explicit filter
-    const { data: subjectsData } = useSubjects(1, 100, '', subjectTeacherId);
+    // Groups & Subjects: scoped automatically by backend based on user roles
+    const { data: groupsData, isLoading: isGroupsLoading } = useGroups(1, 100, '');
+    const { data: subjectsData } = useSubjects(1, 100, '');
     const { data: quizzesData } = useQuizzes(1, 100);
 
     const groups = groupsData?.groups || [];
