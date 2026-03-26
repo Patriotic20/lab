@@ -14,6 +14,7 @@ from .schemas import (
     GroupListRequest,
     GroupListResponse,
 )
+from app.models.user.model import User
 from app.modules.student.repository import student_repository
 from app.modules.student.schemas import StudentListResponse, StudentListRequest
 # from app.core.cache import clear_cache, custom_key_builder
