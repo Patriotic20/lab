@@ -21,7 +21,7 @@ import { useQuizzes } from '@/hooks/useQuizzes';
 import { useAuth } from '@/context/AuthContext';
 
 const ResultsPage = () => {
-    const { user, isLoading: isAuthLoading } = useAuth();
+    const { isLoading: isAuthLoading } = useAuth();
     const navigate = useNavigate();
 
 
