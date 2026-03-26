@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Pagination } from '@/components/ui/Pagination';
 import { useResults } from '@/hooks/useResults';
@@ -16,35 +16,48 @@ import { Combobox } from '@/components/ui/Combobox';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 
+import { useGroups } from '@/hooks/useGroups';
 import { useSubjects } from '@/hooks/useSubjects';
 import { useQuizzes } from '@/hooks/useQuizzes';
 import { useAuth } from '@/context/AuthContext';
 
 const ResultsPage = () => {
-    const { isLoading: isAuthLoading } = useAuth();
+    const { user, isLoading: isAuthLoading } = useAuth();
     const navigate = useNavigate();
 
+    // Role detection — backend enforces access, this is only for UI decisions
+    const isStudent = user?.roles?.some(role => role.name.toLowerCase() === 'student');
+    const isAdminOrTeacher = !isStudent;
 
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 10;
 
+    const [selectedGroup, setSelectedGroup] = useState<string>('');
     const [selectedSubject, setSelectedSubject] = useState<string>('');
     const [selectedQuiz, setSelectedQuiz] = useState<string>('');
     const [selectedGrade, setSelectedGrade] = useState<string>('');
 
+    const parsedGroup = selectedGroup ? parseInt(selectedGroup, 10) : undefined;
     const parsedSubject = selectedSubject ? parseInt(selectedSubject, 10) : undefined;
     const parsedQuiz = selectedQuiz ? parseInt(selectedQuiz, 10) : undefined;
     const parsedGrade = selectedGrade ? parseInt(selectedGrade, 10) : undefined;
 
+    // Reset page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedGroup, selectedSubject, selectedQuiz, selectedGrade]);
+
     const { data: resultsData, isLoading: isResultsLoading } = useResults(
-        currentPage, pageSize, undefined, parsedGrade, undefined, parsedSubject, parsedQuiz,
-        !isAuthLoading  // only run query once auth is resolved
+        currentPage, pageSize, undefined, parsedGrade, parsedGroup, parsedSubject, parsedQuiz,
+        !isAuthLoading  // only run once auth is resolved
     );
 
-    // Subjects & Quizzes: scoped automatically by backend based on user roles
+    // Groups are scoped by backend: admins see all, teachers see only assigned groups
+    const { data: groupsData } = useGroups(1, 1000, '');
     const { data: subjectsData } = useSubjects(1, 1000, '');
     const { data: quizzesData } = useQuizzes(1, 1000);
 
+    const groups = groupsData?.groups || [];
     const subjectOptions = subjectsData?.subjects.map(s => ({ value: String(s.id), label: s.name })) || [];
     const quizOptions = quizzesData?.quizzes.map(q => ({ value: String(q.id), label: q.title })) || [];
 
@@ -52,11 +65,14 @@ const ResultsPage = () => {
     const totalPages = resultsData ? Math.ceil(resultsData.total / pageSize) : 1;
 
     const handleClearFilters = () => {
+        setSelectedGroup('');
         setSelectedSubject('');
         setSelectedQuiz('');
         setSelectedGrade('');
         setCurrentPage(1);
     };
+
+    const hasActiveFilters = !!(selectedGroup || selectedSubject || selectedQuiz || selectedGrade);
 
     return (
         <div className="space-y-6">
@@ -64,7 +80,9 @@ const ResultsPage = () => {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                 <div>
                     <h1 className="text-xl font-semibold tracking-tight">Natijalar</h1>
-                    <p className="mt-0.5 text-sm text-muted-foreground">Talabalar test natijalarini va baholarini ko'rish</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">
+                        Talabalar test natijalarini va baholarini ko'rish
+                    </p>
                 </div>
             </div>
 
@@ -72,6 +90,20 @@ const ResultsPage = () => {
             <Card>
                 <CardContent className="p-4">
                     <div className="flex flex-wrap gap-4 items-end">
+                        {/* Group filter — only for Admin / Teacher; backend scopes the list */}
+                        {isAdminOrTeacher && (
+                            <div className="flex flex-col gap-2 min-w-[200px] flex-1">
+                                <label className="text-sm font-medium">Guruh bo'yicha filtri</label>
+                                <Combobox
+                                    options={groups.map(g => ({ value: String(g.id), label: g.name }))}
+                                    value={selectedGroup}
+                                    onChange={(val) => setSelectedGroup(val || '')}
+                                    placeholder="Barcha guruhlar"
+                                    searchPlaceholder="Guruhni qidirish..."
+                                />
+                            </div>
+                        )}
+
                         <div className="flex flex-col gap-2 min-w-[200px] flex-1">
                             <label className="text-sm font-medium">Fan bo'yicha filtri</label>
                             <Combobox
@@ -82,6 +114,7 @@ const ResultsPage = () => {
                                 searchPlaceholder="Fanni qidirish..."
                             />
                         </div>
+
                         <div className="flex flex-col gap-2 min-w-[200px] flex-1">
                             <label className="text-sm font-medium">Test bo'yicha filtri</label>
                             <Combobox
@@ -92,6 +125,7 @@ const ResultsPage = () => {
                                 searchPlaceholder="Testni qidirish..."
                             />
                         </div>
+
                         <div className="flex flex-col gap-2 w-[120px]">
                             <label className="text-sm font-medium">Ball</label>
                             <Input
@@ -103,7 +137,8 @@ const ResultsPage = () => {
                                 max={5}
                             />
                         </div>
-                        {(selectedSubject || selectedQuiz || selectedGrade) && (
+
+                        {hasActiveFilters && (
                             <Button variant="ghost" className="mb-0.5" onClick={handleClearFilters}>
                                 <X className="mr-2 h-4 w-4" />
                                 Tozalash
@@ -113,6 +148,7 @@ const ResultsPage = () => {
                 </CardContent>
             </Card>
 
+            {/* Results table */}
             <Card>
                 <CardContent>
                     {isResultsLoading ? (
@@ -130,6 +166,7 @@ const ResultsPage = () => {
                                 <TableRow>
                                     <TableHead>ID</TableHead>
                                     <TableHead>Talaba</TableHead>
+                                    {isAdminOrTeacher && <TableHead>Guruh</TableHead>}
                                     <TableHead>Fan</TableHead>
                                     <TableHead>Test</TableHead>
                                     <TableHead>Ball</TableHead>
@@ -158,6 +195,9 @@ const ResultsPage = () => {
                                                 </div>
                                             )}
                                         </TableCell>
+                                        {isAdminOrTeacher && (
+                                            <TableCell className="capitalize">{result.group?.name || '-'}</TableCell>
+                                        )}
                                         <TableCell className="capitalize">{result.subject?.name || '-'}</TableCell>
                                         <TableCell className="capitalize">{result.quiz?.title || `Test ${result.quiz_id}`}</TableCell>
                                         <TableCell>
