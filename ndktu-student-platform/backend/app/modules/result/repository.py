@@ -85,7 +85,8 @@ class ResultRepository:
                 # If a teacher has no assigned groups/subjects, they see nothing
                 teacher_filter = Result.id == -1
 
-            stmt = stmt.where(teacher_filter)
+            if teacher_filter is not None:
+                stmt = stmt.where(teacher_filter)
         elif is_student:
             # Students only see their own results
             stmt = stmt.where(Result.user_id == current_user.id)
