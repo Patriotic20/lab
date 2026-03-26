@@ -72,7 +72,6 @@ class ResultRepository:
             st_result = await session.execute(st_stmt)
             allowed_subject_ids = st_result.scalars().all()
 
-            teacher_filter = None
             if allowed_group_ids and allowed_subject_ids:
                 teacher_filter = (
                     Result.group_id.in_(allowed_group_ids)
@@ -86,9 +85,9 @@ class ResultRepository:
                 # If a teacher has no assigned groups/subjects, they see nothing
                 teacher_filter = Result.id == -1
 
-        elif is_teacher:
             if teacher_filter is not None:
                 stmt = stmt.where(teacher_filter)
+
         elif is_student:
             # Students only see their own results
             stmt = stmt.where(Result.user_id == current_user.id)
