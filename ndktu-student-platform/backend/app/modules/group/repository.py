@@ -66,24 +66,34 @@ class GroupRepository:
         is_teacher = any(role.name.lower() == "teacher" for role in current_user.roles)
         is_student = any(role.name.lower() == "student" for role in current_user.roles)
 
+        # Track if we already joined GroupTeacher to avoid duplicate JOINs
+        already_joined_group_teacher = False
+        assigned_group_id = None
+
         if is_admin:
+            # Admins see ALL groups — no filter applied, ignore request.teacher_id
             pass
         elif is_teacher:
-            stmt = stmt.join(GroupTeacher, Group.id == GroupTeacher.group_id).where(GroupTeacher.teacher_id == current_user.id)
+            stmt = stmt.join(GroupTeacher, Group.id == GroupTeacher.group_id).where(
+                GroupTeacher.teacher_id == current_user.id
+            )
+            already_joined_group_teacher = True
         elif is_student:
-             from app.models.student.model import Student
-             # Try to get student's group
-             student_stmt = select(Student.group_id).where(Student.user_id == current_user.id)
-             student_result = await session.execute(student_stmt)
-             assigned_group_id = student_result.scalar_one_or_none()
-             if assigned_group_id:
-                 stmt = stmt.where(Group.id == assigned_group_id)
-             else:
-                 stmt = stmt.where(Group.id == -1)
-        
-        if request.teacher_id:
-             # Explicit teacher filter if provided
-             stmt = stmt.join(GroupTeacher, Group.id == GroupTeacher.group_id).where(GroupTeacher.teacher_id == request.teacher_id)
+            from app.models.student.model import Student
+            student_stmt = select(Student.group_id).where(Student.user_id == current_user.id)
+            student_result = await session.execute(student_stmt)
+            assigned_group_id = student_result.scalar_one_or_none()
+            if assigned_group_id:
+                stmt = stmt.where(Group.id == assigned_group_id)
+            else:
+                stmt = stmt.where(Group.id == -1)
+
+        # Only apply explicit teacher_id filter for non-admin users
+        # and only if it wasn't already joined via role-based filter
+        if not is_admin and request.teacher_id and not already_joined_group_teacher:
+            stmt = stmt.join(GroupTeacher, Group.id == GroupTeacher.group_id).where(
+                GroupTeacher.teacher_id == request.teacher_id
+            )
 
         stmt = stmt.offset(request.offset).limit(request.limit)
 
@@ -96,20 +106,25 @@ class GroupRepository:
         result = await session.execute(stmt)
         groups = result.scalars().all()
 
+        # --- Count query ---
         count_stmt = select(func.count()).select_from(Group)
 
         if is_admin:
             pass
         elif is_teacher:
-            count_stmt = count_stmt.join(GroupTeacher, Group.id == GroupTeacher.group_id).where(GroupTeacher.teacher_id == current_user.id)
+            count_stmt = count_stmt.join(GroupTeacher, Group.id == GroupTeacher.group_id).where(
+                GroupTeacher.teacher_id == current_user.id
+            )
         elif is_student:
-             if assigned_group_id:
-                 count_stmt = count_stmt.where(Group.id == assigned_group_id)
-             else:
-                 count_stmt = count_stmt.where(Group.id == -1)
+            if assigned_group_id:
+                count_stmt = count_stmt.where(Group.id == assigned_group_id)
+            else:
+                count_stmt = count_stmt.where(Group.id == -1)
 
-        if request.teacher_id:
-            count_stmt = count_stmt.join(GroupTeacher, Group.id == GroupTeacher.group_id).where(GroupTeacher.teacher_id == request.teacher_id)
+        if not is_admin and request.teacher_id and not already_joined_group_teacher:
+            count_stmt = count_stmt.join(GroupTeacher, Group.id == GroupTeacher.group_id).where(
+                GroupTeacher.teacher_id == request.teacher_id
+            )
         if request.name:
             count_stmt = count_stmt.where(Group.name.ilike(f"%{request.name}%"))
         if request.faculty_id:
@@ -121,6 +136,7 @@ class GroupRepository:
         return GroupListResponse(
             total=total, page=request.page, limit=request.limit, groups=groups
         )
+
 
     async def update_group(
         self, session: AsyncSession, group_id: int, data: GroupCreateRequest
