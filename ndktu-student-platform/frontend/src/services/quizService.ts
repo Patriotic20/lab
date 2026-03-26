@@ -60,4 +60,9 @@ export const quizService = {
     deleteQuiz: async (id: number) => {
         await api.delete(`/quiz/${id}`);
     },
+
+    getDeleteInfo: async (id: number): Promise<{ results_count: number }> => {
+        const response = await api.get<{ results_count: number }>(`/quiz/${id}/delete-info`);
+        return response.data;
+    },
 };

@@ -17,9 +17,12 @@ if TYPE_CHECKING:
 class Question(Base, IdIntPk, TimestampMixin):
     __tablename__ = "questions"
 
-    subject_id: Mapped[int] = mapped_column(ForeignKey("subjects.id"))
-    
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    subject_id: Mapped[int | None] = mapped_column(
+        ForeignKey("subjects.id", ondelete="SET NULL"), nullable=True
+    )
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
 
     text: Mapped[str] = mapped_column(nullable=False)
     option_a: Mapped[str] = mapped_column(nullable=False)

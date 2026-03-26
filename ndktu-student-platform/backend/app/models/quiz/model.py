@@ -18,15 +18,15 @@ class Quiz(Base, IdIntPk, TimestampMixin):
     __tablename__ = "quizzes"
     
     user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
+        ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
     group_id: Mapped[int | None] = mapped_column(
-        ForeignKey("groups.id", ondelete="CASCADE"),
+        ForeignKey("groups.id", ondelete="SET NULL"),
         nullable=True,
     )
     subject_id: Mapped[int | None] = mapped_column(
-        ForeignKey("subjects.id", ondelete="CASCADE"),
+        ForeignKey("subjects.id", ondelete="SET NULL"),
         nullable=True,
     )
     
