@@ -55,9 +55,9 @@ const ResultsPage = () => {
     );
 
     // Groups & Subjects: scoped automatically by backend based on user roles
-    const { data: groupsData, isLoading: isGroupsLoading } = useGroups(1, 100, '');
-    const { data: subjectsData } = useSubjects(1, 100, '');
-    const { data: quizzesData } = useQuizzes(1, 100);
+    const { data: groupsData, isLoading: isGroupsLoading } = useGroups(1, 1000, '');
+    const { data: subjectsData } = useSubjects(1, 1000, '');
+    const { data: quizzesData } = useQuizzes(1, 1000);
 
     const groups = groupsData?.groups || [];
 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Any
+from typing import Any, Literal, Optional
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 
@@ -128,3 +128,83 @@ class TeacherAssignedGroupsResponse(BaseModel):
         if hasattr(data, "user") and data.user is not None:
             data.__dict__["group_teachers"] = data.user.group_teachers
         return data
+
+
+# ── Teacher ranking schemas ───────────────────────────────────────────────────
+
+class TeacherRankItem(BaseModel):
+    """A single teacher entry in a ranking list."""
+    rank: int
+    teacher_id: int
+    full_name: str
+    kafedra_id: Optional[int] = None
+    kafedra_name: Optional[str] = None
+    faculty_id: Optional[int] = None
+    faculty_name: Optional[str] = None
+    # Present only when scope == "group"
+    group_id: Optional[int] = None
+    group_name: Optional[str] = None
+    student_count: int
+    avg_grade: float         # plain AVG(grade) on 2–5 scale
+    weighted_rating: float   # Bayesian-adjusted rating, also 2–5
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TeacherRankingResponse(BaseModel):
+    total: int
+    page: int = 1
+    limit: int = 10
+    teachers: list[TeacherRankItem]
+    # active filters (None = no filter applied)
+    faculty_id: Optional[int] = None
+    kafedra_id: Optional[int] = None
+    group_id: Optional[int] = None
+    search: Optional[str] = None
+
+
+# ── Faculty ranking schemas ───────────────────────────────────────────────────
+
+class FacultyRankItem(BaseModel):
+    """A single faculty entry in a faculty ranking list."""
+    rank: int
+    faculty_id: int
+    faculty_name: str
+    kafedra_count: int
+    student_count: int
+    avg_grade: float
+    weighted_rating: float
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FacultyRankingResponse(BaseModel):
+    total: int
+    page: int = 1
+    limit: int = 10
+    faculties: list[FacultyRankItem]
+
+
+# ── Kafedra ranking schemas ───────────────────────────────────────────────────
+
+class KafedraRankItem(BaseModel):
+    """A single kafedra (chair) entry in a kafedra ranking list."""
+    rank: int
+    kafedra_id: int
+    kafedra_name: str
+    faculty_id: int
+    faculty_name: str
+    teacher_count: int
+    student_count: int
+    avg_grade: float
+    weighted_rating: float
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class KafedraRankingResponse(BaseModel):
+    total: int
+    page: int = 1
+    limit: int = 10
+    kafedras: list[KafedraRankItem]
+

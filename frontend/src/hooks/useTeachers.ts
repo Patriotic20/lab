@@ -88,3 +88,36 @@ export const useTeacherAssignedGroups = (userId?: number) => {
         enabled: !!userId,
     });
 };
+
+// ── Ranking hooks ─────────────────────────────────────────────────────────
+
+type TeacherRankingFilters = {
+    faculty_id?: number;
+    kafedra_id?: number;
+    group_id?: number;
+    search?: string;
+};
+
+export const useTeacherRanking = (filters?: TeacherRankingFilters & { page?: number; limit?: number }) => {
+    return useQuery({
+        queryKey: ['teacherRanking', filters ?? {}],
+        queryFn: () => teacherService.getRankingOverall(filters),
+        placeholderData: (prev) => prev,
+    });
+};
+
+export const useFacultyRanking = (params?: { page?: number; limit?: number }) => {
+    return useQuery({
+        queryKey: ['facultyRanking', params ?? {}],
+        queryFn: () => teacherService.getFacultyRanking(params),
+        placeholderData: (prev) => prev,
+    });
+};
+
+export const useKafedraRanking = (params?: { page?: number; limit?: number }) => {
+    return useQuery({
+        queryKey: ['kafedraRanking', params ?? {}],
+        queryFn: () => teacherService.getKafedraRanking(params),
+        placeholderData: (prev) => prev,
+    });
+};

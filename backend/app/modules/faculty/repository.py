@@ -2,7 +2,7 @@ import logging
 
 from fastapi import HTTPException, status
 from app.models.faculty.model import Faculty
-from sqlalchemy import func, select
+from sqlalchemy import func, select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .schemas import (
@@ -57,10 +57,13 @@ class FacultyRepository:
     async def list_faculties(
         self, session: AsyncSession, request: FacultyListRequest
     ) -> FacultyListResponse:
-        stmt = select(Faculty).offset(request.offset).limit(request.limit)
+        stmt = select(Faculty)
 
         if request.name:
             stmt = stmt.where(Faculty.name.ilike(f"%{request.name}%"))
+
+        stmt = stmt.order_by(desc(Faculty.created_at))
+        stmt = stmt.offset(request.offset).limit(request.limit)
 
         result = await session.execute(stmt)
         faculties = result.scalars().all()

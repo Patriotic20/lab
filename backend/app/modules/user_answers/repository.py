@@ -1,6 +1,6 @@
 import logging
 
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_, func, desc
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user_answers.model import UserAnswers
@@ -36,6 +36,7 @@ class UserAnswersRepository:
         total_result = await session.execute(count_stmt)
         total = total_result.scalar() or 0
 
+        stmt = stmt.order_by(desc(UserAnswers.created_at))
         stmt = stmt.offset(data.offset).limit(data.limit)
         
         result = await session.execute(stmt)

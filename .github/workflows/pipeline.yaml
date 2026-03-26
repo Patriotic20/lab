@@ -137,8 +137,6 @@ jobs:
 
   # ──────────────────────────────────────────
   # JOB 3: Deploy to Production
-  # Only runs on push to main (not PRs), after
-  # both CI jobs pass.
   # ──────────────────────────────────────────
   deploy:
     name: Deploy to Production
@@ -160,6 +158,7 @@ jobs:
           LOGFIRE_TOKEN=${{ secrets.LOGFIRE_TOKEN }}
           PGADMIN_DEFAULT_EMAIL=${{ secrets.PGADMIN_DEFAULT_EMAIL }}
           PGADMIN_DEFAULT_PASSWORD=${{ secrets.PGADMIN_DEFAULT_PASSWORD }}
+          LOGFIRE_TOKEN=${{ secrets.LOGFIRE_TOKEN }}
           EOF
 
       - name: Write backend/.env
@@ -197,11 +196,11 @@ jobs:
           POSTGRES_PORT=5432
           EOF
 
-      - name: Stop existing containers
-        run: docker compose down --remove-orphans
+      # ВАЖНО: Мы больше не делаем docker compose down!
+      # Используем нашу новую команду из Makefile
+      - name: Zero-Downtime Deploy
+        run: make deploy
 
-      - name: Pull & rebuild containers
-        run: docker compose up -d --build
-
-      - name: Remove dangling Docker images
+      # Очистка теперь встроена в make deploy, но можно оставить для надежности
+      - name: Clean up unused Docker resources
         run: docker image prune -f

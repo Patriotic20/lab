@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from app.models.role.model import Role
 from app.models.permission.model import Permission
 from app.models.role_permission.model import RolePermission
-from sqlalchemy import func, select
+from sqlalchemy import func, select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -73,7 +73,13 @@ class RoleRepository:
     async def list_roles(
         self, session: AsyncSession, request: RoleListRequest
     ) -> RoleListResponse:
-        stmt = select(Role).options(selectinload(Role.permissions)).offset(request.offset).limit(request.limit)
+        stmt = (
+            select(Role)
+            .options(selectinload(Role.permissions))
+            .order_by(desc(Role.created_at))
+            .offset(request.offset)
+            .limit(request.limit)
+        )
         result = await session.execute(stmt)
         roles = result.scalars().all()
 

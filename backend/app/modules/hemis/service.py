@@ -1,11 +1,12 @@
 import logging
-
+import re
 import httpx
 from datetime import datetime, date
 
-from sqlalchemy import select
+from sqlalchemy import select, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 
 from core.config import settings
@@ -231,14 +232,38 @@ class HemisLoginService:
         return obj
 
     async def get_or_create_group(self, session: AsyncSession, name: str, faculty_id: int) -> Group:
-        stmt = select(Group).where(Group.name == name)
+        # 1. Normalization (7A-23KT -> 7 a-23 kt)
+        clean_name = name.lower().strip()
+        # Use regex to bring to standard format
+        normalized = re.sub(r'(\d)([a-z])', r'\1 \2', clean_name)
+        normalized = re.sub(r'(\d+)([a-z]{2})$', r'\1 \2', normalized)
+
+        # 2. Complex Search (ILIKE and variants)
+        # We search for: both normalized format, original clean, and without spaces
+        stmt = select(Group).where(
+            or_(
+                Group.name == normalized,
+                Group.name == clean_name,
+                Group.name.ilike(f"%{clean_name.replace(' ', '')}%")
+            )
+        )
+        
         result = await session.execute(stmt)
         obj = result.scalar_one_or_none()
+
         if not obj:
-            obj = Group(name=name, faculty_id=faculty_id)
-            session.add(obj)
-            await session.flush()
-            await session.refresh(obj)
+            # 3. If not found, create in the most correct (normalized) format
+            try:
+                obj = Group(name=normalized, faculty_id=faculty_id)
+                session.add(obj)
+                await session.flush()
+                await session.refresh(obj)
+            except IntegrityError:
+                # If already created in a parallel request, search again
+                await session.rollback()
+                result = await session.execute(select(Group).where(Group.name == normalized))
+                obj = result.scalar_one()
+
         return obj
 
 hemis_service = HemisLoginService()

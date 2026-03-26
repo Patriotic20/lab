@@ -6,6 +6,7 @@ interface ComboboxProps {
     options: { value: string; label: string }[];
     value?: string;
     onChange: (value: string) => void;
+    onSearchChange?: (query: string) => void;
     placeholder?: string;
     searchPlaceholder?: string;
     disabled?: boolean;
@@ -16,6 +17,7 @@ export function Combobox({
     options,
     value,
     onChange,
+    onSearchChange,
     placeholder = "Select option...",
     searchPlaceholder = "Search...",
     disabled = false,
@@ -89,7 +91,11 @@ export function Combobox({
                             className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
                             placeholder={searchPlaceholder}
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(e) => {
+                                const query = e.target.value;
+                                setSearchQuery(query);
+                                onSearchChange?.(query);
+                            }}
                         />
                     </div>
                     <div className="max-h-[200px] overflow-y-auto p-1">

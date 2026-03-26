@@ -1,6 +1,5 @@
 from sqladmin import ModelView
-from app.models.quiz.model import Quiz  
-
+from app.models.quiz.model import Quiz
 
 class QuizView(ModelView, model=Quiz):
     column_list = (
@@ -13,8 +12,7 @@ class QuizView(ModelView, model=Quiz):
         "user",
         "group",
         "subject",
-    )  
-
+    )
     column_labels = {
         "id": "ID",
         "title": "Title",
@@ -26,51 +24,33 @@ class QuizView(ModelView, model=Quiz):
         "group": "Group",
         "subject": "Subject",
     }
-
     column_formatters = {
-        "created_at": Quiz.created_at,
-        "updated_at": Quiz.updated_at,
+        "created_at": lambda m, a: m.created_at.strftime("%Y-%m-%d %H:%M") if m.created_at else "-",
+        "updated_at": lambda m, a: m.updated_at.strftime("%Y-%m-%d %H:%M") if m.updated_at else "-",
     }
-
+    # ✅ Only scalar columns — relationships can't be searched
     column_searchable_list = (
         "title",
-        "question_number",
-        "duration",
         "pin",
-        "is_active",
-        "user",
-        "group",
-        "subject",
     )
-
+    # ✅ Only simple scalar columns — relationships can't be inline-edited
     column_editable_list = (
         "title",
         "question_number",
         "duration",
         "pin",
         "is_active",
-        "user",
-        "group",
-        "subject",
     )
-
-    column_sortable_list = (
-        "id",
-        "title",
-        "question_number",
-        "duration",
-        "pin",
-        "is_active",
-        "user",
-        "group",
-        "subject",
-    )
-
-    column_default_sort = (
-        "id",
-        True,
-    )
-
+    # ✅ Only scalar columns — relationships can't be sorted
+    # column_sortable_list = (
+    #     "id",
+    #     "title",
+    #     "question_number",
+    #     "duration",
+    #     "pin",
+    #     "is_active",
+    # )
+    column_default_sort = ("id", True)
     form_excluded_columns = [
         "user_answers",
         "results",

@@ -17,6 +17,9 @@ from .schemas import (
     TeacherSubjectAssignRequest,
     TeacherAssignedSubjectsResponse,
     TeacherAssignedGroupsResponse,
+    TeacherRankingResponse,
+    FacultyRankingResponse,
+    KafedraRankingResponse,
 )
 from app.models.user.model import User
 # from app.core.cache import clear_cache, custom_key_builder
@@ -134,3 +137,70 @@ async def get_teacher_assigned_groups(
     return await get_teacher_repository.get_assigned_groups_by_user(
         session=session, user_id=user_id
     )
+
+
+
+@router.get(
+    "/ranking/overall",
+    response_model=TeacherRankingResponse,
+    summary="Teacher ranking — with optional filters",
+)
+async def teacher_ranking_overall(
+    faculty_id: int | None = None,
+    kafedra_id: int | None = None,
+    group_id: int | None = None,
+    search: str | None = None,
+    page: int = 1,
+    limit: int = 10,
+    session: AsyncSession = Depends(db_helper.session_getter),
+    _: PermissionRequired = Depends(PermissionRequired("read:teacher")),
+):
+    """
+    Return teachers ranked by Bayesian weighted avg student grade.
+    All query params are optional — omit all to get full university ranking.
+        ?faculty_id=1  → teachers of that faculty only
+        ?kafedra_id=3  → teachers of that kafedra only
+        ?group_id=7    → teachers assigned to that group only
+        ?search=John   → teachers whose name contains "John"
+        ?page=1&limit=10 → pagination
+    Any combination of filters can be used together.
+    """
+    return await get_teacher_repository.get_ranking(
+        session=session,
+        faculty_id=faculty_id,
+        kafedra_id=kafedra_id,
+        group_id=group_id,
+        search=search,
+        page=page,
+        limit=limit,
+    )
+
+
+@router.get(
+    "/ranking/faculty",
+    response_model=FacultyRankingResponse,
+    summary="Faculty ranking — faculties ranked by avg student grade",
+)
+async def faculty_ranking(
+    page: int = 1,
+    limit: int = 10,
+    session: AsyncSession = Depends(db_helper.session_getter),
+    _: PermissionRequired = Depends(PermissionRequired("read:teacher")),
+):
+    """Return all faculties ranked by avg student grade (Bayesian weighted)."""
+    return await get_teacher_repository.get_faculty_ranking(session=session, page=page, limit=limit)
+
+
+@router.get(
+    "/ranking/kafedra",
+    response_model=KafedraRankingResponse,
+    summary="Kafedra ranking — chairs ranked by avg student grade",
+)
+async def kafedra_ranking(
+    page: int = 1,
+    limit: int = 10,
+    session: AsyncSession = Depends(db_helper.session_getter),
+    _: PermissionRequired = Depends(PermissionRequired("read:teacher")),
+):
+    """Return all kafedras (chairs) ranked by avg student grade (Bayesian weighted)."""
+    return await get_teacher_repository.get_kafedra_ranking(session=session, page=page, limit=limit)

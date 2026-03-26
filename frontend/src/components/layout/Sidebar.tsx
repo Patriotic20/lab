@@ -17,14 +17,13 @@ import {
     GraduationCap,
     BookOpen,
     FileText,
-    Shield,
-    Key,
     Building2,
     Layers,
     UsersRound,
     FileQuestion,
     PlayCircle,
     X,
+    Trophy,
 } from 'lucide-react';
 import { cn } from '@/utils/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -51,6 +50,7 @@ const adminSections: NavSection[] = [
         label: 'Umumiy',
         items: [
             { name: 'Dashboard', href: '/', icon: BarChart2 },
+            { name: 'Reyting', href: '/teacher-ranking', icon: Trophy },
         ],
     },
     {
@@ -71,13 +71,6 @@ const adminSections: NavSection[] = [
         ],
     },
     {
-        label: 'Kirish huquqlari',
-        items: [
-            { name: 'Rollar', href: '/roles', icon: Shield },
-            { name: 'Ruxsatlar', href: '/permissions', icon: Key },
-        ],
-    },
-    {
         label: 'Testlar',
         items: [
             { name: 'Savollar', href: '/questions', icon: FileQuestion },
@@ -93,6 +86,7 @@ const teacherSections: NavSection[] = [
         label: 'Fanlar',
         items: [
             { name: 'Mening fanlarim', href: '/teacher-subjects', icon: BookOpen },
+            { name: 'Reyting', href: '/teacher-ranking', icon: Trophy },
         ],
     },
     {

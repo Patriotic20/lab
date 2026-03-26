@@ -118,5 +118,94 @@ export const teacherService = {
         const response = await api.get<TeacherAssignedGroupsResponse>(`/teacher/assigned_groups/by-user/${userId}`);
         return response.data;
     },
+
+    // ── Ranking ────────────────────────────────────────────────────────────
+    getRankingOverall: async (params?: {
+        faculty_id?: number;
+        kafedra_id?: number;
+        group_id?: number;
+        search?: string;
+        page?: number;
+        limit?: number;
+    }): Promise<TeacherRankingResponse> => {
+        const response = await api.get<TeacherRankingResponse>('/teacher/ranking/overall', { params });
+        return response.data;
+    },
+
+    getFacultyRanking: async (params?: { page?: number; limit?: number }): Promise<FacultyRankingResponse> => {
+        const response = await api.get<FacultyRankingResponse>('/teacher/ranking/faculty', { params });
+        return response.data;
+    },
+
+    getKafedraRanking: async (params?: { page?: number; limit?: number }): Promise<KafedraRankingResponse> => {
+        const response = await api.get<KafedraRankingResponse>('/teacher/ranking/kafedra', { params });
+        return response.data;
+    },
 };
+
+// ── Teacher ranking types ────────────────────────────────────────────────────
+
+export interface TeacherRankItem {
+    rank: number;
+    teacher_id: number;
+    full_name: string;
+    kafedra_id: number | null;
+    kafedra_name: string | null;
+    faculty_id: number | null;
+    faculty_name: string | null;
+    group_id: number | null;
+    group_name: string | null;
+    student_count: number;
+    avg_grade: number;
+    weighted_rating: number;
+}
+
+export interface TeacherRankingResponse {
+    total: number;
+    page: number;
+    limit: number;
+    teachers: TeacherRankItem[];
+    faculty_id: number | null;
+    kafedra_id: number | null;
+    group_id: number | null;
+}
+
+// ── Faculty ranking types ────────────────────────────────────────────────────
+export interface FacultyRankItem {
+    rank: number;
+    faculty_id: number;
+    faculty_name: string;
+    kafedra_count: number;
+    student_count: number;
+    avg_grade: number;
+    weighted_rating: number;
+}
+
+export interface FacultyRankingResponse {
+    total: number;
+    page: number;
+    limit: number;
+    faculties: FacultyRankItem[];
+}
+
+// ── Kafedra ranking types ────────────────────────────────────────────────────
+export interface KafedraRankItem {
+    rank: number;
+    kafedra_id: number;
+    kafedra_name: string;
+    faculty_id: number;
+    faculty_name: string;
+    teacher_count: number;
+    student_count: number;
+    avg_grade: number;
+    weighted_rating: number;
+}
+
+export interface KafedraRankingResponse {
+    total: number;
+    page: number;
+    limit: number;
+    kafedras: KafedraRankItem[];
+}
+
 

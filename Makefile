@@ -1,4 +1,4 @@
-.PHONY: help up down restart logs frontend-logs backend-logs backup backup-database backup-logs backup-images restore
+.PHONY: help up down restart logs frontend-logs backend-logs backup backup-database backup-logs backup-images restore deploy
 
 .DEFAULT_GOAL := help
 
@@ -33,6 +33,8 @@ help:
 	@echo "make restore          - Restore the database from a given SQL.GZ backup file"
 	@echo "                        Example: make restore FILE=backups/backup_2026-02-18_13-00-00.sql.gz"
 	@echo ""
+	@echo "make deploy           - Zero-downtime update for backend"
+	@echo "                        Example: make deploy"
 
 # Start all services
 up:
@@ -76,3 +78,21 @@ backup-images:
 restore:
 	@if [ -z "$(FILE)" ]; then echo "Usage: make restore FILE=backups/backup_YYYY-MM-DD_HH-MM-SS.sql.gz"; exit 1; fi
 	./scripts/restore.sh $(FILE)
+
+
+# Zero-Downtime Deployment
+deploy:
+	@echo "🚀 Starting Zero-Downtime Deployment..."
+	
+	# 1. Update Backend (Zero-Downtime)
+	@echo "Updating Backend..."
+	docker compose up -d --build backend
+	
+	# 2. Update Frontend (Zero-Downtime)
+	@echo "Updating Frontend..."
+	docker compose up -d --build frontend
+	
+	@echo "✅ Deployment finished successfully!"
+	
+	# Clean up old images
+	docker image prune -f

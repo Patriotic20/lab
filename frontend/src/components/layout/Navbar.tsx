@@ -24,8 +24,6 @@ const ROUTE_LABELS: Record<string, string> = {
     'users':       'Foydalanuvchilar',
     'teachers':    "O'qituvchilar",
     'students':    'Talabalar',
-    'roles':       'Rollar',
-    'permissions': 'Ruxsatlar',
     'faculties':   'Fakultetlar',
     'kafedras':    'Kafedralar',
     'groups':      'Guruhlar',

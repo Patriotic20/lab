@@ -1,4 +1,5 @@
 import logging
+from typing import Literal, Optional
 
 from fastapi import HTTPException, status
 from app.models.teacher.model import Teacher
@@ -7,7 +8,10 @@ from app.models.group.model import Group
 from app.models.subject.model import Subject
 from app.models.group_teachers.model import GroupTeacher
 from app.models.subject_teacher.model import SubjectTeacher
-from sqlalchemy import func, select
+from app.models.kafedra.model import Kafedra
+from app.models.faculty.model import Faculty
+from app.models.results.model import Result
+from sqlalchemy import func, select, desc, asc, case, cast, Float
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +21,12 @@ from .schemas import (
     TeacherListResponse,
     TeacherGroupAssignRequest,
     TeacherSubjectAssignRequest,
+    TeacherRankItem,
+    TeacherRankingResponse,
+    FacultyRankItem,
+    FacultyRankingResponse,
+    KafedraRankItem,
+    KafedraRankingResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -93,13 +103,16 @@ class TeacherRepository:
             selectinload(Teacher.kafedra),
             selectinload(Teacher.user).selectinload(User.group_teachers).selectinload(GroupTeacher.group),
             selectinload(Teacher.subject_teachers).selectinload(SubjectTeacher.subject),
-        ).offset(request.offset).limit(request.limit)
+        )
 
         if request.full_name:
             stmt = stmt.where(Teacher.full_name.ilike(f"%{request.full_name}%"))
         
         if request.kafedra_id:
             stmt = stmt.where(Teacher.kafedra_id == request.kafedra_id)
+
+        stmt = stmt.order_by(desc(Teacher.created_at))
+        stmt = stmt.offset(request.offset).limit(request.limit)
 
         result = await session.execute(stmt)
         teachers = result.scalars().all()
@@ -298,5 +311,280 @@ class TeacherRepository:
             )
 
         return teacher
+
+    # ------------------------------------------------------------------
+    # Bayesian helper
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _bayesian(entries: list[dict], C: float = 5.0) -> list[dict]:
+        """
+        Apply Bayesian weighted rating to a list of dicts that have
+        'avg_grade' and 'student_count' keys.  Adds 'weighted_rating'.
+
+        Formula: weighted_rating = (C×m + avg_grade×v) / (C + v)
+          m = global mean avg_grade across all entries
+          v = student_count for this entry
+          C = confidence threshold (default 5)
+        """
+        if not entries:
+            return entries
+        total_v = sum(e["student_count"] for e in entries)
+        if total_v == 0:
+            for e in entries:
+                e["weighted_rating"] = 0.0
+            return entries
+        # Global mean = weighted avg of avg_grades
+        m = sum(e["avg_grade"] * e["student_count"] for e in entries) / total_v
+        for e in entries:
+            v = e["student_count"]
+            e["weighted_rating"] = round((C * m + e["avg_grade"] * v) / (C + v), 2)
+        return entries
+
+    # ------------------------------------------------------------------
+    # Teacher ranking  (optional filters: faculty, kafedra, group)
+    # ------------------------------------------------------------------
+    async def get_ranking(
+        self,
+        session: AsyncSession,
+        faculty_id: int | None = None,
+        kafedra_id: int | None = None,
+        group_id: int | None = None,
+        search: str | None = None,
+        page: int = 1,
+        limit: int = 10,
+    ) -> TeacherRankingResponse:
+        """
+        Return teachers ranked by weighted rating and student performance.
+        Weighted Formula:
+            Grade 5: 1.2, Grade 4: 1.0, Grade 3: 0.5, Grade 2: -1.0
+        Volume Factor:
+            Adds a small bonus based on student count to favor teachers with more students.
+        """
+        # Define Weighted Points logic
+        weighted_points = case(
+            (Result.grade == 5, 5 * 1.2), # 6.0
+            (Result.grade == 4, 4 * 1.0), # 4.0
+            (Result.grade == 3, 3 * 0.5), # 1.5
+            (Result.grade == 2, 2 * -1.0),# -2.0
+            else_=0
+        )
+
+        total_students = func.count(func.distinct(Result.user_id)).label("student_count")
+        # Use nullif to avoid division by zero and coalesce to provide a default 1.0 rating
+        raw_rating = func.sum(weighted_points) / cast(func.nullif(func.count(Result.id), 0), Float)
+        
+        # Clamp between 1.0 and 5.0 and ensure it's not NULL
+        clamped_rating = func.coalesce(func.least(5.0, func.greatest(1.0, raw_rating)), 0.0)
+        
+        # Rank score adds volume boost: 0.01 * Log10(Count + 1)
+        rank_score = (clamped_rating + (func.log(cast(total_students + 1, Float)) * 0.01)).label("rank_score")
+
+        columns = [
+            Teacher.id.label("teacher_id"),
+            Teacher.full_name,
+            Teacher.kafedra_id,
+            Kafedra.name.label("kafedra_name"),
+            Kafedra.faculty_id,
+            Faculty.name.label("faculty_name"),
+            total_students,
+            func.coalesce(func.avg(Result.grade), 0).label("avg_grade"),
+            clamped_rating.label("weighted_rating"),
+            rank_score
+        ]
+
+        stmt = (
+            select(*columns)
+            .join(Kafedra, Teacher.kafedra_id == Kafedra.id)
+            .join(Faculty, Kafedra.faculty_id == Faculty.id)
+            .join(GroupTeacher, Teacher.user_id == GroupTeacher.teacher_id)
+            .join(Result, GroupTeacher.group_id == Result.group_id)
+        )
+
+        if faculty_id is not None:
+            stmt = stmt.where(Kafedra.faculty_id == faculty_id)
+        if kafedra_id is not None:
+            stmt = stmt.where(Teacher.kafedra_id == kafedra_id)
+        if group_id is not None:
+            stmt = stmt.where(Result.group_id == group_id)
+
+        stmt = stmt.group_by(
+            Teacher.id, Teacher.full_name, Teacher.kafedra_id,
+            Kafedra.name, Kafedra.faculty_id, Faculty.name,
+        )
+
+        # Subquery 1: Calculate raw metrics and rank_score
+        subq1 = stmt.subquery()
+        
+        # Subquery 2: Assign global rank across the whole category
+        rank_col = func.row_number().over(order_by=desc(subq1.c.rank_score)).label("calculated_rank")
+        subq2 = select(subq1, rank_col).subquery()
+        
+        # Outer selection: Apply search filter to the ALREADY ranked rows
+        filtered_stmt = select(subq2)
+        if search:
+            filtered_stmt = filtered_stmt.where(subq2.c.full_name.ilike(f"%{search}%"))
+
+        # Calculate total based on search result
+        count_stmt = select(func.count()).select_from(filtered_stmt.subquery())
+        total = (await session.execute(count_stmt)).scalar() or 0
+
+        # Apply final order and pagination
+        final_stmt = filtered_stmt.order_by(asc(subq2.c.calculated_rank)).offset((page - 1) * limit).limit(limit)
+        rows = (await session.execute(final_stmt)).mappings().all()
+        
+        teachers = [
+            TeacherRankItem(
+                rank=int(row["calculated_rank"]),
+                teacher_id=row["teacher_id"],
+                full_name=row["full_name"],
+                kafedra_id=row["kafedra_id"],
+                kafedra_name=row["kafedra_name"],
+                faculty_id=row["faculty_id"],
+                faculty_name=row["faculty_name"],
+                group_id=None,
+                group_name=None,
+                student_count=int(row["student_count"]),
+                avg_grade=round(float(row["avg_grade"]), 2),
+                weighted_rating=round(float(row["weighted_rating"]), 2),
+            )
+            for row in rows
+        ]
+
+        return TeacherRankingResponse(
+            total=total, page=page, limit=limit, teachers=teachers,
+            faculty_id=faculty_id, kafedra_id=kafedra_id, group_id=group_id,
+            search=search,
+        )
+
+    # ------------------------------------------------------------------
+    # Faculty ranking
+    # ------------------------------------------------------------------
+    async def get_faculty_ranking(self, session: AsyncSession, page: int = 1, limit: int = 10) -> FacultyRankingResponse:
+        """
+        Rank faculties by weighted average student grade in a single pass.
+        """
+        weighted_points = case(
+            (Result.grade == 5, 5 * 1.2),
+            (Result.grade == 4, 4 * 1.0),
+            (Result.grade == 3, 3 * 0.5),
+            (Result.grade == 2, 2 * -1.0),
+            else_=0
+        )
+        total_students = func.count(func.distinct(Result.user_id)).label("student_count")
+        raw_rating = func.sum(weighted_points) / cast(func.nullif(func.count(Result.id), 0), Float)
+        clamped_rating = func.coalesce(func.least(5.0, func.greatest(1.0, raw_rating)), 0.0).label("weighted_rating")
+        rank_score = (clamped_rating + (func.log(cast(total_students + 1, Float)) * 0.01)).label("rank_score")
+
+        stmt = (
+            select(
+                Faculty.id.label("faculty_id"),
+                Faculty.name.label("faculty_name"),
+                func.count(func.distinct(Kafedra.id)).label("kafedra_count"),
+                total_students,
+                func.coalesce(func.avg(Result.grade), 0).label("avg_grade"),
+                clamped_rating,
+                rank_score
+            )
+            .join(Kafedra, Kafedra.faculty_id == Faculty.id)
+            .join(Teacher, Teacher.kafedra_id == Kafedra.id)
+            .join(GroupTeacher, GroupTeacher.teacher_id == Teacher.user_id)
+            .join(Result, Result.group_id == GroupTeacher.group_id)
+            .group_by(Faculty.id, Faculty.name)
+            .order_by(desc("rank_score"))
+        )
+        total_stmt = select(func.count(func.distinct(Faculty.id)))\
+            .select_from(Faculty)\
+            .join(Kafedra, Kafedra.faculty_id == Faculty.id)\
+            .join(Teacher, Teacher.kafedra_id == Kafedra.id)\
+            .join(GroupTeacher, GroupTeacher.teacher_id == Teacher.user_id)\
+            .join(Result, Result.group_id == GroupTeacher.group_id)
+        
+        total = (await session.execute(total_stmt)).scalar() or 0
+        
+        stmt = stmt.offset((page - 1) * limit).limit(limit)
+        
+        rows = (await session.execute(stmt)).mappings().all()
+
+        faculties = [
+            FacultyRankItem(
+                rank=(page - 1) * limit + idx,
+                faculty_id=row["faculty_id"],
+                faculty_name=row["faculty_name"],
+                kafedra_count=int(row["kafedra_count"]),
+                student_count=int(row["student_count"]),
+                avg_grade=round(float(row["avg_grade"]), 2),
+                weighted_rating=round(float(row["weighted_rating"]), 2),
+            )
+            for idx, row in enumerate(rows, start=1)
+        ]
+        return FacultyRankingResponse(total=total, page=page, limit=limit, faculties=faculties)
+
+    # ------------------------------------------------------------------
+    # Kafedra ranking
+    # ------------------------------------------------------------------
+    async def get_kafedra_ranking(self, session: AsyncSession, page: int = 1, limit: int = 10) -> KafedraRankingResponse:
+        """
+        Rank kafedras by weighted average student grade in a single pass.
+        """
+        weighted_points = case(
+            (Result.grade == 5, 5 * 1.2),
+            (Result.grade == 4, 4 * 1.0),
+            (Result.grade == 3, 3 * 0.5),
+            (Result.grade == 2, 2 * -1.0),
+            else_=0
+        )
+        total_students = func.count(func.distinct(Result.user_id)).label("student_count")
+        raw_rating = func.sum(weighted_points) / cast(func.nullif(func.count(Result.id), 0), Float)
+        clamped_rating = func.coalesce(func.least(5.0, func.greatest(1.0, raw_rating)), 0.0).label("weighted_rating")
+        rank_score = (clamped_rating + (func.log(cast(total_students + 1, Float)) * 0.01)).label("rank_score")
+
+        stmt = (
+            select(
+                Kafedra.id.label("kafedra_id"),
+                Kafedra.name.label("kafedra_name"),
+                Kafedra.faculty_id,
+                Faculty.name.label("faculty_name"),
+                func.count(func.distinct(Teacher.id)).label("teacher_count"),
+                total_students,
+                func.coalesce(func.avg(Result.grade), 0).label("avg_grade"),
+                clamped_rating,
+                rank_score
+            )
+            .join(Faculty, Faculty.id == Kafedra.faculty_id)
+            .join(Teacher, Teacher.kafedra_id == Kafedra.id)
+            .join(GroupTeacher, GroupTeacher.teacher_id == Teacher.user_id)
+            .join(Result, Result.group_id == GroupTeacher.group_id)
+            .group_by(Kafedra.id, Kafedra.name, Kafedra.faculty_id, Faculty.name)
+            .order_by(desc("rank_score"))
+        )
+        total_stmt = select(func.count(func.distinct(Kafedra.id)))\
+            .select_from(Kafedra)\
+            .join(Faculty, Faculty.id == Kafedra.faculty_id)\
+            .join(Teacher, Teacher.kafedra_id == Kafedra.id)\
+            .join(GroupTeacher, GroupTeacher.teacher_id == Teacher.user_id)\
+            .join(Result, Result.group_id == GroupTeacher.group_id)
+        
+        total = (await session.execute(total_stmt)).scalar() or 0
+        
+        stmt = stmt.offset((page - 1) * limit).limit(limit)
+        
+        rows = (await session.execute(stmt)).mappings().all()
+
+        kafedras = [
+            KafedraRankItem(
+                rank=(page - 1) * limit + idx,
+                kafedra_id=row["kafedra_id"],
+                kafedra_name=row["kafedra_name"],
+                faculty_id=row["faculty_id"],
+                faculty_name=row["faculty_name"],
+                teacher_count=int(row["teacher_count"]),
+                student_count=int(row["student_count"]),
+                avg_grade=round(float(row["avg_grade"]), 2),
+                weighted_rating=round(float(row["weighted_rating"]), 2),
+            )
+            for idx, row in enumerate(rows, start=1)
+        ]
+        return KafedraRankingResponse(total=total, page=page, limit=limit, kafedras=kafedras)
+
 
 get_teacher_repository = TeacherRepository()
