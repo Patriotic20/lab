@@ -1,4 +1,4 @@
-.PHONY: help up down restart logs frontend-logs backend-logs face-logs prod-up prod-down prod-restart prod-logs backup backup-database backup-logs backup-images restore
+.PHONY: help up down restart logs frontend-logs backend-logs face-logs prod-up prod-down prod-restart prod-logs backup backup-database backup-logs backup-images restore deploy
 
 .DEFAULT_GOAL := help
 
@@ -95,6 +95,16 @@ backup-images:
 restore:
 	@if [ -z "$(FILE)" ]; then echo "Usage: make restore FILE=path/to/backup.sql.gz"; exit 1; fi
 	./ndktu-student-platform/scripts/restore.sh $$(realpath $(FILE))
+
+# Zero-Downtime Deployment (prod)
+deploy:
+	@echo "🚀 Starting Zero-Downtime Deployment..."
+	@echo "Updating Backend..."
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build backend
+	@echo "Updating Frontend..."
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build frontend
+	@echo "✅ Deployment finished successfully!"
+	docker image prune -f
 
 # Run database migrations
 # Usage: make migrate MSG="your_migration_message"
