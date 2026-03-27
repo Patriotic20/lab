@@ -1,98 +1,103 @@
-.PHONY: help up down restart logs frontend-logs backend-logs backup backup-database backup-logs backup-images restore deploy
+.PHONY: help up down restart logs frontend-logs backend-logs face-logs prod-up prod-down prod-restart prod-logs backup backup-database backup-logs backup-images restore
 
 .DEFAULT_GOAL := help
 
 # Show this help message with usage examples
 help:
-	@echo "Available commands:"
-	@echo "-------------------"
-	@echo "make up               - Start all Docker services in the background"
-	@echo "                        Example: make up"
-	@echo "make down             - Stop and remove all Docker containers"
-	@echo "                        Example: make down"
-	@echo "make restart          - Restart all Docker services"
-	@echo "                        Example: make restart"
-	@echo "make logs             - View logs for all services"
-	@echo "                        Example: make logs"
-	@echo "make frontend-logs    - View logs specifically for the frontend container"
-	@echo "                        Example: make frontend-logs"
-	@echo "make backend-logs     - View logs specifically for the backend container"
-	@echo "                        Example: make backend-logs"
-	@echo "make backup           - Backup database, logs, and images"
-	@echo "                        Example (default path): make backup"
-	@echo "                        Example (custom path):  make backup FILE=/my/custom/path"
-	@echo "make backup-database  - Backup only the PostgreSQL database"
-	@echo "                        Example (default path): make backup-database"
-	@echo "                        Example (custom path):  make backup-database FILE=/my/custom/path"
-	@echo "make backup-logs      - Backup only backend logs"
-	@echo "                        Example (default path): make backup-logs"
-	@echo "                        Example (custom path):  make backup-logs FILE=/my/custom/path"
-	@echo "make backup-images    - Backup only uploaded images"
-	@echo "                        Example (default path): make backup-images"
-	@echo "                        Example (custom path):  make backup-images FILE=/my/custom/path"
-	@echo "make restore          - Restore the database from a given SQL.GZ backup file"
-	@echo "                        Example: make restore FILE=backups/backup_2026-02-18_13-00-00.sql.gz"
+	@echo "╔════════════════════════════════════════════════════════════════╗"
+	@echo "║         Available commands (Development & Production)          ║"
+	@echo "╚════════════════════════════════════════════════════════════════╝"
 	@echo ""
-	@echo "make deploy           - Zero-downtime update for backend"
-	@echo "                        Example: make deploy"
+	@echo "DEVELOPMENT (localhost, no nginx):"
+	@echo "──────────────────────────────────"
+	@echo "make up               - Start all services (dev, localhost)"
+	@echo "make down             - Stop all services"
+	@echo "make restart          - Restart all services"
+	@echo "make logs             - View logs for all services"
+	@echo "make frontend-logs    - View frontend logs"
+	@echo "make backend-logs     - View backend logs"
+	@echo "make face-logs        - View face detection logs"
+	@echo ""
+	@echo "PRODUCTION (with nginx reverse proxy):"
+	@echo "────────────────────────────────────"
+	@echo "make prod-up          - Start all services (prod, with nginx)"
+	@echo "make prod-down        - Stop all services"
+	@echo "make prod-restart     - Restart all services"
+	@echo "make prod-logs        - View logs for all services"
+	@echo ""
+	@echo "BACKUP & RESTORE:"
+	@echo "────────────────"
+	@echo "make backup           - Backup database, logs, and images"
+	@echo "make backup-database  - Backup only the PostgreSQL database"
+	@echo "make backup-logs      - Backup only backend logs"
+	@echo "make backup-images    - Backup only uploaded images"
+	@echo "make restore FILE=path/to/backup.sql.gz - Restore from backup"
+	@echo ""
 
-# Start all services
+# Start development services (localhost, no nginx)
 up:
 	docker compose up -d --build
 
-# Stop operations
+# Stop development services
 down:
 	docker compose down
 
-# Restart operations
+# Restart development services
 restart: down up
 
-# Tail all logs
+# View development logs
 logs:
 	docker compose logs -f
 
-# Tail frontend logs
+# View frontend logs
 frontend-logs:
 	docker compose logs -f frontend
 
-# Tail backend logs
+# View backend logs
 backend-logs:
 	docker compose logs -f backend
+
+# View face detection logs
+face-logs:
+	docker compose logs -f backend
+
+# Start production services (with nginx reverse proxy)
+prod-up:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+# Stop production services
+prod-down:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+
+# Restart production services
+prod-restart: prod-down prod-up
+
+# View production logs
+prod-logs:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f
 
 # Backup everything (database, logs, and images)
 backup: backup-database backup-logs backup-images
 
 # Backup just the database
 backup-database:
-	FILE="$(FILE)" ./scripts/backup.sh
+	./scripts/backup.sh
 
 # Backup just the logs
 backup-logs:
-	FILE="$(FILE)" ./scripts/backup_logs.sh
+	./scripts/backup_logs.sh
 
 # Backup just the images
 backup-images:
-	FILE="$(FILE)" ./scripts/backup_images.sh
+	./scripts/backup_images.sh
 
-# Target to restore database from backup file
+# Restore database from backup file
 restore:
-	@if [ -z "$(FILE)" ]; then echo "Usage: make restore FILE=backups/backup_YYYY-MM-DD_HH-MM-SS.sql.gz"; exit 1; fi
-	./scripts/restore.sh $(FILE)
+	@if [ -z "$(FILE)" ]; then echo "Usage: make restore FILE=path/to/backup.sql.gz"; exit 1; fi
+	./scripts/restore.sh $$(realpath $(FILE))
 
-
-# Zero-Downtime Deployment
-deploy:
-	@echo "🚀 Starting Zero-Downtime Deployment..."
-	
-	# 1. Update Backend (Zero-Downtime)
-	@echo "Updating Backend..."
-	docker compose up -d --build backend
-	
-	# 2. Update Frontend (Zero-Downtime)
-	@echo "Updating Frontend..."
-	docker compose up -d --build frontend
-	
-	@echo "✅ Deployment finished successfully!"
-	
-	# Clean up old images
-	docker image prune -f
+# Run database migrations
+migrate:
+	docker exec nusmt_backend sh -c "cd /face/app && uv run alembic revision --autogenerate -m 'add_cheating_image_url'"
+	docker cp nusmt_backend:/face/app/migrations/versions/. ./backend/app/migrations/versions/
+	docker exec nusmt_backend sh -c "cd /face/app && uv run alembic upgrade head"
