@@ -1,10 +1,61 @@
+import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
-
-import { User, Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { User, Calendar, KeyRound, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { userService } from '@/services/userService';
 
 const ProfilePage = () => {
     const { user } = useAuth();
+    
+    // Credentials form state
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newUsername, setNewUsername] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+
+    const handleCredentialsChange = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setSuccess('');
+
+        if (!currentPassword) {
+            setError('Joriy parolni kiritish majburiy');
+            return;
+        }
+
+        if (!newUsername && !newPassword) {
+            setError('Kamida bitta maydon (Logit yoki Yangi parol) o\'zgartirilishi kerak');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const data: any = { current_password: currentPassword };
+            if (newUsername) data.new_username = newUsername;
+            if (newPassword) data.new_password = newPassword;
+
+            await userService.changeMyCredentials(data);
+            
+            // Clean form and show message
+            setCurrentPassword('');
+            setNewUsername('');
+            setNewPassword('');
+            setSuccess('Ma\'lumotlar muvaffaqiyatli yangilandi! Tizimga yangi ma\'lumotlar bilan qayta kiring.');
+            
+            // Log out user so they can login with new credentials
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 3000);
+        } catch (err: any) {
+            setError(err.response?.data?.detail || 'Xatolik yuz berdi');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     if (!user) return null;
 
@@ -221,6 +272,72 @@ const ProfilePage = () => {
                         </div>
                     </div>
 
+                </CardContent>
+            </Card>
+
+            {/* Change Credentials Form */}
+            <Card className="w-full">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <KeyRound className="h-5 w-5" />
+                        Kirish ma'lumotlarini o'zgartirish
+                    </CardTitle>
+                    <CardDescription>O'z login va parolingizni shu yerdan yangilashingiz mumkin.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={handleCredentialsChange} className="space-y-4 max-w-md">
+                        {error && (
+                            <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 rounded-md">
+                                <AlertCircle className="h-4 w-4 shrink-0" />
+                                {error}
+                            </div>
+                        )}
+                        {success && (
+                            <div className="flex items-center gap-2 p-3 text-sm text-green-600 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800">
+                                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                {success}
+                            </div>
+                        )}
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Joriy parol <span className="text-destructive">*</span></label>
+                            <Input
+                                type="password"
+                                placeholder="Tasdiqlash uchun joriy parolingizni kiriting"
+                                value={currentPassword}
+                                onChange={(e) => setCurrentPassword(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Yangi Login (Username)</label>
+                            <Input
+                                type="text"
+                                placeholder="Ixtiyoriy: Yangi login nomini kiriting"
+                                value={newUsername}
+                                onChange={(e) => setNewUsername(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Yangi Parol</label>
+                            <Input
+                                type="password"
+                                placeholder="Ixtiyoriy: Yangi parolni kiriting (min. 4 ta belgi)"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                            />
+                        </div>
+
+                        <Button type="submit" disabled={loading} className="w-full sm:w-auto mt-2">
+                            {loading ? 'Bazaga yozilmoqda...' : (
+                                <>
+                                    <Save className="mr-2 h-4 w-4" />
+                                    Saqlash
+                                </>
+                            )}
+                        </Button>
+                    </form>
                 </CardContent>
             </Card>
         </div>

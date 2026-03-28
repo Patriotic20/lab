@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 class QuizQuestion(Base, IdIntPk, TimestampMixin):
     __tablename__ = "quiz_questions"
     
-    quiz_id: Mapped[int] = mapped_column(ForeignKey("quizzes.id"))
+    quiz_id: Mapped[int] = mapped_column(ForeignKey("quizzes.id", ondelete="CASCADE"))
     question_id: Mapped[int] = mapped_column(ForeignKey("questions.id"))
     
     quiz: Mapped["Quiz"] = relationship("Quiz", back_populates="quiz_questions")

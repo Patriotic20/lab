@@ -225,9 +225,46 @@ class UserRepository:
                 detail="Database error while assigning roles"
             )
 
-import logging
+    async def change_my_credentials(
+        self, session: AsyncSession, current_user: User, data
+    ) -> User:
+        from core.utils.password_hash import verify_password
+        # Verify current password
+        if not verify_password(data.current_password, current_user.password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Joriy parol noto'g'ri"
+            )
 
-logger = logging.getLogger(__name__)
+        if data.new_username is None and data.new_password is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Kamida bitta maydon o'zgartirilishi kerak"
+            )
+
+        # Check username not taken by another user
+        if data.new_username is not None:
+            stmt_check = select(User).where(
+                User.username == data.new_username,
+                User.id != current_user.id
+            )
+            if (await session.execute(stmt_check)).scalar_one_or_none():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Bu foydalanuvchi nomi allaqachon band"
+                )
+            current_user.username = data.new_username
+
+        if data.new_password is not None:
+            current_user.password = data.new_password  # already hashed by schema validator
+
+        await session.commit()
+        
+        # Re-fetch the user to avoid MissingGreenlet errors on response serialization
+        from sqlalchemy.orm import selectinload
+        stmt_refresh = select(User).where(User.id == current_user.id).options(selectinload(User.roles))
+        result_refresh = await session.execute(stmt_refresh)
+        return result_refresh.scalar_one()
 
 
 get_user_repository = UserRepository()

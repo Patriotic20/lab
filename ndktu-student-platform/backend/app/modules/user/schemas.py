@@ -46,6 +46,31 @@ class UserUpdateRequest(BaseModel):
         return hash_password(value.strip())
 
 
+class UserChangeCredentialsRequest(BaseModel):
+    """Used by any authenticated user to change their own credentials."""
+    current_password: str
+    new_username: str | None = None
+    new_password: str | None = None
+
+    @field_validator("new_username", mode="before")
+    def validate_new_username(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        if not value.strip():
+            raise ValueError("Username cannot be empty")
+        return value.strip().lower()
+
+    @field_validator("new_password", mode="before")
+    def validate_new_password(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        if not value.strip():
+            raise ValueError("New password cannot be empty")
+        if len(value.strip()) < 4:
+            raise ValueError("New password must be at least 4 characters")
+        return hash_password(value.strip())
+
+
 class UserRoleAssignRequest(BaseModel):
     user_id: int
     role_ids: list[int]

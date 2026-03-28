@@ -17,6 +17,7 @@ from .schemas import (
     UserLoginResponse,
     UserRoleAssignRequest,
     UserUpdateRequest,
+    UserChangeCredentialsRequest,
     UserDetailResponse,
 )
 from .service import auth_service
@@ -53,6 +54,20 @@ async def get_me(
     _: PermissionRequired = Depends(PermissionRequired("user:me")),
 ):
     return await auth_service.get_current_user(session=session, token=authorization)
+
+
+@router.put("/me/credentials", response_model=UserCreateResponse)
+async def update_my_credentials(
+    data: UserChangeCredentialsRequest,
+    authorization: str = Header(...),
+    session: AsyncSession = Depends(db_helper.session_getter),
+    _: PermissionRequired = Depends(PermissionRequired("user:me")),
+):
+    current_user = await auth_service.get_current_user(session=session, token=authorization)
+    result = await get_user_repository.change_my_credentials(
+        session=session, current_user=current_user, data=data
+    )
+    return result
 
 
 @router.post(

@@ -65,4 +65,9 @@ export const quizService = {
         const response = await api.get<{ results_count: number }>(`/quiz/${id}/delete-info`);
         return response.data;
     },
+
+    repeatQuiz: async (id: number): Promise<Quiz> => {
+        const response = await api.post<Quiz>(`/quiz/${id}/repeat`);
+        return response.data;
+    },
 };

@@ -238,7 +238,7 @@ class QuizRepository:
     async def repeat_quiz(
         self, session: AsyncSession, quiz_id: int
     ) -> Quiz:
-        import uuid
+        import random
         stmt = (
             select(Quiz)
             .options(selectinload(Quiz.quiz_questions).selectinload(QuizQuestion.question))
@@ -256,7 +256,7 @@ class QuizRepository:
             title=quiz.title,
             question_number=quiz.question_number,
             duration=quiz.duration,
-            pin=str(uuid.uuid4())[:6].upper(),  # Generate a new PIN
+            pin=str(random.randint(1000, 9999)),  # Generate a new 4-digit PIN
             is_active=quiz.is_active,
             user_id=quiz.user_id,
             group_id=quiz.group_id,

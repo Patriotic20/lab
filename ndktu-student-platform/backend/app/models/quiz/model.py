@@ -57,16 +57,19 @@ class Quiz(Base, IdIntPk, TimestampMixin):
     quiz_questions: Mapped[list["QuizQuestion"]] = relationship(
         "QuizQuestion",
         back_populates="quiz",
+        cascade="all, delete-orphan",
     )
 
     results: Mapped[list["Result"]] = relationship(
-        "Result", 
-        back_populates="quiz"
+        "Result",
+        back_populates="quiz",
+        cascade="all, delete-orphan",
     )
 
     user_answers: Mapped[list["UserAnswers"]] = relationship(
-        "UserAnswers", 
-        back_populates="quiz"
+        "UserAnswers",
+        back_populates="quiz",
+        cascade="all, delete-orphan",
     )
 
     def __str__(self):

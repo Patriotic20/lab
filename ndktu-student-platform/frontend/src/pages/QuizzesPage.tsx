@@ -14,7 +14,7 @@ import {
     TableRow,
 } from '@/components/ui/Table';
 import { Card, CardContent } from '@/components/ui/Card';
-import { Plus, Pencil, Trash2, Loader2, BookOpen, Search, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, BookOpen, Search, X, RotateCcw, Copy, Check } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Input } from '@/components/ui/Input';
@@ -22,7 +22,7 @@ import { Switch } from '@/components/ui/Switch';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuizzes, useCreateQuiz, useUpdateQuiz, useDeleteQuiz } from '@/hooks/useQuizzes';
+import { useQuizzes, useCreateQuiz, useUpdateQuiz, useDeleteQuiz, useRepeatQuiz } from '@/hooks/useQuizzes';
 import { quizService } from '@/services/quizService';
 import { useSubjects } from '@/hooks/useSubjects';
 import { useGroups } from '@/hooks/useGroups';
@@ -58,6 +58,12 @@ const QuizzesPage = () => {
     const pageSize = 10;
     const [isUpdatingStatus, setIsUpdatingStatus] = useState<number | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Repeat quiz state
+    const [isRepeatConfirmOpen, setIsRepeatConfirmOpen] = useState(false);
+    const [quizToRepeat, setQuizToRepeat] = useState<Quiz | null>(null);
+    const [repeatedQuiz, setRepeatedQuiz] = useState<Quiz | null>(null);
+    const [isPinCopied, setIsPinCopied] = useState(false);
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
     // Filter states
@@ -91,6 +97,7 @@ const QuizzesPage = () => {
 
     const updateQuizMutation = useUpdateQuiz();
     const deleteQuizMutation = useDeleteQuiz();
+    const repeatQuizMutation = useRepeatQuiz();
 
     const quizzes = quizzesData?.quizzes || [];
     const totalPages = quizzesData ? Math.ceil(quizzesData.total / pageSize) : 1;
@@ -137,6 +144,33 @@ const QuizzesPage = () => {
 
     const handleSuccess = () => {
         setIsModalOpen(false);
+    };
+
+    const handleRepeatClick = (quiz: Quiz) => {
+        setQuizToRepeat(quiz);
+        setIsRepeatConfirmOpen(true);
+    };
+
+    const handleConfirmRepeat = () => {
+        if (!quizToRepeat) return;
+        repeatQuizMutation.mutate(quizToRepeat.id, {
+            onSuccess: (newQuiz) => {
+                setIsRepeatConfirmOpen(false);
+                setRepeatedQuiz(newQuiz);
+                setIsPinCopied(false);
+            },
+            onError: () => {
+                alert('Testni qayta yaratishda xatolik yuz berdi');
+            },
+        });
+    };
+
+    const handleCopyPin = () => {
+        if (repeatedQuiz?.pin) {
+            navigator.clipboard.writeText(repeatedQuiz.pin);
+            setIsPinCopied(true);
+            setTimeout(() => setIsPinCopied(false), 2000);
+        }
     };
 
     const handleToggleStatus = (quiz: Quiz) => {
@@ -319,6 +353,15 @@ const QuizzesPage = () => {
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
+                                                        title="Testni qayta yaratish (2-urinish)"
+                                                        onClick={() => handleRepeatClick(quiz)}
+                                                        disabled={repeatQuizMutation.isPending}
+                                                    >
+                                                        <RotateCcw className="h-4 w-4 text-blue-500" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
                                                         onClick={() => handleEditQuiz(quiz)}
                                                     >
                                                         <Pencil className="h-4 w-4" />
@@ -371,6 +414,54 @@ const QuizzesPage = () => {
                 confirmText="O'chirish"
                 cancelText="Bekor qilish"
             />
+
+            {/* Repeat confirmation dialog */}
+            <ConfirmDialog
+                isOpen={isRepeatConfirmOpen}
+                onClose={() => setIsRepeatConfirmOpen(false)}
+                onConfirm={handleConfirmRepeat}
+                title="Testni qayta yaratish"
+                description={`"${quizToRepeat?.title}" testi uchun 2-urinish yaratilsinmi? Yangi PIN generatsiya qilinadi va talabalar shu PIN orqali qayta topshira oladi.`}
+                confirmText={repeatQuizMutation.isPending ? 'Yaratilmoqda...' : 'Yaratish'}
+                cancelText="Bekor qilish"
+            />
+
+            {/* Repeated quiz success modal — shows new PIN */}
+            {repeatedQuiz && (
+                <Modal
+                    isOpen={!!repeatedQuiz}
+                    onClose={() => setRepeatedQuiz(null)}
+                    title="2-urinish muvaffaqiyatli yaratildi ✅"
+                >
+                    <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                            <span className="font-medium text-foreground">{repeatedQuiz.title}</span> testi uchun yangi 2-urinish yaratildi.
+                            Quyidagi PIN kodni muvaffaqiyatsiz o'tgan talabalar bilan ulashing:
+                        </p>
+                        <div className="flex items-center gap-3 p-4 bg-muted rounded-lg border">
+                            <span className="text-2xl font-mono font-bold tracking-widest flex-1 text-center">
+                                {repeatedQuiz.pin}
+                            </span>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleCopyPin}
+                                title="PIN nusxalash"
+                            >
+                                {isPinCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                        <div className="text-xs text-muted-foreground space-y-1">
+                            <p>📋 Savollar soni: {repeatedQuiz.question_number}</p>
+                            <p>⏱ Davomiyligi: {repeatedQuiz.duration} daqiqa</p>
+                            <p>🔁 Urinish: {repeatedQuiz.attempt}</p>
+                        </div>
+                        <div className="flex justify-end pt-2">
+                            <Button onClick={() => setRepeatedQuiz(null)}>Yopish</Button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
         </div>
     );
 };

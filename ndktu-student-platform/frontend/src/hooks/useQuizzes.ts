@@ -47,3 +47,14 @@ export const useDeleteQuiz = () => {
         },
     });
 };
+
+export const useRepeatQuiz = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => quizService.repeatQuiz(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['quizzes'] });
+        },
+    });
+};
+

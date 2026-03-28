@@ -44,4 +44,9 @@ export const userService = {
         const response = await api.post('/user/sync-hemis');
         return response.data;
     },
+
+    changeMyCredentials: async (data: { current_password: string; new_username?: string; new_password?: string }) => {
+        const response = await api.put('/user/me/credentials', data);
+        return response.data;
+    },
 };
