@@ -41,7 +41,21 @@ class ResultRepository:
     async def list_results(
         self, session: AsyncSession, request: ResultListRequest, current_user: User
     ) -> ResultListResponse:
-        stmt = select(Result).options(
+        # Subquery to identify the latest result record for each user/quiz pair
+        subq = (
+            select(
+                Result.user_id,
+                Result.quiz_id,
+                func.max(Result.id).label("max_id")
+            )
+            .group_by(Result.user_id, Result.quiz_id)
+            .subquery()
+        )
+
+        stmt = select(Result).join(
+            subq,
+            Result.id == subq.c.max_id
+        ).options(
             selectinload(Result.user).selectinload(User.student),
             selectinload(Result.quiz),
             selectinload(Result.subject),
@@ -113,7 +127,11 @@ class ResultRepository:
         result = await session.execute(stmt)
         results = result.scalars().all()
 
-        count_stmt = select(func.count()).select_from(Result)
+        # Count stmt must also use the same join logic to be accurate
+        count_stmt = select(func.count(Result.id)).select_from(Result).join(
+            subq,
+            Result.id == subq.c.max_id
+        )
 
         if is_admin:
             # Admins see everything
