@@ -226,6 +226,16 @@ const TeachersPanel = () => {
             ws['!merges'].push({ s: { r: 1, c: 3 }, e: { r: 1, c: 5 } });
             ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 2 } });
 
+            // Set reasonable column widths for readability so texts are completely visible
+            ws['!cols'] = [
+                { wch: 15 }, // A: O'rin (Rank)
+                { wch: 40 }, // B: O'qituvchi F.I.O
+                { wch: 45 }, // C: Kafedra
+                { wch: 45 }, // D: Fakultet
+                { wch: 20 }, // E: Talabalar Soni
+                { wch: 20 }, // F: O'rtacha Baho
+            ];
+
             const wb = utils.book_new();
             utils.book_append_sheet(wb, ws, "Reyting");
             
