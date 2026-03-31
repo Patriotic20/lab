@@ -3,7 +3,8 @@ import logging
 from fastapi import HTTPException, status
 from app.models.results.model import Result
 from app.models.user.model import User
-from sqlalchemy import func, select
+from app.models.student.model import Student
+from sqlalchemy import func, select, desc, or_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.teacher.model import Teacher
@@ -60,7 +61,13 @@ class ResultRepository:
             selectinload(Result.quiz),
             selectinload(Result.subject),
             selectinload(Result.group),
-        ).offset(request.offset).limit(request.limit)
+        )
+
+        # If username search is needed, add explicit joins for filtering
+        if request.username:
+            stmt = stmt.outerjoin(User, Result.user_id == User.id).outerjoin(
+                Student, User.id == Student.user_id
+            )
 
         is_admin = any(role.name.lower() == "admin" for role in current_user.roles)
         is_teacher = any(role.name.lower() == "teacher" for role in current_user.roles)
@@ -120,6 +127,18 @@ class ResultRepository:
         if request.grade is not None:
             stmt = stmt.where(Result.grade == request.grade)
 
+        if request.username:
+            # Search by username or student full_name (case-insensitive)
+            search_pattern = f"%{request.username}%"
+            stmt = stmt.where(
+                or_(
+                    User.username.ilike(search_pattern),
+                    Student.full_name.ilike(search_pattern)
+                )
+            ).distinct()
+
+        stmt = stmt.order_by(desc(Result.created_at))
+        stmt = stmt.offset(request.offset).limit(request.limit)
         result = await session.execute(stmt)
         results = result.scalars().all()
 
@@ -128,6 +147,12 @@ class ResultRepository:
             subq,
             Result.id == subq.c.max_id
         )
+
+        # If username search is needed, add explicit joins for filtering
+        if request.username:
+            count_stmt = count_stmt.outerjoin(User, Result.user_id == User.id).outerjoin(
+                Student, User.id == Student.user_id
+            )
 
         if is_admin:
             # Admins see everything
@@ -147,6 +172,15 @@ class ResultRepository:
             count_stmt = count_stmt.where(Result.subject_id == request.subject_id)
         if request.grade is not None:
             count_stmt = count_stmt.where(Result.grade == request.grade)
+        if request.username:
+            # Search by username or student full_name (case-insensitive)
+            search_pattern = f"%{request.username}%"
+            count_stmt = count_stmt.where(
+                or_(
+                    User.username.ilike(search_pattern),
+                    Student.full_name.ilike(search_pattern)
+                )
+            )
 
         total_result = await session.execute(count_stmt)
         total = total_result.scalar() or 0

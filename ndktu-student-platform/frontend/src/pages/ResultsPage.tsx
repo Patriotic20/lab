@@ -36,6 +36,7 @@ const ResultsPage = () => {
     const [selectedSubject, setSelectedSubject] = useState<string>('');
     const [selectedQuiz, setSelectedQuiz] = useState<string>('');
     const [selectedGrade, setSelectedGrade] = useState<string>('');
+    const [usernameSearch, setUsernameSearch] = useState<string>('');
 
     const parsedGroup = selectedGroup ? parseInt(selectedGroup, 10) : undefined;
     const parsedSubject = selectedSubject ? parseInt(selectedSubject, 10) : undefined;
@@ -45,10 +46,10 @@ const ResultsPage = () => {
     // Reset page when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [selectedGroup, selectedSubject, selectedQuiz, selectedGrade]);
+    }, [selectedGroup, selectedSubject, selectedQuiz, selectedGrade, usernameSearch]);
 
     const { data: resultsData, isLoading: isResultsLoading } = useResults(
-        currentPage, pageSize, undefined, parsedGrade, parsedGroup, parsedSubject, parsedQuiz,
+        currentPage, pageSize, undefined, parsedGrade, parsedGroup, parsedSubject, parsedQuiz, usernameSearch || undefined,
         !isAuthLoading  // only run once auth is resolved
     );
 
@@ -69,10 +70,11 @@ const ResultsPage = () => {
         setSelectedSubject('');
         setSelectedQuiz('');
         setSelectedGrade('');
+        setUsernameSearch('');
         setCurrentPage(1);
     };
 
-    const hasActiveFilters = !!(selectedGroup || selectedSubject || selectedQuiz || selectedGrade);
+    const hasActiveFilters = !!(selectedGroup || selectedSubject || selectedQuiz || selectedGrade || usernameSearch);
 
     return (
         <div className="space-y-6">
@@ -90,6 +92,15 @@ const ResultsPage = () => {
             <Card>
                 <CardContent className="p-4">
                     <div className="flex flex-wrap gap-4 items-end">
+                        <div className="flex flex-col gap-2 min-w-[200px] flex-1">
+                            <label className="text-sm font-medium">Talaba ismi bo'yicha qidirish</label>
+                            <Input
+                                placeholder="Ism yoki foydalanuvchi nomini kiriting..."
+                                value={usernameSearch}
+                                onChange={(e) => setUsernameSearch(e.target.value)}
+                            />
+                        </div>
+
                         {/* Group filter — only for Admin / Teacher; backend scopes the list */}
                         {isAdminOrTeacher && (
                             <div className="flex flex-col gap-2 min-w-[200px] flex-1">
@@ -210,7 +221,7 @@ const ResultsPage = () => {
                                             </span>
                                         </TableCell>
                                         <TableCell>{result.correct_answers} / {result.correct_answers + result.wrong_answers}</TableCell>
-                                        <TableCell>{new Date(result.created_at).toLocaleDateString()}</TableCell>
+                                        <TableCell>{new Date(result.created_at).toLocaleString(undefined, { hour12: false })}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
