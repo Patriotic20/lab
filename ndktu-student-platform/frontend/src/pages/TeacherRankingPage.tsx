@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Loader2, Medal, Crown, Building2, Layers, Search, X } from 'lucide-react';
+import { Trophy, Loader2, Medal, Crown, Building2, Layers, Search, X, FilterX } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -227,6 +227,23 @@ const TeachersPanel = () => {
                     searchPlaceholder="Kafedra qidirish..."
                     className="w-full sm:max-w-[250px]"
                 />
+
+                {(search || facultyId || kafedraId) && (
+                    <Button 
+                        variant="outline" 
+                        onClick={() => {
+                            setSearch('');
+                            setDebouncedSearch('');
+                            setFacultyId('');
+                            setKafedraId('');
+                            setPage(1);
+                        }}
+                        className="w-full sm:w-auto text-muted-foreground hover:text-foreground"
+                    >
+                        <FilterX className="mr-2 h-4 w-4" />
+                        Tozalash
+                    </Button>
+                )}
             </div>
 
             {isLoading && !data ? (
