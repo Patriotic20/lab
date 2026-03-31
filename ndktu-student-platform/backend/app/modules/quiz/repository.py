@@ -158,10 +158,9 @@ class QuizRepository:
         if request.is_active is not None:
              stmt = stmt.where(Quiz.is_active == request.is_active)
 
-        if request.sort_dir and request.sort_dir.lower() == "asc":
-            stmt = stmt.order_by(asc(Quiz.created_at))
-        else:
-            stmt = stmt.order_by(desc(Quiz.created_at))
+        # Always prioritize active quizzes first, then sort by date
+        sort_field = asc(Quiz.created_at) if request.sort_dir and request.sort_dir.lower() == "asc" else desc(Quiz.created_at)
+        stmt = stmt.order_by(desc(Quiz.is_active), sort_field)
         
         stmt = stmt.offset(request.offset).limit(request.limit)
 

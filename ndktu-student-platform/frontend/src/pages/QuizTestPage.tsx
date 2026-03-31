@@ -4,13 +4,34 @@ import { type StartQuizResponse, type EndQuizResponse, type AnswerDTO } from '@/
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
-import { PlayCircle, ChevronLeft, ChevronRight, CheckCircle, XCircle, Trophy, Clock, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { 
+    Loader2, 
+    PlayCircle, 
+    ChevronLeft, 
+    ChevronRight, 
+    CheckCircle, 
+    XCircle, 
+    Trophy, 
+    Clock, 
+    ArrowLeft,
+    AlertTriangle
+} from 'lucide-react';
 import { useStartQuiz, useEndQuiz } from '@/hooks/useQuizProcess';
 import { useQuizzes } from '@/hooks/useQuizzes';
 import { Modal } from '@/components/ui/Modal';
 import { QuizVideoMonitoring } from '@/components/QuizVideoMonitoring';
 import { FACE_DETECTION_SERVICE_URL, ENABLE_QUIZ_PROCTORING } from '@/config/env';
 import { cheatingImageService } from '@/services/cheatingImageService';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/Table';
+import { Pagination } from '@/components/ui/Pagination';
+import { cn } from '@/utils/utils';
 
 type QuizPhase = 'start' | 'quiz' | 'results';
 
@@ -21,7 +42,9 @@ const QuizTestPage = () => {
     const [phase, setPhase] = useState<QuizPhase>('start');
 
     // Start phase
-    const { data: quizzesData, isLoading: isLoadingQuizzes } = useQuizzes(1, 100, undefined); // Fetch all quizzes to show upcoming/inactive ones too
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 10;
+    const { data: quizzesData, isLoading: isLoadingQuizzes, isFetching: isFetchingQuizzes } = useQuizzes(currentPage, pageSize);
     const [selectedQuiz, setSelectedQuiz] = useState<{ id: number; title: string } | null>(null);
     const [pin, setPin] = useState('');
     const [startError, setStartError] = useState('');
@@ -209,61 +232,94 @@ const QuizTestPage = () => {
     // ================================
     if (phase === 'start') {
         const activeQuizzes = quizzesData?.quizzes || [];
+        const totalPages = quizzesData ? Math.ceil(quizzesData.total / pageSize) : 1;
 
         return (
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-xl font-semibold tracking-tight">Test ishlash</h1>
+                        <p className="mt-0.5 text-sm text-muted-foreground">
+                            Ishlash uchun testlarni tanlang
+                        </p>
+                    </div>
                 </div>
 
-                {isLoadingQuizzes ? (
-                    <div className="flex h-40 items-center justify-center">
-                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                    </div>
-                ) : activeQuizzes.length === 0 ? (
-                    <Card>
-                        <CardContent className="flex flex-col items-center justify-center p-6 text-center">
-                            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                                <PlayCircle className="h-6 w-6 text-muted-foreground" />
+                <Card>
+                    <CardContent className="p-0">
+                        {isLoadingQuizzes ? (
+                            <div className="flex h-40 items-center justify-center">
+                                <Loader2 className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                             </div>
-                            <h3 className="text-lg font-semibold">Faol testlar mavjud emas</h3>
-                            <p className="text-muted-foreground">Hozircha ishlash uchun testlar yo'q.</p>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {activeQuizzes.map((quiz) => (
-                            <Card key={quiz.id} className={`flex flex-col ${!quiz.is_active ? 'opacity-60 grayscale' : ''}`}>
-                                <CardHeader>
-                                    <CardTitle className="flex justify-between items-start">
-                                        <span>{quiz.title}</span>
-                                        {!quiz.is_active && (
-                                            <span className="text-xs bg-muted px-2 py-1 rounded">Faol emas</span>
-                                        )}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="flex-1">
-                                    <div className="flex flex-col gap-2 text-sm text-muted-foreground mb-4">
-                                        <div className="flex items-center gap-2">
-                                            <Trophy className="h-4 w-4" />
-                                            <span>{quiz.question_number} ta savol</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Clock className="h-4 w-4" />
-                                            <span>{quiz.duration} daqiqa</span>
-                                        </div>
-                                    </div>
-                                    <Button
-                                        onClick={() => handleOpenStartModal(quiz)}
-                                        className="w-full mt-auto"
-                                        disabled={!quiz.is_active}
-                                    >
-                                        <PlayCircle className="mr-2 h-4 w-4" />
-                                        {quiz.is_active ? 'Testni boshlash' : 'Test faol emas'}
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
+                        ) : activeQuizzes.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
+                                <PlayCircle className="h-12 w-12 mb-4 opacity-20" />
+                                <h3 className="text-lg font-semibold">Faol testlar mavjud emas</h3>
+                                <p>Hozircha ishlash uchun testlar yo'q.</p>
+                            </div>
+                        ) : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Test nomi</TableHead>
+                                        <TableHead>Savollar soni</TableHead>
+                                        <TableHead>Davomiyligi</TableHead>
+                                        <TableHead>Holati</TableHead>
+                                        <TableHead className="text-right">Amal</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {activeQuizzes.map((quiz) => (
+                                        <TableRow key={quiz.id} className={cn(!quiz.is_active && "opacity-60")}>
+                                            <TableCell className="font-medium">{quiz.title}</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <Trophy className="h-4 w-4 text-muted-foreground" />
+                                                    <span>{quiz.question_number} ta savol</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <Clock className="h-4 w-4 text-muted-foreground" />
+                                                    <span>{quiz.duration} daqiqa</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <span className={cn(
+                                                    "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                                                    quiz.is_active 
+                                                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                                        : "bg-muted text-muted-foreground"
+                                                )}>
+                                                    {quiz.is_active ? 'Faol' : 'Faol emas'}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button
+                                                    size="sm"
+                                                    variant={quiz.is_active ? "primary" : "outline"}
+                                                    onClick={() => handleOpenStartModal(quiz)}
+                                                    disabled={!quiz.is_active}
+                                                >
+                                                    <PlayCircle className="mr-2 h-4 w-4" />
+                                                    {quiz.is_active ? 'Ishlash' : 'Yopiq'}
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {totalPages > 1 && (
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={setCurrentPage}
+                        isLoading={isFetchingQuizzes}
+                    />
                 )}
 
                 <Modal

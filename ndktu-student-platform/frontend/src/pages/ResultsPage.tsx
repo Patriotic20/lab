@@ -234,11 +234,10 @@ const ResultsPage = () => {
                             <label className="text-sm font-medium">Ball</label>
                             <Combobox
                                 options={[
-                                    { value: '5', label: '5 ball' },
-                                    { value: '4', label: '4 ball' },
-                                    { value: '3', label: '3 ball' },
-                                    { value: '2', label: '2 ball' },
-                                    { value: '1', label: '1 ball' },
+                                    { value: '5', label: "5 - A'lo" },
+                                    { value: '4', label: "4 - Yaxshi" },
+                                    { value: '3', label: "3 - Qoniqarli" },
+                                    { value: '2', label: "2 - Qoniqarsiz" },
                                 ]}
                                 value={selectedGrade}
                                 onChange={setSelectedGrade}
