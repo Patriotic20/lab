@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { questionService, type QuestionCreateRequest } from '@/services/questionService';
 
-export const useQuestions = (page = 1, limit = 10, text?: string, subject_id?: number) => {
+export const useQuestions = (page = 1, limit = 10, text?: string, subject_id?: number, user_id?: number) => {
     return useQuery({
-        queryKey: ['questions', page, limit, text, subject_id],
-        queryFn: () => questionService.getQuestions(page, limit, text, subject_id),
+        queryKey: ['questions', page, limit, text, subject_id, user_id],
+        queryFn: () => questionService.getQuestions(page, limit, text, subject_id, user_id),
         placeholderData: (previousData) => previousData,
     });
 };
@@ -61,5 +61,15 @@ export const useUploadQuestions = () => {
 export const useUploadImage = () => {
     return useMutation({
         mutationFn: (file: File) => questionService.uploadImage(file),
+    });
+};
+
+export const useBulkDeleteQuestions = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: { subject_id: number; user_id: number }) => questionService.bulkDeleteQuestions(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['questions'] });
+        },
     });
 };

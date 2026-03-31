@@ -16,10 +16,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Plus, Pencil, Trash2, Loader2, FileQuestion, Upload, FileUp, Search, BookOpen, ArrowRight, ArrowLeft } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { useQuestions, useDeleteQuestion, useUploadQuestions } from '@/hooks/useQuestions';
+import { useQuestions, useDeleteQuestion, useUploadQuestions, useBulkDeleteQuestions } from '@/hooks/useQuestions';
 import { useSubjects, useTeacherAssignedSubjects } from '@/hooks/useSubjects';
+import { useUsers } from '@/hooks/useUsers';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/context/AuthContext';
+import { Combobox } from '@/components/ui/Combobox';
 
 // ─── Teacher Subject Picker ──────────────────────────────────────────────────
 
@@ -100,6 +102,7 @@ const QuestionsTable = ({ subjectId, subjects, onBack, selectedSubjectName }: Qu
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -195,6 +198,10 @@ const QuestionsTable = ({ subjectId, subjects, onBack, selectedSubjectName }: Qu
                         <Upload className="mr-2 h-4 w-4" />
                         Excel import
                     </Button>
+                    <Button variant="outline" className="text-destructive border-destructive hover:bg-destructive/10" onClick={() => setIsBulkDeleteModalOpen(true)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Ommaviy o'chirish
+                    </Button>
                     <Button onClick={handleCreateQuestion}>
                         <Plus className="mr-2 h-4 w-4" />
                         Qo'shish
@@ -278,6 +285,14 @@ const QuestionsTable = ({ subjectId, subjects, onBack, selectedSubjectName }: Qu
                 isOpen={isUploadModalOpen}
                 onClose={() => setIsUploadModalOpen(false)}
                 onSuccess={() => setIsUploadModalOpen(false)}
+                subjects={subjects}
+                defaultSubjectId={subjectId}
+            />
+
+            <BulkDeleteModal
+                isOpen={isBulkDeleteModalOpen}
+                onClose={() => setIsBulkDeleteModalOpen(false)}
+                onSuccess={() => setIsBulkDeleteModalOpen(false)}
                 subjects={subjects}
                 defaultSubjectId={subjectId}
             />
@@ -448,16 +463,13 @@ const UploadModal = ({
             <div className="space-y-6">
                 <div className="space-y-2">
                     <label className="text-sm font-medium">Fan</label>
-                    <select
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    <Combobox
+                        options={subjects.map(s => ({ value: String(s.id), label: s.name }))}
                         value={subjectId}
-                        onChange={(e) => setSubjectId(e.target.value)}
-                    >
-                        <option value="">Fan tanlang</option>
-                        {subjects.map((s) => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                    </select>
+                        onChange={(val) => setSubjectId(val)}
+                        placeholder="Fan tanlang"
+                        searchPlaceholder="Fanni qidirish..."
+                    />
                 </div>
                 <div className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg p-10">
                     <FileUp className="h-10 w-10 text-muted-foreground mb-4" />
@@ -485,6 +497,108 @@ const UploadModal = ({
                     <Button variant="outline" onClick={onClose}>Bekor qilish</Button>
                     <Button onClick={handleUpload} isLoading={uploadMutation.isPending} disabled={!file || !subjectId}>
                         Yuklash
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+const BulkDeleteModal = ({
+    isOpen,
+    onClose,
+    onSuccess,
+    subjects,
+    defaultSubjectId,
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    onSuccess: () => void;
+    subjects: Subject[];
+    defaultSubjectId?: number;
+}) => {
+    const [subjectId, setSubjectId] = useState<string>(defaultSubjectId ? String(defaultSubjectId) : '');
+    const [userId, setUserId] = useState<string>('');
+    const bulkDeleteMutation = useBulkDeleteQuestions();
+    const { data: usersData, isLoading: isUsersLoading } = useUsers(1, 1000); // Fetch all users for selection
+    const users = usersData?.users || [];
+
+    // Sync defaultSubjectId when it changes
+    useEffect(() => {
+        setSubjectId(defaultSubjectId ? String(defaultSubjectId) : '');
+    }, [defaultSubjectId]);
+
+    const handleDelete = () => {
+        if (!subjectId || !userId) {
+            alert("Iltimos, fan va foydalanuvchini tanlang");
+            return;
+        }
+
+        if (window.confirm("Haqiqatan ham ushbu fan va foydalanuvchiga tegishli BARCHA savollarni o'chirmoqchimisiz?")) {
+            bulkDeleteMutation.mutate({ 
+                subject_id: parseInt(subjectId), 
+                user_id: parseInt(userId) 
+            }, {
+                onSuccess: (data: any) => {
+                    alert(`${data.deleted_count} ta savol o'chirildi`);
+                    onSuccess();
+                },
+                onError: () => alert("Savollarni o'chirishda xatolik yuz berdi"),
+            });
+        }
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Savollarni ommaviy o'chirish">
+            <div className="space-y-6">
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-sm text-destructive">
+                    <p className="font-semibold flex items-center gap-2">
+                        <Trash2 className="h-4 w-4" />
+                        Diqqat!
+                    </p>
+                    <p className="mt-1">
+                        Tanlangan fan va foydalanuvchiga tegishli barcha savollar butunlay o'chirib tashlanadi.
+                    </p>
+                </div>
+
+                <div className="space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground italic">
+                            Fanni tanlang:
+                        </label>
+                        <Combobox
+                            options={subjects.map(s => ({ value: String(s.id), label: s.name }))}
+                            value={subjectId}
+                            onChange={(val) => setSubjectId(val)}
+                            placeholder="Fan tanlang"
+                            searchPlaceholder="Fanni qidirish..."
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground italic">
+                            Foydalanuvchini (username) tanlang:
+                        </label>
+                        <Combobox
+                            options={users.map(u => ({ value: String(u.id), label: u.username }))}
+                            value={userId}
+                            onChange={(val) => setUserId(val)}
+                            placeholder="Foydalanuvchi tanlang"
+                            searchPlaceholder="Foydalanuvchini qidirish..."
+                            disabled={isUsersLoading}
+                        />
+                    </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4 border-t">
+                    <Button variant="outline" onClick={onClose}>Bekor qilish</Button>
+                    <Button 
+                        variant="danger" 
+                        onClick={handleDelete} 
+                        isLoading={bulkDeleteMutation.isPending} 
+                        disabled={!subjectId || !userId}
+                    >
+                        O'chirish
                     </Button>
                 </div>
             </div>

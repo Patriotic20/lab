@@ -13,6 +13,7 @@ from .schemas import (
     QuestionCreateResponse,
     QuestionListRequest,
     QuestionListResponse,
+    QuestionBulkDeleteRequest,
 )
 # from app.core.cache import clear_cache, custom_key_builder
 
@@ -90,6 +91,18 @@ async def delete_question(
     )
     # await clear_cache(list_questions)
     # await clear_cache(get_question, question_id=question_id)
+
+
+@router.delete("/bulk/subject-user", status_code=status.HTTP_200_OK, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+async def bulk_delete_questions(
+    data: QuestionBulkDeleteRequest,
+    session: AsyncSession = Depends(db_helper.session_getter),
+    _: PermissionRequired = Depends(PermissionRequired("delete:question")),
+):
+    count = await get_question_repository.bulk_delete_questions(
+        session=session, data=data
+    )
+    return {"deleted_count": count}
 
 
 @router.post("/upload_image", status_code=status.HTTP_200_OK, dependencies=[Depends(RateLimiter(times=5, seconds=60))])

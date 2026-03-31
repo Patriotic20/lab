@@ -10,6 +10,7 @@ from .schemas import (
     QuestionCreateRequest,
     QuestionListRequest,
     QuestionListResponse,
+    QuestionBulkDeleteRequest,
 )
 from core.config import settings
 
@@ -138,6 +139,21 @@ class QuestionRepository:
 
         await session.delete(question)
         await session.commit()
+
+    async def bulk_delete_questions(
+        self, session: AsyncSession, data: QuestionBulkDeleteRequest
+    ) -> int:
+        from sqlalchemy import delete
+        
+        stmt = delete(Question).where(
+            Question.subject_id == data.subject_id,
+            Question.user_id == data.user_id
+        )
+        
+        result = await session.execute(stmt)
+        await session.commit()
+        
+        return result.rowcount
 
 
     async def upload_image(self, file) -> str:
