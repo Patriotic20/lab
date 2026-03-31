@@ -55,6 +55,7 @@ const TeachersPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [teacherToDelete, setTeacherToDelete] = useState<Teacher | null>(null);
+    const [cascadeWarnings, setCascadeWarnings] = useState<string[]>([]);
 
     const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
     const [isSubjectModalOpen, setIsSubjectModalOpen] = useState(false);
@@ -95,6 +96,7 @@ const TeachersPage = () => {
     const handleDeleteClick = (teacher: Teacher, e: React.MouseEvent) => {
         e.stopPropagation();
         setTeacherToDelete(teacher);
+        setCascadeWarnings([]);
         setIsDeleteModalOpen(true);
     };
 
@@ -112,11 +114,22 @@ const TeachersPage = () => {
 
     const handleConfirmDelete = async () => {
         if (!teacherToDelete) return;
-        deleteTeacherMutation.mutate(teacherToDelete.id, {
+        deleteTeacherMutation.mutate({ id: teacherToDelete.id, force: cascadeWarnings.length > 0 }, {
             onSuccess: () => {
                 setIsDeleteModalOpen(false);
                 setTeacherToDelete(null);
+                setCascadeWarnings([]);
             },
+            onError: (error: any) => {
+                if (error.response?.status === 409 && error.response?.data?.detail?.requires_confirmation) {
+                    setCascadeWarnings(error.response.data.detail.warnings || []);
+                } else {
+                    alert("O'chirishda xatolik yuz berdi");
+                    setIsDeleteModalOpen(false);
+                    setTeacherToDelete(null);
+                    setCascadeWarnings([]);
+                }
+            }
         });
     };
 
@@ -237,11 +250,21 @@ const TeachersPage = () => {
 
             <ConfirmDialog
                 isOpen={isDeleteModalOpen}
-                onClose={() => setIsDeleteModalOpen(false)}
+                onClose={() => { setIsDeleteModalOpen(false); setCascadeWarnings([]); setTeacherToDelete(null); }}
                 onConfirm={handleConfirmDelete}
                 title="O'qituvchini o'chirish"
-                description={`Siz haqiqatan ham "${teacherToDelete?.full_name}" o'qituvchisini o'chirmoqchimisiz? Bu amalni bekor qilib bo'lmaydi.`}
-                confirmText="O'chirish"
+                description={
+                    cascadeWarnings.length > 0 ? (
+                        <div className="space-y-2 mt-2 text-left">
+                            <p className="text-red-600 font-medium">Diqqat! Ushbu o'qituvchini o'chirish quyidagi ma'lumotlarni ham o'chiradi:</p>
+                            <ul className="list-disc pl-5 text-sm text-red-500">
+                                {cascadeWarnings.map((w, i) => <li key={i}>{w}</li>)}
+                            </ul>
+                            <p className="font-semibold text-red-700 mt-2">Tasdiqlaysizmi? Bu amalni bekor qilib bo'lmaydi!</p>
+                        </div>
+                    ) : `Siz haqiqatan ham "${teacherToDelete?.full_name}" o'qituvchisini o'chirmoqchimisiz? Bu amalni bekor qilib bo'lmaydi.`
+                }
+                confirmText={cascadeWarnings.length > 0 ? "Ha, majburiy o'chirish" : "O'chirish"}
                 cancelText="Bekor qilish"
             />
 

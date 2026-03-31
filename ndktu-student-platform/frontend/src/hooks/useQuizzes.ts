@@ -41,7 +41,7 @@ export const useUpdateQuiz = () => {
 export const useDeleteQuiz = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (id: number) => quizService.deleteQuiz(id),
+        mutationFn: ({ id, force }: { id: number; force?: boolean }) => quizService.deleteQuiz(id, force),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['quizzes'] });
         },

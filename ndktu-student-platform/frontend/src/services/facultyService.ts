@@ -37,7 +37,8 @@ export const facultyService = {
         return response.data;
     },
 
-    deleteFaculty: async (id: number) => {
-        await api.delete(`/faculty/${id}`);
+    deleteFaculty: async (id: number, force?: boolean) => {
+        const url = force ? `/faculty/${id}?force=true` : `/faculty/${id}`;
+        await api.delete(url);
     },
 };

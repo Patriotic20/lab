@@ -125,10 +125,11 @@ async def update_user(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
 async def delete_user(
     user_id: int,
+    force: bool = False,
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("delete:user")),
 ):
-    await get_user_repository.delete_user(session=session, user_id=user_id)
+    await get_user_repository.delete_user(session=session, user_id=user_id, force=force)
 
 
 @router.post("/assign_role", status_code=status.HTTP_200_OK, dependencies=[Depends(RateLimiter(times=5, seconds=60))])

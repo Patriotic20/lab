@@ -99,11 +99,12 @@ async def update_group(
 @router.delete("/{group_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
 async def delete_group(
     group_id: int,
+    force: bool = False,
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("delete:group")),
 ):
     await get_group_repository.delete_group(
-        session=session, group_id=group_id
+        session=session, group_id=group_id, force=force
     )
     # await clear_cache(list_groups)
     # await clear_cache(get_group, group_id=group_id)

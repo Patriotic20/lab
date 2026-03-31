@@ -113,8 +113,27 @@ class StudentRepository:
         await session.refresh(student)
         return student
 
-    async def delete_student(self, session: AsyncSession, student_id: int) -> None:
+    async def delete_student(self, session: AsyncSession, student_id: int, force: bool = False) -> None:
+        from app.models.results.model import Result
+        from sqlalchemy import delete
+
         student = await self.get_student(session, student_id)
+
+        if not force:
+            result_count = (await session.execute(select(func.count(Result.id)).where(Result.user_id == student.user_id))).scalar() or 0
+            if result_count > 0:
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "requires_confirmation": True,
+                        "message": "Ushbu talabani o'chirish quyidagi bog'langan ma'lumotlarga ta'sir qiladi:",
+                        "warnings": [f"{result_count} ta talaba natijalari (ballari) o'chadi"]
+                    }
+                )
+
+        # Aggressive delete results
+        await session.execute(delete(Result).where(Result.user_id == student.user_id))
+        
         await session.delete(student)
         await session.commit()
 

@@ -82,11 +82,12 @@ async def update_kafedra(
 @router.delete("/{kafedra_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
 async def delete_kafedra(
     kafedra_id: int,
+    force: bool = False,
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("delete:kafedra")),
 ):
     await get_kafedra_repository.delete_kafedra(
-        session=session, kafedra_id=kafedra_id
+        session=session, kafedra_id=kafedra_id, force=force
     )
     # await clear_cache(list_kafedras)
     # await clear_cache(get_kafedra, kafedra_id=kafedra_id)

@@ -90,11 +90,12 @@ async def update_teacher(
 @router.delete("/{teacher_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
 async def delete_teacher(
     teacher_id: int,
+    force: bool = False,
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("delete:teacher")),
 ):
     await get_teacher_repository.delete_teacher(
-        session=session, teacher_id=teacher_id
+        session=session, teacher_id=teacher_id, force=force
     )
     # await clear_cache(list_teachers)
     # await clear_cache(get_teacher, teacher_id=teacher_id)

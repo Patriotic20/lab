@@ -57,14 +57,12 @@ export const quizService = {
         return response.data;
     },
 
-    deleteQuiz: async (id: number) => {
-        await api.delete(`/quiz/${id}`);
+    deleteQuiz: async (id: number, force?: boolean) => {
+        const url = force ? `/quiz/${id}?force=true` : `/quiz/${id}`;
+        await api.delete(url);
     },
 
-    getDeleteInfo: async (id: number): Promise<{ results_count: number }> => {
-        const response = await api.get<{ results_count: number }>(`/quiz/${id}/delete-info`);
-        return response.data;
-    },
+
 
     repeatQuiz: async (id: number): Promise<Quiz> => {
         const response = await api.post<Quiz>(`/quiz/${id}/repeat`);

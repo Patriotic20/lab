@@ -8,7 +8,7 @@ interface ConfirmDialogProps {
     onClose: () => void;
     onConfirm: () => void;
     title: string;
-    description: string;
+    description: React.ReactNode;
     confirmText?: string;
     cancelText?: string;
     isLoading?: boolean;
@@ -33,10 +33,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 sm:h-12 sm:w-12">
                         <AlertTriangle className="h-5 w-5 text-red-600" aria-hidden="true" />
                     </div>
-                    <div className="mt-1">
-                        <p className="text-sm text-muted-foreground">
-                            {description}
-                        </p>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                        {description}
                     </div>
                 </div>
                 <div className="flex justify-end gap-3 mt-4">

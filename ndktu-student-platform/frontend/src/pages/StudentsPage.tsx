@@ -27,7 +27,8 @@ const StudentsPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [selectedGroup, setSelectedGroup] = useState<string>('');
-    const [studentToDelete, setStudentToDelete] = useState<number | null>(null);
+    const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+    const [cascadeWarnings, setCascadeWarnings] = useState<string[]>([]);
     const pageSize = 10;
     const deleteMutation = useDeleteStudent();
 
@@ -60,16 +61,22 @@ const StudentsPage = () => {
     };
 
     const handleDelete = () => {
-        if (studentToDelete) {
-            deleteMutation.mutate(studentToDelete, {
-                onSuccess: () => {
-                    setStudentToDelete(null);
-                },
-                onError: () => {
+        if (!studentToDelete) return;
+        deleteMutation.mutate({ id: studentToDelete.id, force: cascadeWarnings.length > 0 }, {
+            onSuccess: () => {
+                setStudentToDelete(null);
+                setCascadeWarnings([]);
+            },
+            onError: (error: any) => {
+                if (error.response?.status === 409 && error.response?.data?.detail?.requires_confirmation) {
+                    setCascadeWarnings(error.response.data.detail.warnings || []);
+                } else {
                     alert('Talabani o`chirishda xatolik yuz berdi');
+                    setStudentToDelete(null);
+                    setCascadeWarnings([]);
                 }
-            });
-        }
+            }
+        });
     };
 
     if (viewMode === 'detail' && selectedStudent) {
@@ -159,7 +166,8 @@ const StudentsPage = () => {
                                                     size="sm"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setStudentToDelete(student.id);
+                                                        setStudentToDelete(student);
+                                                        setCascadeWarnings([]);
                                                     }}
                                                     className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
                                                 >
@@ -189,11 +197,21 @@ const StudentsPage = () => {
 
             <ConfirmDialog
                 isOpen={!!studentToDelete}
-                onClose={() => setStudentToDelete(null)}
+                onClose={() => { setStudentToDelete(null); setCascadeWarnings([]); }}
                 onConfirm={handleDelete}
                 title="Talabani o'chirish"
-                description="Haqiqatan ham bu talabani o'chirmoqchimisiz? Bu amalni bekor qilib bo'lmaydi."
-                confirmText="O'chirish"
+                description={
+                    cascadeWarnings.length > 0 ? (
+                        <div className="space-y-2 mt-2 text-left">
+                            <p className="text-red-600 font-medium">Diqqat! Ushbu talabani o'chirish quyidagi ma'lumotlarni ham o'chiradi:</p>
+                            <ul className="list-disc pl-5 text-sm text-red-500">
+                                {cascadeWarnings.map((w, i) => <li key={i}>{w}</li>)}
+                            </ul>
+                            <p className="font-semibold text-red-700 mt-2">Tasdiqlaysizmi? Bu amalni bekor qilib bo'lmaydi!</p>
+                        </div>
+                    ) : `Siz haqiqatan ham "${studentToDelete?.full_name}" talabasini o'chirmoqchimisiz? Bu amalni bekor qilib bo'lmaydi.`
+                }
+                confirmText={cascadeWarnings.length > 0 ? "Ha, majburiy o'chirish" : "O'chirish"}
                 cancelText="Bekor qilish"
                 variant="danger"
             />

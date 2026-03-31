@@ -84,11 +84,12 @@ async def update_subject(
 @router.delete("/{subject_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
 async def delete_subject(
     subject_id: int,
+    force: bool = False,
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("delete:subject")),
 ):
     await get_subject_repository.delete_subject(
-        session=session, subject_id=subject_id
+        session=session, subject_id=subject_id, force=force
     )
     # await clear_cache(list_subjects)
     # await clear_cache(get_subject, subject_id=subject_id)

@@ -72,9 +72,10 @@ async def update_student(
 @router.delete("/{student_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
 async def delete_student(
     student_id: int, 
+    force: bool = False,
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("delete:student")),
 ):
-    await student_repository.delete_student(session, student_id)
+    await student_repository.delete_student(session, student_id, force)
     # await clear_cache(list_students)
     # await clear_cache(get_student, student_id=student_id)

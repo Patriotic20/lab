@@ -171,8 +171,12 @@ class GroupRepository:
         return group
 
     async def delete_group(
-        self, session: AsyncSession, group_id: int
+        self, session: AsyncSession, group_id: int, force: bool = False
     ) -> None:
+        from app.models.student.model import Student
+        from app.models.quiz.model import Quiz
+        from app.models.group_teachers.model import GroupTeacher
+
         stmt = select(Group).where(Group.id == group_id)
         result = await session.execute(stmt)
         group = result.scalar_one_or_none()
@@ -182,8 +186,32 @@ class GroupRepository:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Group not found"
             )
 
+        if not force:
+            student_count = (await session.execute(select(func.count(Student.id)).where(Student.group_id == group_id))).scalar() or 0
+            result_count = (await session.execute(select(func.count(Result.id)).where(Result.group_id == group_id))).scalar() or 0
+            quiz_count = (await session.execute(select(func.count(Quiz.id)).where(Quiz.group_id == group_id))).scalar() or 0
+            teacher_count = (await session.execute(select(func.count(GroupTeacher.id)).where(GroupTeacher.group_id == group_id))).scalar() or 0
+            
+            total = student_count + result_count + quiz_count + teacher_count
+            if total > 0:
+                warnings = []
+                if student_count > 0: warnings.append(f"{student_count} ta talaba guruhsiz qoladi")
+                if result_count > 0: warnings.append(f"{result_count} ta test natijalari guruhsiz qoladi")
+                if quiz_count > 0: warnings.append(f"{quiz_count} ta guruhga oid testlar guruhsiz qoladi")
+                if teacher_count > 0: warnings.append(f"{teacher_count} ta o'qituvchi guruhdan uziladi")
+                
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "requires_confirmation": True,
+                        "message": "Ushbu guruhni o'chirish quyidagi bog'langan ma'lumotlarga ta'sir qiladi:",
+                        "warnings": warnings
+                    }
+                )
+
         # FK ondelete="SET NULL" on Student.group_id and Result.group_id means
         # linked students/results lose their group reference but are NOT deleted.
+        # GroupTeacher has cascade delete orphan.
         await session.delete(group)
         await session.commit()
 

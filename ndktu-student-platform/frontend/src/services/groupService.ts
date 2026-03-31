@@ -57,8 +57,9 @@ export const groupService = {
         return response.data;
     },
 
-    deleteGroup: async (id: number) => {
-        await api.delete(`/group/${id}`);
+    deleteGroup: async (id: number, force?: boolean) => {
+        const url = force ? `/group/${id}?force=true` : `/group/${id}`;
+        await api.delete(url);
     },
 
     getDeleteInfo: async (id: number): Promise<{ students_count: number; results_count: number }> => {

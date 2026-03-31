@@ -31,8 +31,9 @@ export const userService = {
         return response.data;
     },
 
-    deleteUser: async (id: number) => {
-        await api.delete(`/user/${id}`);
+    deleteUser: async (id: number, force?: boolean) => {
+        const url = force ? `/user/${id}?force=true` : `/user/${id}`;
+        await api.delete(url);
     },
 
     assignRoles: async (user_id: number, role_ids: number[]) => {

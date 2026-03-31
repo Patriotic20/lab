@@ -59,7 +59,8 @@ export const subjectService = {
         return response.data;
     },
 
-    deleteSubject: async (id: number) => {
-        await api.delete(`/subject/${id}`);
+    deleteSubject: async (id: number, force?: boolean) => {
+        const url = force ? `/subject/${id}?force=true` : `/subject/${id}`;
+        await api.delete(url);
     },
 };

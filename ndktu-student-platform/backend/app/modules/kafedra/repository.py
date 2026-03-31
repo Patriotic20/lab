@@ -117,8 +117,11 @@ class KafedraRepository:
         return kafedra
 
     async def delete_kafedra(
-        self, session: AsyncSession, kafedra_id: int
+        self, session: AsyncSession, kafedra_id: int, force: bool = False
     ) -> None:
+        from app.models.teacher.model import Teacher
+        from sqlalchemy import delete
+
         stmt = select(Kafedra).where(Kafedra.id == kafedra_id)
         result = await session.execute(stmt)
         kafedra = result.scalar_one_or_none()
@@ -127,6 +130,27 @@ class KafedraRepository:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Kafedra not found"
             )
+
+        if not force:
+            teacher_count = (await session.execute(select(func.count(Teacher.id)).where(Teacher.kafedra_id == kafedra_id))).scalar() or 0
+            if teacher_count > 0:
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "requires_confirmation": True,
+                        "message": "Ushbu kafedrani o'chirish quyidagi bog'langan ma'lumotlarga ta'sir qiladi:",
+                        "warnings": [f"{teacher_count} ta o'qituvchi(lar) va ularning barcha guruh/fan biriktirmalari o'chiladi"]
+                    }
+                )
+
+        # Aggressive delete Teachers and their links
+        teacher_ids = (await session.execute(select(Teacher.id).where(Teacher.kafedra_id == kafedra_id))).scalars().all()
+        if teacher_ids:
+            from app.models.subject_teacher.model import SubjectTeacher
+            from app.models.group_teachers.model import GroupTeacher
+            await session.execute(delete(SubjectTeacher).where(SubjectTeacher.teacher_id.in_(teacher_ids)))
+            await session.execute(delete(GroupTeacher).where(GroupTeacher.teacher_id.in_(teacher_ids)))
+            await session.execute(delete(Teacher).where(Teacher.id.in_(teacher_ids)))
 
         await session.delete(kafedra)
         await session.commit()

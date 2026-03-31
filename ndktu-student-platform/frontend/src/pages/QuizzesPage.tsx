@@ -23,7 +23,6 @@ import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuizzes, useCreateQuiz, useUpdateQuiz, useDeleteQuiz, useRepeatQuiz } from '@/hooks/useQuizzes';
-import { quizService } from '@/services/quizService';
 import { useSubjects } from '@/hooks/useSubjects';
 import { useGroups } from '@/hooks/useGroups';
 import { useTeachers, useTeacherAssignedGroups } from '@/hooks/useTeachers';
@@ -52,8 +51,7 @@ const QuizzesPage = () => {
     const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [quizToDelete, setQuizToDelete] = useState<Quiz | null>(null);
-    const [quizDeleteInfo, setQuizDeleteInfo] = useState<{ results_count: number } | null>(null);
-    const [isLoadingDeleteInfo, setIsLoadingDeleteInfo] = useState(false);
+    const [cascadeWarnings, setCascadeWarnings] = useState<string[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 10;
     const [isUpdatingStatus, setIsUpdatingStatus] = useState<number | null>(null);
@@ -117,30 +115,31 @@ const QuizzesPage = () => {
         setIsModalOpen(true);
     };
 
-    const handleDeleteClick = async (quiz: Quiz) => {
+    const handleDeleteClick = (quiz: Quiz) => {
         setQuizToDelete(quiz);
-        setQuizDeleteInfo(null);
+        setCascadeWarnings([]);
         setIsDeleteModalOpen(true);
-        // Fetch related counts for the warning
-        setIsLoadingDeleteInfo(true);
-        try {
-            const info = await quizService.getDeleteInfo(quiz.id);
-            setQuizDeleteInfo(info);
-        } catch {
-            setQuizDeleteInfo({ results_count: 0 });
-        } finally {
-            setIsLoadingDeleteInfo(false);
-        }
     };
 
     const handleConfirmDelete = async () => {
         if (!quizToDelete) return;
-        deleteQuizMutation.mutate(quizToDelete.id, {
+
+        deleteQuizMutation.mutate({ id: quizToDelete.id, force: cascadeWarnings.length > 0 }, {
             onSuccess: () => {
                 setIsDeleteModalOpen(false);
                 setQuizToDelete(null);
-                setQuizDeleteInfo(null);
+                setCascadeWarnings([]);
             },
+            onError: (error: any) => {
+                if (error.response?.status === 409 && error.response?.data?.detail?.requires_confirmation) {
+                    setCascadeWarnings(error.response.data.detail.warnings || []);
+                } else {
+                    alert("O'chirishda xatolik yuz berdi");
+                    setIsDeleteModalOpen(false);
+                    setQuizToDelete(null);
+                    setCascadeWarnings([]);
+                }
+            }
         });
     };
 
@@ -415,17 +414,21 @@ const QuizzesPage = () => {
             />
             <ConfirmDialog
                 isOpen={isDeleteModalOpen}
-                onClose={() => { setIsDeleteModalOpen(false); setQuizDeleteInfo(null); }}
+                onClose={() => { setIsDeleteModalOpen(false); setCascadeWarnings([]); setQuizToDelete(null); }}
                 onConfirm={handleConfirmDelete}
                 title="Testni o'chirish"
                 description={
-                    isLoadingDeleteInfo
-                        ? "Ma'lumot yuklanmoqda..."
-                        : quizDeleteInfo && quizDeleteInfo.results_count > 0
-                            ? `⚠️ "${quizToDelete?.title}" testi bilan birga ${quizDeleteInfo.results_count} ta talaba natijasi ham o'chib ketadi. Bu amalni ortga qaytarib bo'lmaydi.`
-                            : `"${quizToDelete?.title}" testini o'chirishni xohlaysizmi? Bu amalni ortga qaytarib bo'lmaydi.`
+                    cascadeWarnings.length > 0 ? (
+                        <div className="space-y-2 mt-2 text-left">
+                            <p className="text-red-600 font-medium">Diqqat! Ushbu testni o'chirish quyidagi ma'lumotlarni ham o'chiradi:</p>
+                            <ul className="list-disc pl-5 text-sm text-red-500">
+                                {cascadeWarnings.map((w, i) => <li key={i}>{w}</li>)}
+                            </ul>
+                            <p className="font-semibold text-red-700 mt-2">Tasdiqlaysizmi? Bu amalni bekor qilib bo'lmaydi!</p>
+                        </div>
+                    ) : `Siz haqiqatan ham "${quizToDelete?.title}" testini o'chirmoqchimisiz? Bu amalni bekor qilib bo'lmaydi.`
                 }
-                confirmText="O'chirish"
+                confirmText={cascadeWarnings.length > 0 ? "Ha, majburiy o'chirish" : "O'chirish"}
                 cancelText="Bekor qilish"
             />
 

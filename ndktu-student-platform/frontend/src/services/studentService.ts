@@ -69,7 +69,8 @@ export const studentService = {
         return response.data;
     },
 
-    deleteStudent: async (id: number): Promise<void> => {
-        await api.delete(`/students/${id}`);
+    deleteStudent: async (id: number, force?: boolean): Promise<void> => {
+        const url = force ? `/students/${id}?force=true` : `/students/${id}`;
+        await api.delete(url);
     },
 };

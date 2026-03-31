@@ -35,7 +35,7 @@ export const useUpdateFaculty = () => {
 export const useDeleteFaculty = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (id: number) => facultyService.deleteFaculty(id),
+        mutationFn: ({ id, force }: { id: number; force?: boolean }) => facultyService.deleteFaculty(id, force),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['faculties'] });
         },
@@ -73,7 +73,7 @@ export const useUpdateKafedra = () => {
 export const useDeleteKafedra = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (id: number) => kafedraService.deleteKafedra(id),
+        mutationFn: ({ id, force }: { id: number; force?: boolean }) => kafedraService.deleteKafedra(id, force),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['kafedras'] });
         },

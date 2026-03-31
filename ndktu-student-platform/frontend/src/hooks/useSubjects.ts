@@ -50,7 +50,7 @@ export const useUpdateSubject = () => {
 export const useDeleteSubject = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (id: number) => subjectService.deleteSubject(id),
+        mutationFn: ({ id, force }: { id: number; force?: boolean }) => subjectService.deleteSubject(id, force),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['subjects'] });
         },

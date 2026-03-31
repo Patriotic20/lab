@@ -38,7 +38,8 @@ export const kafedraService = {
         return response.data;
     },
 
-    deleteKafedra: async (id: number) => {
-        await api.delete(`/kafedra/${id}`);
+    deleteKafedra: async (id: number, force?: boolean) => {
+        const url = force ? `/kafedra/${id}?force=true` : `/kafedra/${id}`;
+        await api.delete(url);
     },
 };

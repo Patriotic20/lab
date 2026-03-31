@@ -222,8 +222,11 @@ class QuizRepository:
         return quiz
 
     async def delete_quiz(
-        self, session: AsyncSession, quiz_id: int
+        self, session: AsyncSession, quiz_id: int, force: bool = False
     ) -> None:
+        from app.models.results.model import Result
+        from sqlalchemy import delete as sa_delete
+
         stmt = select(Quiz).where(Quiz.id == quiz_id)
         result = await session.execute(stmt)
         quiz = result.scalar_one_or_none()
@@ -233,9 +236,19 @@ class QuizRepository:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
             )
 
+        if not force:
+            result_count = (await session.execute(select(func.count(Result.id)).where(Result.quiz_id == quiz_id))).scalar() or 0
+            if result_count > 0:
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "requires_confirmation": True,
+                        "message": "Ushbu testni o'chirish quyidagi bog'langan ma'lumotlarga ta'sir qiladi:",
+                        "warnings": [f"{result_count} ta talaba natijalari (ballari) butunlay o'chib ketadi"]
+                    }
+                )
+
         # Cascade-delete all results linked to this quiz before deleting the quiz
-        from app.models.results.model import Result
-        from sqlalchemy import delete as sa_delete
         await session.execute(sa_delete(Result).where(Result.quiz_id == quiz_id))
 
         await session.delete(quiz)

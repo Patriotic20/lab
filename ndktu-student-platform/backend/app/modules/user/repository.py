@@ -136,7 +136,13 @@ class UserRepository:
         await session.refresh(user)
         return user
 
-    async def delete_user(self, session: AsyncSession, user_id: int) -> None:
+    async def delete_user(self, session: AsyncSession, user_id: int, force: bool = False) -> None:
+        from app.models.results.model import Result
+        from app.models.quiz.model import Quiz as QuizModel
+        from app.models.student.model import Student as StudentModel
+        from app.models.teacher.model import Teacher as TeacherModel
+        from sqlalchemy import delete
+
         stmt = select(User).where(User.id == user_id)
         result = await session.execute(stmt)
         user = result.scalar_one_or_none()
@@ -146,34 +152,48 @@ class UserRepository:
                 status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
-        # Guard: check for results linked to this user
-        from app.models.results.model import Result
-        from app.models.quiz.model import Quiz as QuizModel
-        result_count_stmt = select(func.count()).select_from(Result).where(
-            Result.user_id == user_id
-        )
-        result_count = (await session.execute(result_count_stmt)).scalar() or 0
+        if not force:
+            result_count = (await session.execute(select(func.count(Result.id)).where(Result.user_id == user_id))).scalar() or 0
+            quiz_count = (await session.execute(select(func.count(QuizModel.id)).where(QuizModel.user_id == user_id))).scalar() or 0
+            student_count = (await session.execute(select(func.count(StudentModel.id)).where(StudentModel.user_id == user_id))).scalar() or 0
+            teacher_count = (await session.execute(select(func.count(TeacherModel.id)).where(TeacherModel.user_id == user_id))).scalar() or 0
+            
+            total = result_count + quiz_count + student_count + teacher_count
+            if total > 0:
+                warnings = []
+                if result_count > 0: warnings.append(f"{result_count} ta talaba natijalari o'chadi")
+                if quiz_count > 0: warnings.append(f"{quiz_count} ta yaratgan testlari o'chadi")
+                if student_count > 0: warnings.append("Ushbu foydalanuvchiga tegishli talaba ma'lumotlari o'chadi")
+                if teacher_count > 0: warnings.append("Ushbu foydalanuvchiga tegishli o'qituvchi ma'lumotlari o'chadi")
+                
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "requires_confirmation": True,
+                        "message": f"'{user.username}' foydalanuvchisini o'chirish quyidagi ma'lumotlarga ta'sir qiladi:",
+                        "warnings": warnings
+                    }
+                )
 
-        quiz_count_stmt = select(func.count()).select_from(QuizModel).where(
-            QuizModel.user_id == user_id
-        )
-        quiz_count = (await session.execute(quiz_count_stmt)).scalar() or 0
+        # Aggressive delete
+        # 1. Results
+        await session.execute(delete(Result).where(Result.user_id == user_id))
+        
+        # 2. Quizzes & their Results & Questions?
+        # If the user is a teacher, we already have logic in delete_teacher.
+        # But here we delete the User directly.
+        quiz_ids = (await session.execute(select(QuizModel.id).where(QuizModel.user_id == user_id))).scalars().all()
+        if quiz_ids:
+            from app.models.quiz_questions.model import QuizQuestion
+            await session.execute(delete(Result).where(Result.quiz_id.in_(quiz_ids)))
+            await session.execute(delete(QuizQuestion).where(QuizQuestion.quiz_id.in_(quiz_ids)))
+            await session.execute(delete(QuizModel).where(QuizModel.id.in_(quiz_ids)))
 
-        issues = []
-        if result_count > 0:
-            issues.append(f"{result_count} ta natija")
-        if quiz_count > 0:
-            issues.append(f"{quiz_count} ta test")
-
-        if issues:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    f"'{user.username}' foydalanuvchisini o'chirib bo'lmaydi. "
-                    f"Unga bog'liq: {', '.join(issues)}. "
-                    f"Avval bog'liq ma'lumotlarni o'chiring."
-                ),
-            )
+        # 3. Student & Teacher records
+        await session.execute(delete(StudentModel).where(StudentModel.user_id == user_id))
+        await session.execute(delete(TeacherModel).where(TeacherModel.user_id == user_id))
+        
+        # 4. Role assignments (usually handled by SQLAlchemy relationship if set up, but safe to delete user)
 
         await session.delete(user)
         await session.commit()

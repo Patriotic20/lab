@@ -31,6 +31,7 @@ const SubjectsPage = () => {
     const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [subjectToDelete, setSubjectToDelete] = useState<Subject | null>(null);
+    const [cascadeWarnings, setCascadeWarnings] = useState<string[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -58,11 +59,22 @@ const SubjectsPage = () => {
     const handleConfirmDelete = async () => {
         if (!subjectToDelete) return;
 
-        deleteSubjectMutation.mutate(subjectToDelete.id, {
+        deleteSubjectMutation.mutate({ id: subjectToDelete.id, force: cascadeWarnings.length > 0 }, {
             onSuccess: () => {
                 setIsDeleteModalOpen(false);
                 setSubjectToDelete(null);
+                setCascadeWarnings([]);
             },
+            onError: (error: any) => {
+                if (error.response?.status === 409 && error.response?.data?.detail?.requires_confirmation) {
+                    setCascadeWarnings(error.response.data.detail.warnings || []);
+                } else {
+                    alert("O'chirishda xatolik yuz berdi");
+                    setIsDeleteModalOpen(false);
+                    setSubjectToDelete(null);
+                    setCascadeWarnings([]);
+                }
+            }
         });
     };
 
@@ -165,11 +177,21 @@ const SubjectsPage = () => {
 
             <ConfirmDialog
                 isOpen={isDeleteModalOpen}
-                onClose={() => setIsDeleteModalOpen(false)}
+                onClose={() => { setIsDeleteModalOpen(false); setCascadeWarnings([]); setSubjectToDelete(null); }}
                 onConfirm={handleConfirmDelete}
                 title="Fanni o'chirish"
-                description={`Siz haqiqatan ham "${subjectToDelete?.name}" fanini o'chirmoqchimisiz? Bu amalni bekor qilib bo'lmaydi.`}
-                confirmText="O'chirish"
+                description={
+                    cascadeWarnings.length > 0 ? (
+                        <div className="space-y-2 mt-2 text-left">
+                            <p className="text-red-600 font-medium">Diqqat! Ushbu fanni o'chirish quyidagi ma'lumotlarni ham o'chiradi:</p>
+                            <ul className="list-disc pl-5 text-sm text-red-500">
+                                {cascadeWarnings.map((w, i) => <li key={i}>{w}</li>)}
+                            </ul>
+                            <p className="font-semibold text-red-700 mt-2">Tasdiqlaysizmi? Bu amalni bekor qilib bo'lmaydi!</p>
+                        </div>
+                    ) : `Siz haqiqatan ham "${subjectToDelete?.name}" fanini o'chirmoqchimisiz? Bu amalni bekor qilib bo'lmaydi.`
+                }
+                confirmText={cascadeWarnings.length > 0 ? "Ha, majburiy o'chirish" : "O'chirish"}
                 cancelText="Bekor qilish"
             />
         </div>

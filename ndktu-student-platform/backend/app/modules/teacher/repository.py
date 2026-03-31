@@ -170,8 +170,14 @@ class TeacherRepository:
         return teacher
 
     async def delete_teacher(
-        self, session: AsyncSession, teacher_id: int
+        self, session: AsyncSession, teacher_id: int, force: bool = False
     ) -> None:
+        from app.models.quiz.model import Quiz
+        from app.models.question.model import Question
+        from app.models.subject_teacher.model import SubjectTeacher
+        from app.models.group_teachers.model import GroupTeacher
+        from sqlalchemy import delete
+
         stmt = select(Teacher).where(Teacher.id == teacher_id)
         result = await session.execute(stmt)
         teacher = result.scalar_one_or_none()
@@ -180,6 +186,47 @@ class TeacherRepository:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Teacher not found"
             )
+
+        if not force:
+            st_count = (await session.execute(select(func.count(SubjectTeacher.id)).where(SubjectTeacher.teacher_id == teacher_id))).scalar() or 0
+            gt_count = (await session.execute(select(func.count(GroupTeacher.id)).where(GroupTeacher.teacher_id == teacher.user_id))).scalar() or 0
+            quiz_count = (await session.execute(select(func.count(Quiz.id)).where(Quiz.user_id == teacher.user_id))).scalar() or 0
+            question_count = (await session.execute(select(func.count(Question.id)).where(Question.user_id == teacher.user_id))).scalar() or 0
+            
+            total = st_count + gt_count + quiz_count + question_count
+            if total > 0:
+                warnings = []
+                if st_count > 0: warnings.append(f"{st_count} ta fanga biriktiruv o'chadi")
+                if gt_count > 0: warnings.append(f"{gt_count} ta guruhga biriktiruv o'chadi")
+                if quiz_count > 0: warnings.append(f"{quiz_count} ta yaratgan testlari va ularning natijalari o'chadi")
+                if question_count > 0: warnings.append(f"{question_count} ta yaratgan savollari o'chadi")
+                
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "requires_confirmation": True,
+                        "message": "Ushbu o'qituvchini o'chirish quyidagi ma'lumotlarga ta'sir qiladi:",
+                        "warnings": warnings
+                    }
+                )
+
+        # Aggressive delete
+        # 1. Quizzes (this will trigger result deletion if we use the repository method or if we do it here)
+        quiz_ids = (await session.execute(select(Quiz.id).where(Quiz.user_id == teacher.user_id))).scalars().all()
+        if quiz_ids:
+            from app.models.results.model import Result
+            from app.models.quiz_questions.model import QuizQuestion
+            await session.execute(delete(Result).where(Result.quiz_id.in_(quiz_ids)))
+            await session.execute(delete(QuizQuestion).where(QuizQuestion.quiz_id.in_(quiz_ids)))
+            await session.execute(delete(Quiz).where(Quiz.id.in_(quiz_ids)))
+        
+        # 2. Questions
+        await session.execute(delete(Question).where(Question.user_id == teacher.user_id))
+        
+        # 3. Group Assignments
+        await session.execute(delete(GroupTeacher).where(GroupTeacher.teacher_id == teacher.user_id))
+        
+        # 4. Subject Assignments (handled by SQLAlchemy cascade)
 
         await session.delete(teacher)
         await session.commit()

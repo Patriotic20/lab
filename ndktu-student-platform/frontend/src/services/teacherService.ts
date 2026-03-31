@@ -100,8 +100,9 @@ export const teacherService = {
         return response.data;
     },
 
-    deleteTeacher: async (id: number) => {
-        await api.delete(`/teacher/${id}`);
+    deleteTeacher: async (id: number, force?: boolean) => {
+        const url = force ? `/teacher/${id}?force=true` : `/teacher/${id}`;
+        await api.delete(url);
     },
 
     assignGroups: async (user_id: number, group_ids: number[]) => {

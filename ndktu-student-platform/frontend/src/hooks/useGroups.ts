@@ -51,7 +51,7 @@ export const useUpdateGroup = () => {
 export const useDeleteGroup = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (id: number) => groupService.deleteGroup(id),
+        mutationFn: ({ id, force }: { id: number; force?: boolean }) => groupService.deleteGroup(id, force),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['groups'] });
         },

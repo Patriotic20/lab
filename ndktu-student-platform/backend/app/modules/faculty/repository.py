@@ -107,8 +107,52 @@ class FacultyRepository:
         return faculty
 
     async def delete_faculty(
-        self, session: AsyncSession, faculty_id: int
+        self, session: AsyncSession, faculty_id: int, force: bool = False
     ) -> None:
+        from app.models.group.model import Group
+        from app.models.kafedra.model import Kafedra
+        from sqlalchemy import delete, select, func
+
+        if not force:
+            kafedra_count = (await session.execute(select(func.count(Kafedra.id)).where(Kafedra.faculty_id == faculty_id))).scalar() or 0
+            group_count = (await session.execute(select(func.count(Group.id)).where(Group.faculty_id == faculty_id))).scalar() or 0
+
+            if kafedra_count > 0 or group_count > 0:
+                warnings = []
+                if kafedra_count > 0: warnings.append(f"{kafedra_count} ta kafedra va ulardagi barcha o'qituvchilar tizimdan o'chadi")
+                if group_count > 0: warnings.append(f"{group_count} ta guruh o'chadi (talabalarning guruhi belgilanmagan holatga o'tadi)")
+                
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "requires_confirmation": True,
+                        "message": "Ushbu fakultetni o'chirish quyidagi jiddiy oqibatlarga olib keladi:",
+                        "warnings": warnings
+                    }
+                )
+
+        # Proceed with forced aggressive cascade delete
+        
+        # 1. Cascade delete Kafedras and their Teachers
+        kafedra_ids = (await session.execute(select(Kafedra.id).where(Kafedra.faculty_id == faculty_id))).scalars().all()
+        if kafedra_ids:
+            from app.models.teacher.model import Teacher
+            teacher_ids = (await session.execute(select(Teacher.id).where(Teacher.kafedra_id.in_(kafedra_ids)))).scalars().all()
+            if teacher_ids:
+                from app.models.subject_teacher.model import SubjectTeacher
+                from app.models.group_teachers.model import GroupTeacher
+                await session.execute(delete(SubjectTeacher).where(SubjectTeacher.teacher_id.in_(teacher_ids)))
+                await session.execute(delete(GroupTeacher).where(GroupTeacher.teacher_id.in_(teacher_ids)))
+                await session.execute(delete(Teacher).where(Teacher.id.in_(teacher_ids)))
+            await session.execute(delete(Kafedra).where(Kafedra.faculty_id == faculty_id))
+
+        # 2. Cascade delete Groups
+        group_ids = (await session.execute(select(Group.id).where(Group.faculty_id == faculty_id))).scalars().all()
+        if group_ids:
+            from app.models.group_teachers.model import GroupTeacher
+            await session.execute(delete(GroupTeacher).where(GroupTeacher.group_id.in_(group_ids)))
+            await session.execute(delete(Group).where(Group.faculty_id == faculty_id))
+
         stmt = select(Faculty).where(Faculty.id == faculty_id)
         result = await session.execute(stmt)
         faculty = result.scalar_one_or_none()

@@ -16,7 +16,6 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useGroups, useCreateGroup, useUpdateGroup, useDeleteGroup } from '@/hooks/useGroups';
 import { useFaculties } from '@/hooks/useReferenceData';
-import { groupService } from '@/services/groupService';
 
 const groupSchema = z.object({
     name: z.string().min(1, 'Group name is required'),
@@ -30,8 +29,7 @@ const GroupsPage = () => {
     const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
-    const [groupDeleteInfo, setGroupDeleteInfo] = useState<{ students_count: number; results_count: number } | null>(null);
-    const [isLoadingDeleteInfo, setIsLoadingDeleteInfo] = useState(false);
+    const [cascadeWarnings, setCascadeWarnings] = useState<string[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -53,29 +51,31 @@ const GroupsPage = () => {
     const totalPages = groupsData ? Math.ceil(groupsData.total / pageSize) : 1;
     const faculties = facultiesData?.faculties || [];
 
-    const handleDeleteClick = async (group: Group) => {
+    const handleDeleteClick = (group: Group) => {
         setGroupToDelete(group);
-        setGroupDeleteInfo(null);
+        setCascadeWarnings([]);
         setIsDeleteModalOpen(true);
-        setIsLoadingDeleteInfo(true);
-        try {
-            const info = await groupService.getDeleteInfo(group.id);
-            setGroupDeleteInfo(info);
-        } catch {
-            setGroupDeleteInfo({ students_count: 0, results_count: 0 });
-        } finally {
-            setIsLoadingDeleteInfo(false);
-        }
     };
 
     const handleConfirmDelete = async () => {
         if (!groupToDelete) return;
-        deleteGroupMutation.mutate(groupToDelete.id, {
+
+        deleteGroupMutation.mutate({ id: groupToDelete.id, force: cascadeWarnings.length > 0 }, {
             onSuccess: () => {
                 setIsDeleteModalOpen(false);
                 setGroupToDelete(null);
-                setGroupDeleteInfo(null);
+                setCascadeWarnings([]);
             },
+            onError: (error: any) => {
+                if (error.response?.status === 409 && error.response?.data?.detail?.requires_confirmation) {
+                    setCascadeWarnings(error.response.data.detail.warnings || []);
+                } else {
+                    alert("O'chirishda xatolik yuz berdi");
+                    setIsDeleteModalOpen(false);
+                    setGroupToDelete(null);
+                    setCascadeWarnings([]);
+                }
+            }
         });
     };
 
@@ -175,24 +175,21 @@ const GroupsPage = () => {
                 faculties={faculties} onSuccess={handleSuccess} />
             <ConfirmDialog
                 isOpen={isDeleteModalOpen}
-                onClose={() => { setIsDeleteModalOpen(false); setGroupDeleteInfo(null); }}
+                onClose={() => { setIsDeleteModalOpen(false); setCascadeWarnings([]); setGroupToDelete(null); }}
                 onConfirm={handleConfirmDelete}
                 title="Guruhni o'chirish"
                 description={
-                    isLoadingDeleteInfo
-                        ? "Ma'lumot yuklanmoqda..."
-                        : (() => {
-                            const parts: string[] = [];
-                            if (groupDeleteInfo && groupDeleteInfo.students_count > 0)
-                                parts.push(`${groupDeleteInfo.students_count} ta talabaning guruhi bo'sh qoladi`);
-                            if (groupDeleteInfo && groupDeleteInfo.results_count > 0)
-                                parts.push(`${groupDeleteInfo.results_count} ta natijadan guruh ma'lumoti o'chadi`);
-                            return parts.length > 0
-                                ? `⚠️ "${groupToDelete?.name}" guruhini o'chirsangiz: ${parts.join(', ')}. Davom etasizmi?`
-                                : `"${groupToDelete?.name}" guruhini o'chirishni xohlaysizmi? Bu amalni ortga qaytarib bo'lmaydi.`;
-                        })()
+                    cascadeWarnings.length > 0 ? (
+                        <div className="space-y-2 mt-2 text-left">
+                            <p className="text-red-600 font-medium">Diqqat! Ushbu guruhni o'chirish quyidagi ma'lumotlarni ham o'zgartiradi:</p>
+                            <ul className="list-disc pl-5 text-sm text-red-500">
+                                {cascadeWarnings.map((w, i) => <li key={i}>{w}</li>)}
+                            </ul>
+                            <p className="font-semibold text-red-700 mt-2">Tasdiqlaysizmi? Bu amalni bekor qilib bo'lmaydi!</p>
+                        </div>
+                    ) : `Siz haqiqatan ham "${groupToDelete?.name}" guruhini o'chirmoqchimisiz? Bu amalni bekor qilib bo'lmaydi.`
                 }
-                confirmText="O'chirish"
+                confirmText={cascadeWarnings.length > 0 ? "Ha, majburiy o'chirish" : "O'chirish"}
                 cancelText="Bekor qilish"
             />
         </div>

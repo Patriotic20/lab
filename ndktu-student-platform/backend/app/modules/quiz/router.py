@@ -83,11 +83,12 @@ async def update_quiz(
 @router.delete("/{quiz_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
 async def delete_quiz(
     quiz_id: int,
+    force: bool = False,
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("delete:quiz")),
 ):
     await get_quiz_repository.delete_quiz(
-        session=session, quiz_id=quiz_id
+        session=session, quiz_id=quiz_id, force=force
     )
     # await clear_cache(list_quizzes)
     # await clear_cache(get_quiz, quiz_id=quiz_id)
