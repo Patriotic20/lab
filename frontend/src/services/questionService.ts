@@ -35,9 +35,9 @@ export interface QuestionListResponse {
 }
 
 export const questionService = {
-    getQuestions: async (page = 1, limit = 10, text?: string, subject_id?: number) => {
+    getQuestions: async (page = 1, limit = 10, text?: string, subject_id?: number, user_id?: number) => {
         const response = await api.get<QuestionListResponse>('/question/', {
-            params: { page, limit, text, subject_id },
+            params: { page, limit, text, subject_id, user_id },
         });
         return response.data;
     },
@@ -78,6 +78,11 @@ export const questionService = {
                 'Content-Type': 'multipart/form-data',
             },
         });
+        return response.data;
+    },
+    
+    bulkDeleteQuestions: async (data: { subject_id: number; user_id: number }) => {
+        const response = await api.delete('/question/bulk/subject-user', { data });
         return response.data;
     },
 };

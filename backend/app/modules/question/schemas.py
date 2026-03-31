@@ -18,6 +18,10 @@ class QuestionCreateRequest(BaseModel):
             raise ValueError("Field cannot be empty")
         return v.strip()
 
+class QuestionBulkDeleteRequest(BaseModel):
+    subject_id: int
+    user_id: int
+
 
 class QuestionCreateResponse(BaseModel):
     id: int
