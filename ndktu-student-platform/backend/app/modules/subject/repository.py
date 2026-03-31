@@ -145,6 +145,34 @@ class SubjectRepository:
     async def delete_subject(
         self, session: AsyncSession, subject_id: int
     ) -> None:
+        from app.models.subject_teacher.model import SubjectTeacher
+        from app.models.question.model import Question
+        from app.models.quiz.model import Quiz
+        
+        # Guard: Check for associated teachers
+        teacher_check = await session.execute(select(SubjectTeacher).where(SubjectTeacher.subject_id == subject_id).limit(1))
+        if teacher_check.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Ushbu fanga biriktirilgan o'qituvchilar mavjud. O'chirishdan oldin o'qituvchilarni fandan uzing."
+            )
+            
+        # Guard: Check for associated questions
+        question_check = await session.execute(select(Question).where(Question.subject_id == subject_id).limit(1))
+        if question_check.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Ushbu fanga test savollari biriktirilgan. O'chirishdan oldin savollarni bazadan tozalang."
+            )
+
+        # Guard: Check for associated quizzes
+        quiz_check = await session.execute(select(Quiz).where(Quiz.subject_id == subject_id).limit(1))
+        if quiz_check.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Ushbu fandan shakllantirilgan testlar (quizzes) mavjud. O'chirishdan oldin testlarni tozalang."
+            )
+
         stmt = select(Subject).where(Subject.id == subject_id)
         result = await session.execute(stmt)
         subject = result.scalar_one_or_none()
