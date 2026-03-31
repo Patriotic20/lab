@@ -15,6 +15,7 @@ import { Loader2, FileText, X, FileSpreadsheet } from 'lucide-react';
 import { Combobox } from '@/components/ui/Combobox';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { cn } from '@/utils/utils';
 
 import { useGroups } from '@/hooks/useGroups';
 import { useSubjects } from '@/hooks/useSubjects';
@@ -229,28 +230,34 @@ const ResultsPage = () => {
                             />
                         </div>
 
-                        <div className="flex flex-col gap-2 w-[120px]">
+                        <div className="flex flex-col gap-2 w-[160px]">
                             <label className="text-sm font-medium">Ball</label>
-                            <Input
-                                type="number"
-                                placeholder="..."
+                            <Combobox
+                                options={[
+                                    { value: '5', label: '5 ball' },
+                                    { value: '4', label: '4 ball' },
+                                    { value: '3', label: '3 ball' },
+                                    { value: '2', label: '2 ball' },
+                                    { value: '1', label: '1 ball' },
+                                ]}
                                 value={selectedGrade}
-                                onChange={(e) => setSelectedGrade(e.target.value)}
-                                min={1}
-                                max={5}
+                                onChange={setSelectedGrade}
+                                placeholder="Barcha ballar"
+                                searchPlaceholder="Ballni qidirish..."
                             />
                         </div>
 
-                        <div className="flex flex-col gap-2 w-[150px]">
+                        <div className="flex flex-col gap-2 w-[180px]">
                             <label className="text-sm font-medium">Sana bo'yicha</label>
-                            <select
-                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            <Combobox
+                                options={[
+                                    { value: 'desc', label: 'Oxirgi natijalar' },
+                                    { value: 'asc', label: 'Eski natijalar' },
+                                ]}
                                 value={sortDir}
-                                onChange={(e) => setSortDir(e.target.value as 'desc' | 'asc')}
-                            >
-                                <option value="desc">Oxirgi natijalar</option>
-                                <option value="asc">Eski natijalar</option>
-                            </select>
+                                onChange={(val) => setSortDir(val as 'desc' | 'asc')}
+                                placeholder="Saralash..."
+                            />
                         </div>
 
                         {hasActiveFilters && (
@@ -325,11 +332,14 @@ const ResultsPage = () => {
                                         <TableCell className="capitalize">{result.subject?.name || '-'}</TableCell>
                                         <TableCell className="capitalize">{result.quiz?.title || `Test ${result.quiz_id}`}</TableCell>
                                         <TableCell>
-                                            <span className={
-                                                result.grade == 5 ? "text-green-600 font-medium" :
-                                                    (result.grade == 4 || result.grade == 3) ? "text-yellow-600" :
-                                                        "text-red-600"
-                                            }>
+                                            <span className={cn(
+                                                "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset",
+                                                result.grade == 5 
+                                                    ? "bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20"
+                                                    : (result.grade >= 3)
+                                                        ? "bg-yellow-50 text-yellow-700 ring-yellow-600/20 dark:bg-yellow-500/10 dark:text-yellow-400 dark:ring-yellow-500/20"
+                                                        : "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-500/20"
+                                            )}>
                                                 {result.grade}
                                             </span>
                                         </TableCell>
