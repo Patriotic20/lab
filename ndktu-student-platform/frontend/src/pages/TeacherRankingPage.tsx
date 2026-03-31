@@ -13,6 +13,8 @@ import {
 import type { TeacherRankItem, FacultyRankItem, KafedraRankItem } from '@/services/teacherService';
 import { Input } from '@/components/ui/Input';
 import { Pagination } from '@/components/ui/Pagination';
+import { useFaculties, useKafedras } from '@/hooks/useReferenceData';
+import { Combobox } from '@/components/ui/Combobox';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Tab = 'teachers' | 'faculty' | 'kafedra';
@@ -146,6 +148,8 @@ const TeachersPanel = () => {
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [facultyId, setFacultyId] = useState<string>('');
+    const [kafedraId, setKafedraId] = useState<string>('');
     
     // Debounce search input
     useEffect(() => {
@@ -156,36 +160,73 @@ const TeachersPanel = () => {
         return () => clearTimeout(timer);
     }, [search]);
 
+    const { data: facultiesData } = useFaculties(1, 100);
+    const { data: kafedrasData } = useKafedras(1, 100);
+
+    const facultyOptions = facultiesData?.faculties.map(f => ({ value: f.id.toString(), label: f.name })) || [];
+    const kafedraOptions = kafedrasData?.kafedras
+        .filter(k => facultyId ? k.faculty_id.toString() === facultyId : true)
+        .map(k => ({ value: k.id.toString(), label: k.name })) || [];
+
     const { data, isLoading, isFetching } = useTeacherRanking({ 
         page, 
         limit: 10,
-        search: debouncedSearch || undefined
+        search: debouncedSearch || undefined,
+        faculty_id: facultyId ? parseInt(facultyId) : undefined,
+        kafedra_id: kafedraId ? parseInt(kafedraId) : undefined,
     });
 
     return (
         <div className="space-y-4">
-            <div className="relative max-w-sm">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                    {isFetching && search !== debouncedSearch ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    ) : (
-                        <Search className="h-4 w-4 text-muted-foreground" />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="relative w-full sm:max-w-sm">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                        {isFetching && search !== debouncedSearch ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        ) : (
+                            <Search className="h-4 w-4 text-muted-foreground" />
+                        )}
+                    </div>
+                    <Input
+                        placeholder="F.I.O bo'yicha qidirish..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="pl-9 pr-8"
+                    />
+                    {search && (
+                        <button
+                            onClick={() => setSearch('')}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 hover:bg-accent"
+                        >
+                            <X className="h-3.5 w-3.5 text-muted-foreground" />
+                        </button>
                     )}
                 </div>
-                <Input
-                    placeholder="F.I.O bo'yicha qidirish..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 pr-8"
+
+                <Combobox
+                    options={facultyOptions}
+                    value={facultyId}
+                    onChange={(val) => {
+                        setFacultyId(val);
+                        setKafedraId('');
+                        setPage(1);
+                    }}
+                    placeholder="Fakultetni tanlang"
+                    searchPlaceholder="Fakultet qidirish..."
+                    className="w-full sm:max-w-[250px]"
                 />
-                {search && (
-                    <button
-                        onClick={() => setSearch('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 hover:bg-accent"
-                    >
-                        <X className="h-3.5 w-3.5 text-muted-foreground" />
-                    </button>
-                )}
+
+                <Combobox
+                    options={kafedraOptions}
+                    value={kafedraId}
+                    onChange={(val) => {
+                        setKafedraId(val);
+                        setPage(1);
+                    }}
+                    placeholder="Kafedrani tanlang"
+                    searchPlaceholder="Kafedra qidirish..."
+                    className="w-full sm:max-w-[250px]"
+                />
             </div>
 
             {isLoading && !data ? (

@@ -391,10 +391,10 @@ class TeacherRepository:
 
         stmt = (
             select(*columns)
-            .join(Kafedra, Teacher.kafedra_id == Kafedra.id)
-            .join(Faculty, Kafedra.faculty_id == Faculty.id)
-            .join(GroupTeacher, Teacher.user_id == GroupTeacher.teacher_id)
-            .join(Result, GroupTeacher.group_id == Result.group_id)
+            .outerjoin(Kafedra, Teacher.kafedra_id == Kafedra.id)
+            .outerjoin(Faculty, Kafedra.faculty_id == Faculty.id)
+            .outerjoin(GroupTeacher, Teacher.user_id == GroupTeacher.teacher_id)
+            .outerjoin(Result, GroupTeacher.group_id == Result.group_id)
         )
 
         if faculty_id is not None:
@@ -402,7 +402,7 @@ class TeacherRepository:
         if kafedra_id is not None:
             stmt = stmt.where(Teacher.kafedra_id == kafedra_id)
         if group_id is not None:
-            stmt = stmt.where(Result.group_id == group_id)
+            stmt = stmt.where(GroupTeacher.group_id == group_id)
 
         stmt = stmt.group_by(
             Teacher.id, Teacher.full_name, Teacher.kafedra_id,
@@ -482,19 +482,15 @@ class TeacherRepository:
                 clamped_rating,
                 rank_score
             )
-            .join(Kafedra, Kafedra.faculty_id == Faculty.id)
-            .join(Teacher, Teacher.kafedra_id == Kafedra.id)
-            .join(GroupTeacher, GroupTeacher.teacher_id == Teacher.user_id)
-            .join(Result, Result.group_id == GroupTeacher.group_id)
+            .outerjoin(Kafedra, Kafedra.faculty_id == Faculty.id)
+            .outerjoin(Teacher, Teacher.kafedra_id == Kafedra.id)
+            .outerjoin(GroupTeacher, GroupTeacher.teacher_id == Teacher.user_id)
+            .outerjoin(Result, Result.group_id == GroupTeacher.group_id)
             .group_by(Faculty.id, Faculty.name)
             .order_by(desc("rank_score"))
         )
         total_stmt = select(func.count(func.distinct(Faculty.id)))\
-            .select_from(Faculty)\
-            .join(Kafedra, Kafedra.faculty_id == Faculty.id)\
-            .join(Teacher, Teacher.kafedra_id == Kafedra.id)\
-            .join(GroupTeacher, GroupTeacher.teacher_id == Teacher.user_id)\
-            .join(Result, Result.group_id == GroupTeacher.group_id)
+            .select_from(Faculty)
         
         total = (await session.execute(total_stmt)).scalar() or 0
         
@@ -547,19 +543,15 @@ class TeacherRepository:
                 clamped_rating,
                 rank_score
             )
-            .join(Faculty, Faculty.id == Kafedra.faculty_id)
-            .join(Teacher, Teacher.kafedra_id == Kafedra.id)
-            .join(GroupTeacher, GroupTeacher.teacher_id == Teacher.user_id)
-            .join(Result, Result.group_id == GroupTeacher.group_id)
+            .outerjoin(Faculty, Faculty.id == Kafedra.faculty_id)
+            .outerjoin(Teacher, Teacher.kafedra_id == Kafedra.id)
+            .outerjoin(GroupTeacher, GroupTeacher.teacher_id == Teacher.user_id)
+            .outerjoin(Result, Result.group_id == GroupTeacher.group_id)
             .group_by(Kafedra.id, Kafedra.name, Kafedra.faculty_id, Faculty.name)
             .order_by(desc("rank_score"))
         )
         total_stmt = select(func.count(func.distinct(Kafedra.id)))\
-            .select_from(Kafedra)\
-            .join(Faculty, Faculty.id == Kafedra.faculty_id)\
-            .join(Teacher, Teacher.kafedra_id == Kafedra.id)\
-            .join(GroupTeacher, GroupTeacher.teacher_id == Teacher.user_id)\
-            .join(Result, Result.group_id == GroupTeacher.group_id)
+            .select_from(Kafedra)
         
         total = (await session.execute(total_stmt)).scalar() or 0
         
