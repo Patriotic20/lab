@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Pagination } from '@/components/ui/Pagination';
 import { type Kafedra } from '@/services/kafedraService';
 import { type Faculty } from '@/services/facultyService';
@@ -15,6 +15,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useKafedras, useCreateKafedra, useUpdateKafedra, useDeleteKafedra, useFaculties } from '@/hooks/useReferenceData';
+import { Combobox } from '@/components/ui/Combobox';
 
 const kafedraSchema = z.object({
     name: z.string().min(1, 'Kafedra nomi kiritilishi shart'),
@@ -30,6 +31,7 @@ const KafedraPage = () => {
     const [kafedraToDelete, setKafedraToDelete] = useState<Kafedra | null>(null);
     const [cascadeWarnings, setCascadeWarnings] = useState<string[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
+    const [selectedFacultyFilter, setSelectedFacultyFilter] = useState<string>('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const pageSize = 10;
@@ -42,13 +44,22 @@ const KafedraPage = () => {
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    const { data: kafedrasData, isLoading: isKafedrasLoading } = useKafedras(currentPage, pageSize, debouncedSearch);
+    const facultyIdParam = selectedFacultyFilter === 'all' ? undefined : Number(selectedFacultyFilter);
+    const { data: kafedrasData, isLoading: isKafedrasLoading } = useKafedras(currentPage, pageSize, debouncedSearch, facultyIdParam);
     const { data: facultiesData } = useFaculties();
     const deleteKafedraMutation = useDeleteKafedra();
 
     const kafedras = kafedrasData?.kafedras || [];
     const totalPages = kafedrasData ? Math.ceil(kafedrasData.total / pageSize) : 1;
     const faculties = facultiesData?.faculties || [];
+
+    const facultyOptions = useMemo(() => {
+        const options = faculties.map(f => ({
+            value: f.id.toString(),
+            label: f.name
+        }));
+        return [{ value: 'all', label: 'Barcha fakultetlar' }, ...options];
+    }, [faculties]);
 
     const handleDeleteClick = (kafedra: Kafedra) => {
         setKafedraToDelete(kafedra);
@@ -90,25 +101,40 @@ const KafedraPage = () => {
     return (
         <div className="space-y-6">
             {/* Page header */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h1 className="text-xl font-semibold tracking-tight">Kafedralar</h1>
-                    <p className="mt-0.5 text-sm text-muted-foreground">Universitet kafedralarini boshqarish</p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="relative">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Qidirish..."
-                            className="pl-8 w-[220px]"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h1 className="text-xl font-semibold tracking-tight">Kafedralar</h1>
+                        <p className="mt-0.5 text-sm text-muted-foreground">Universitet kafedralarini boshqarish</p>
                     </div>
                     <Button onClick={() => { setSelectedKafedra(null); setIsModalOpen(true); }}>
                         <Plus className="mr-2 h-4 w-4" />
                         Qo'shish
                     </Button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="relative w-full max-w-sm sm:w-auto">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Kafedra nomi bo'yicha qidirish..."
+                            className="pl-8 sm:w-[300px]"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    
+                    <div className="w-full sm:w-[300px]">
+                        <Combobox
+                            options={facultyOptions}
+                            value={selectedFacultyFilter}
+                            onChange={(val: string) => {
+                                setSelectedFacultyFilter(val);
+                                setCurrentPage(1);
+                            }}
+                            placeholder="Fakultet bo'yicha saralash"
+                        />
+                    </div>
                 </div>
             </div>
 
