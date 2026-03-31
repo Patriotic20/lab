@@ -11,7 +11,7 @@ import {
     TableRow,
 } from '@/components/ui/Table';
 import { Card, CardContent } from '@/components/ui/Card';
-import { Loader2, FileText, X } from 'lucide-react';
+import { Loader2, FileText, X, FileSpreadsheet } from 'lucide-react';
 import { Combobox } from '@/components/ui/Combobox';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -20,6 +20,7 @@ import { useGroups } from '@/hooks/useGroups';
 import { useSubjects } from '@/hooks/useSubjects';
 import { useQuizzes } from '@/hooks/useQuizzes';
 import { useAuth } from '@/context/AuthContext';
+import { resultService } from '@/services/resultService';
 
 const ResultsPage = () => {
     const { user, isLoading: isAuthLoading } = useAuth();
@@ -38,6 +39,7 @@ const ResultsPage = () => {
     const [selectedGrade, setSelectedGrade] = useState<string>('');
     const [usernameSearch, setUsernameSearch] = useState<string>('');
     const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
+    const [isExporting, setIsExporting] = useState(false);
 
     const parsedGroup = selectedGroup ? parseInt(selectedGroup, 10) : undefined;
     const parsedSubject = selectedSubject ? parseInt(selectedSubject, 10) : undefined;
@@ -77,6 +79,94 @@ const ResultsPage = () => {
     };
 
     const hasActiveFilters = !!(selectedGroup || selectedSubject || selectedQuiz || selectedGrade || usernameSearch || sortDir !== 'desc');
+
+    const handleExportExcel = async () => {
+        try {
+            setIsExporting(true);
+            const response = await resultService.getResults(
+                1, 10000, parsedGrade, parsedGroup, parsedSubject, parsedQuiz, usernameSearch || undefined, sortDir
+            );
+
+            const items = response.results || [];
+            if (items.length === 0) {
+                alert("Eksport qilish uchun natijalar topilmadi.");
+                return;
+            }
+
+            const { utils, writeFile } = await import('xlsx');
+            const date = new Date().toLocaleDateString('uz-UZ').replace(/\//g, '.');
+
+            const groupName = selectedGroup ? groups.find(g => g.id === parsedGroup)?.name || 'Tanlangan guruh' : 'Barcha guruhlar';
+            const subjectName = selectedSubject ? subjectOptions.find(s => s.value === selectedSubject)?.label || 'Tanlangan fan' : 'Barcha fanlar';
+            const quizName = selectedQuiz ? quizOptions.find(q => q.value === selectedQuiz)?.label || 'Tanlangan test' : 'Barcha testlar';
+
+            const wsData: any[][] = [];
+            wsData.push(["NKMU - Talabalar Natijalari", "", "", "", "", "", ""]);
+            wsData.push([`Sana (Date): ${date}`, "", "", `Filtr Guruh: ${groupName}`, "", "", ""]);
+            wsData.push([`Filtr Fan: ${subjectName}`, "", "", `Filtr Test: ${quizName}`, "", "", ""]);
+            wsData.push(["", "", "", "", "", "", ""]);
+
+            if (isAdminOrTeacher) {
+                wsData.push(["ID", "Talaba", "Guruh", "Fan", "Test", "Ball", "To'g'ri / Jami", "Sana"]);
+            } else {
+                wsData.push(["ID", "Talaba", "Fan", "Test", "Ball", "To'g'ri / Jami", "Sana"]);
+            }
+
+            items.forEach((r) => {
+                const dateStr = new Date(r.created_at).toLocaleString('uz-UZ', { hour12: false });
+                const studentName = r.student_name || r.user?.username || `Foydalanuvchi ${r.user_id}`;
+                const correctTotalStr = `${r.correct_answers} / ${(r.correct_answers || 0) + (r.wrong_answers || 0)}`;
+
+                if (isAdminOrTeacher) {
+                    wsData.push([
+                        r.id,
+                        studentName,
+                        r.group?.name || '-',
+                        r.subject?.name || '-',
+                        r.quiz?.title || '-',
+                        r.grade,
+                        correctTotalStr,
+                        dateStr
+                    ]);
+                } else {
+                    wsData.push([
+                        r.id,
+                        studentName,
+                        r.subject?.name || '-',
+                        r.quiz?.title || '-',
+                        r.grade,
+                        correctTotalStr,
+                        dateStr
+                    ]);
+                }
+            });
+
+            const ws = utils.aoa_to_sheet(wsData);
+
+            if(!ws['!merges']) ws['!merges'] = [];
+            ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } });
+            ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 2 } });
+            ws['!merges'].push({ s: { r: 1, c: 3 }, e: { r: 1, c: 5 } });
+            ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 2 } });
+            ws['!merges'].push({ s: { r: 2, c: 3 }, e: { r: 2, c: 5 } });
+
+            ws['!cols'] = isAdminOrTeacher ? [
+                { wch: 10 }, { wch: 40 }, { wch: 25 }, { wch: 30 }, { wch: 40 }, { wch: 10 }, { wch: 15 }, { wch: 20 }
+            ] : [
+                { wch: 10 }, { wch: 40 }, { wch: 30 }, { wch: 40 }, { wch: 10 }, { wch: 15 }, { wch: 20 }
+            ];
+
+            const wb = utils.book_new();
+            utils.book_append_sheet(wb, ws, "Natijalar");
+            writeFile(wb, `Natijalar_${date.replace(/\./g, '-')}.xlsx`);
+
+        } catch (error) {
+            console.error("Excel eksportda xatolik:", error);
+            alert("Eksport qilishda xatolik yuz berdi.");
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -169,6 +259,15 @@ const ResultsPage = () => {
                                 Tozalash
                             </Button>
                         )}
+                        <Button 
+                            variant="primary"
+                            onClick={handleExportExcel}
+                            disabled={isExporting}
+                            className="w-full sm:w-auto ml-auto"
+                        >
+                            {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
+                            Excel yuklab olish
+                        </Button>
                     </div>
                 </CardContent>
             </Card>
