@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trophy, Loader2, Medal, Crown, Building2, Layers, Search, X, FilterX } from 'lucide-react';
+import { Trophy, Loader2, Medal, Crown, Building2, Layers, Search, X, FilterX, FileSpreadsheet } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -11,6 +11,7 @@ import {
     useKafedraRanking,
 } from '@/hooks/useTeachers';
 import type { TeacherRankItem, FacultyRankItem, KafedraRankItem } from '@/services/teacherService';
+import { teacherService } from '@/services/teacherService';
 import { Input } from '@/components/ui/Input';
 import { Pagination } from '@/components/ui/Pagination';
 import { useFaculties, useKafedras } from '@/hooks/useReferenceData';
@@ -150,6 +151,7 @@ const TeachersPanel = () => {
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [facultyId, setFacultyId] = useState<string>('');
     const [kafedraId, setKafedraId] = useState<string>('');
+    const [isExporting, setIsExporting] = useState(false);
     
     // Debounce search input
     useEffect(() => {
@@ -175,6 +177,67 @@ const TeachersPanel = () => {
         faculty_id: facultyId ? parseInt(facultyId) : undefined,
         kafedra_id: kafedraId ? parseInt(kafedraId) : undefined,
     });
+
+    const handleExportExcel = async () => {
+        try {
+            setIsExporting(true);
+            const response = await teacherService.getRankingOverall({
+                limit: 10000, 
+                search: debouncedSearch || undefined,
+                faculty_id: facultyId ? parseInt(facultyId) : undefined,
+                kafedra_id: kafedraId ? parseInt(kafedraId) : undefined,
+            });
+
+            const items = response.teachers || [];
+            if (items.length === 0) {
+                alert("Eksport qilish uchun ma'lumot topilmadi.");
+                return;
+            }
+
+            const { utils, writeFile } = await import('xlsx');
+            
+            const date = new Date().toLocaleDateString('uz-UZ').replace(/\//g, '.');
+            const facName = facultiesData?.faculties.find(f => f.id.toString() === facultyId)?.name || 'Barcha fakultetlar';
+            const kafName = kafedrasData?.kafedras.find(k => k.id.toString() === kafedraId)?.name || 'Barcha kafedralar';
+
+            const wsData: any[][] = [];
+            wsData.push(["NKMU - O'qituvchilar Umumiy Reytingi", "", "", "", "", ""]);
+            wsData.push([`Sana (Date): ${date}`, "", "", `Filtr kafedra: ${kafName}`, "", ""]);
+            wsData.push([`Filtr fakultet: ${facName}`, "", "", "", "", ""]);
+            wsData.push(["", "", "", "", "", ""]);
+            wsData.push(["O'rin (Rank)", "O'qituvchi F.I.O", "Kafedra", "Fakultet", "Talabalar Soni", "O'rtacha Baho"]);
+
+            items.forEach(item => {
+                wsData.push([
+                    item.rank,
+                    item.full_name,
+                    item.kafedra_name,
+                    item.faculty_name,
+                    item.student_count,
+                    item.weighted_rating
+                ]);
+            });
+
+            const ws = utils.aoa_to_sheet(wsData);
+
+            if(!ws['!merges']) ws['!merges'] = [];
+            ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } });
+            ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 2 } });
+            ws['!merges'].push({ s: { r: 1, c: 3 }, e: { r: 1, c: 5 } });
+            ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 2 } });
+
+            const wb = utils.book_new();
+            utils.book_append_sheet(wb, ws, "Reyting");
+            
+            writeFile(wb, `Oqituvchilar_reytingi_${date.replace(/\./g, '-')}.xlsx`);
+
+        } catch (error) {
+            console.error("Excel eksportda xatolik:", error);
+            alert("Eksport qilishda xatolik yuz berdi.");
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     return (
         <div className="space-y-4">
@@ -244,6 +307,16 @@ const TeachersPanel = () => {
                         Tozalash
                     </Button>
                 )}
+
+                <Button 
+                    variant="primary"
+                    onClick={handleExportExcel}
+                    disabled={isExporting}
+                    className="w-full sm:w-auto ml-auto"
+                >
+                    {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
+                    Excel yuklab olish
+                </Button>
             </div>
 
             {isLoading && !data ? (
