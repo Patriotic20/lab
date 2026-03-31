@@ -33,10 +33,11 @@ export interface GroupStudentListResponse {
 }
 
 export const groupService = {
-    getGroups: async (page = 1, limit = 10, search = '', teacher_id?: number) => {
+    getGroups: async (page = 1, limit = 10, search = '', teacher_id?: number, faculty_id?: number) => {
         const params: any = { page, limit };
         if (search) params.name = search;
         if (teacher_id) params.teacher_id = teacher_id;
+        if (faculty_id) params.faculty_id = faculty_id;
 
         const response = await api.get<GroupListResponse>('/group/', { params });
         return response.data;

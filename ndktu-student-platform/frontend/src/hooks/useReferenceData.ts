@@ -43,10 +43,10 @@ export const useDeleteFaculty = () => {
 };
 
 // Kafedras
-export const useKafedras = (page = 1, limit = 100, name?: string) => {
+export const useKafedras = (page = 1, limit = 100, name?: string, faculty_id?: number) => {
     return useQuery({
-        queryKey: ['kafedras', page, limit, name],
-        queryFn: () => kafedraService.getKafedras(page, limit, name),
+        queryKey: ['kafedras', page, limit, name, faculty_id],
+        queryFn: () => kafedraService.getKafedras(page, limit, name, faculty_id),
     });
 };
 
