@@ -71,6 +71,7 @@ const QuizzesPage = () => {
     const [filterGroupId, setFilterGroupId] = useState<number | undefined>(undefined);
     const [filterUserId, setFilterUserId] = useState<number | undefined>(undefined);
     const [filterIsActive, setFilterIsActive] = useState<boolean | undefined>(undefined);
+    const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -87,7 +88,8 @@ const QuizzesPage = () => {
         filterIsActive,
         filterUserId,
         filterGroupId,
-        filterSubjectId
+        filterSubjectId,
+        sortDir
     );
 
     // Fetch data for filters (all items)
@@ -206,9 +208,10 @@ const QuizzesPage = () => {
         setFilterUserId(undefined);
         setFilterIsActive(undefined);
         setSearchTerm('');
+        setSortDir('desc');
     };
 
-    const hasActiveFilters = filterSubjectId !== undefined || filterGroupId !== undefined || filterUserId !== undefined || filterIsActive !== undefined || searchTerm !== '';
+    const hasActiveFilters = filterSubjectId !== undefined || filterGroupId !== undefined || filterUserId !== undefined || filterIsActive !== undefined || searchTerm !== '' || sortDir !== 'desc';
 
     return (
         <div className="space-y-6">
@@ -282,6 +285,17 @@ const QuizzesPage = () => {
                                 <option value="all">Barchasi</option>
                                 <option value="true">Faol</option>
                                 <option value="false">Faol emas</option>
+                            </select>
+                        </div>
+                        <div className="flex flex-col gap-2 w-[150px]">
+                            <label className="text-sm font-medium">Sana bo'yicha</label>
+                            <select
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                value={sortDir}
+                                onChange={(e) => setSortDir(e.target.value as 'desc' | 'asc')}
+                            >
+                                <option value="desc">Eng yangilari</option>
+                                <option value="asc">Eng eskilari</option>
                             </select>
                         </div>
                         {hasActiveFilters && (

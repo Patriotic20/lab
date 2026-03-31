@@ -28,16 +28,16 @@ export interface ResultListResponse {
 }
 
 export const resultService = {
-    getResults: async (page = 1, limit = 10, grade?: number, group_id?: number, subject_id?: number, quiz_id?: number, username?: string) => {
+    getResults: async (page = 1, limit = 10, grade?: number, group_id?: number, subject_id?: number, quiz_id?: number, username?: string, sort_dir?: string) => {
         const response = await api.get<ResultListResponse>('/result/', {
-            params: { page, limit, grade, group_id, subject_id, quiz_id, username },
+            params: { page, limit, grade, group_id, subject_id, quiz_id, username, sort_dir },
         });
         return response.data;
     },
 
-    getUserResults: async (userId: number, page = 1, limit = 10, grade?: number, group_id?: number, subject_id?: number, quiz_id?: number, username?: string) => {
+    getUserResults: async (userId: number, page = 1, limit = 10, grade?: number, group_id?: number, subject_id?: number, quiz_id?: number, username?: string, sort_dir?: string) => {
         const response = await api.get<ResultListResponse>('/result/', {
-            params: { page, limit, user_id: userId, grade, group_id, subject_id, quiz_id, username },
+            params: { page, limit, user_id: userId, grade, group_id, subject_id, quiz_id, username, sort_dir },
         });
         return response.data;
     },

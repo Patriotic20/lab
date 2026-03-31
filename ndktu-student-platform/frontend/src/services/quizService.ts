@@ -35,9 +35,9 @@ export interface QuizListResponse {
 }
 
 export const quizService = {
-    getQuizzes: async (page = 1, limit = 10, title?: string, is_active?: boolean, user_id?: number, group_id?: number, subject_id?: number) => {
+    getQuizzes: async (page = 1, limit = 10, title?: string, is_active?: boolean, user_id?: number, group_id?: number, subject_id?: number, sort_dir?: string) => {
         const response = await api.get<QuizListResponse>('/quiz/', {
-            params: { page, limit, title, is_active, user_id, group_id, subject_id },
+            params: { page, limit, title, is_active, user_id, group_id, subject_id, sort_dir },
         });
         return response.data;
     },

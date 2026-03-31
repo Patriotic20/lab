@@ -73,6 +73,7 @@ class ResultListRequest(BaseModel):
     
     page: int = 1
     limit: int = 10
+    sort_dir: Optional[str] = "desc"
 
     @property
     def offset(self) -> int:

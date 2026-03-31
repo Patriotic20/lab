@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from app.models.results.model import Result
 from app.models.user.model import User
 from app.models.student.model import Student
-from sqlalchemy import func, select, desc, or_
+from sqlalchemy import func, select, desc, asc, or_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.teacher.model import Teacher
@@ -137,7 +137,11 @@ class ResultRepository:
                 )
             ).distinct()
 
-        stmt = stmt.order_by(desc(Result.created_at))
+        if request.sort_dir and request.sort_dir.lower() == "asc":
+            stmt = stmt.order_by(asc(Result.created_at))
+        else:
+            stmt = stmt.order_by(desc(Result.created_at))
+        
         stmt = stmt.offset(request.offset).limit(request.limit)
         result = await session.execute(stmt)
         results = result.scalars().all()

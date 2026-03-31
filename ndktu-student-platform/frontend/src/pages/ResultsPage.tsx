@@ -37,6 +37,7 @@ const ResultsPage = () => {
     const [selectedQuiz, setSelectedQuiz] = useState<string>('');
     const [selectedGrade, setSelectedGrade] = useState<string>('');
     const [usernameSearch, setUsernameSearch] = useState<string>('');
+    const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
 
     const parsedGroup = selectedGroup ? parseInt(selectedGroup, 10) : undefined;
     const parsedSubject = selectedSubject ? parseInt(selectedSubject, 10) : undefined;
@@ -46,10 +47,10 @@ const ResultsPage = () => {
     // Reset page when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [selectedGroup, selectedSubject, selectedQuiz, selectedGrade, usernameSearch]);
+    }, [selectedGroup, selectedSubject, selectedQuiz, selectedGrade, usernameSearch, sortDir]);
 
     const { data: resultsData, isLoading: isResultsLoading } = useResults(
-        currentPage, pageSize, undefined, parsedGrade, parsedGroup, parsedSubject, parsedQuiz, usernameSearch || undefined,
+        currentPage, pageSize, undefined, parsedGrade, parsedGroup, parsedSubject, parsedQuiz, usernameSearch || undefined, sortDir,
         !isAuthLoading  // only run once auth is resolved
     );
 
@@ -71,10 +72,11 @@ const ResultsPage = () => {
         setSelectedQuiz('');
         setSelectedGrade('');
         setUsernameSearch('');
+        setSortDir('desc');
         setCurrentPage(1);
     };
 
-    const hasActiveFilters = !!(selectedGroup || selectedSubject || selectedQuiz || selectedGrade || usernameSearch);
+    const hasActiveFilters = !!(selectedGroup || selectedSubject || selectedQuiz || selectedGrade || usernameSearch || sortDir !== 'desc');
 
     return (
         <div className="space-y-6">
@@ -147,6 +149,18 @@ const ResultsPage = () => {
                                 min={1}
                                 max={5}
                             />
+                        </div>
+
+                        <div className="flex flex-col gap-2 w-[150px]">
+                            <label className="text-sm font-medium">Sana bo'yicha</label>
+                            <select
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                value={sortDir}
+                                onChange={(e) => setSortDir(e.target.value as 'desc' | 'asc')}
+                            >
+                                <option value="desc">Oxirgi natijalar</option>
+                                <option value="asc">Eski natijalar</option>
+                            </select>
                         </div>
 
                         {hasActiveFilters && (
