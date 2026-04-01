@@ -114,19 +114,3 @@ migrate:
 	docker cp nusmt_backend:/face/app/migrations/versions/. ./ndktu-student-platform/backend/app/migrations/versions/
 	docker exec nusmt_backend sh -c "cd /face/app && uv run alembic upgrade head"
 
-# Zero-Downtime Deployment
-deploy:
-	@echo "🚀 Starting Zero-Downtime Deployment..."
-	
-	# 1. Update Backend (Zero-Downtime)
-	@echo "Updating Backend..."
-	docker compose up -d --build backend
-	
-	# 2. Update Frontend (Zero-Downtime)
-	@echo "Updating Frontend..."
-	docker compose up -d --build frontend
-	
-	@echo "✅ Deployment finished successfully!"
-	
-	# Clean up old images
-	docker image prune -f
