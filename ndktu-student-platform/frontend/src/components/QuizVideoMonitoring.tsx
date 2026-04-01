@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { AlertCircle, Camera, Radio } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { UserCheck, UserX, UserSearch, AlertTriangle } from 'lucide-react';
 import { useVideoMonitoring } from '@/hooks/useVideoMonitoring';
 
 export interface QuizVideoMonitoringProps {
@@ -17,14 +17,40 @@ export function QuizVideoMonitoring({
     faceDetectionServiceUrl,
     imageUrl,
 }: QuizVideoMonitoringProps) {
+    const [warnings, setWarnings] = useState(0);
+    const [lastWarningTime, setLastWarningTime] = useState(0);
+    const [showWarningText, setShowWarningText] = useState(false);
+    const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const handleViolation = useCallback((imageData: string, type: 'multiple' | 'different') => {
+        const now = Date.now();
+        // Prevent rapid warning increments (de-bounce warnings every 3 seconds)
+        if (now - lastWarningTime < 3000) return;
+
+        setWarnings(prev => {
+            const next = prev + 1;
+            setLastWarningTime(now);
+            setShowWarningText(true);
+
+            // Hide warning text after 4 seconds
+            if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
+            warningTimeoutRef.current = setTimeout(() => setShowWarningText(false), 4000);
+
+            if (next >= 3) {
+                if (type === 'multiple') onCheatingDetected(imageData);
+                else onDifferentPersonDetected(imageData);
+            }
+            return next;
+        });
+    }, [onCheatingDetected, onDifferentPersonDetected, lastWarningTime]);
+
     const { state, startMonitoring, stopMonitoring } = useVideoMonitoring({
         faceDetectionServiceUrl,
-        onMultipleFacesDetected: onCheatingDetected,
-        onDifferentPersonDetected,
-        frameInterval: 500, // Send frame every 500ms
+        onMultipleFacesDetected: (img) => handleViolation(img, 'multiple'),
+        onDifferentPersonDetected: (img) => handleViolation(img, 'different'),
+        frameInterval: 500,
         imageUrl,
     });
-
 
     useEffect(() => {
         if (active && !state.isActive) {
@@ -34,91 +60,80 @@ export function QuizVideoMonitoring({
         }
     }, [active, state.isActive, startMonitoring, stopMonitoring]);
 
-    if (!active) {
-        return null;
-    }
+    useEffect(() => {
+        return () => {
+            if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
+        };
+    }, []);
+
+    if (!active) return null;
+
+    const isIssue = state.isDifferentPerson || state.lastFaceCount > 1;
+    const isOk = state.isConnected && !isIssue && state.lastFaceCount === 1;
 
     return (
-        <div className="fixed bottom-6 right-6 z-50">
-            {/* Video Monitor Card */}
-            <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-3 w-64">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                        <Camera className="h-4 w-4 text-gray-600" />
-                        <span className="text-sm font-semibold">Kamera Nadzorasi</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <Radio className="h-3 w-3 animate-pulse text-red-500" />
-                        <span className="text-xs text-red-500">Jonli</span>
-                    </div>
-                </div>
-
-                {/* Status Section */}
-                {state.error ? (
-                    <div className="bg-amber-50 border border-amber-200 rounded p-2 mb-3">
-                        <div className="flex gap-2">
-                            <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                            <div className="text-xs">
-                                <p className="font-medium text-amber-900">Xatolik</p>
-                                <p className="text-amber-700">{state.error}</p>
-                            </div>
-                        </div>
-                    </div>
-                ) : state.isConnected ? (
-                    <div className={`${state.isDifferentPerson ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'} border rounded p-2 mb-3`}>
-                        <p className={`text-xs ${state.isDifferentPerson ? 'text-red-700 font-bold' : 'text-green-700'}`}>
-                            {state.isDifferentPerson 
-                                ? 'OGOHLANTIRISH: Begona shaxs!' 
-                                : state.isReferenceCaptured 
-                                    ? 'Identifikatsiya: Tasdiqlandi' 
-                                    : 'Identifikatsiya qilinmoqda...'}
-                        </p>
-                        <p className="text-xs text-green-600 mt-1">
-                            Juzlar: {state.lastFaceCount}
-                        </p>
-                    </div>
-                ) : state.isActive ? (
-                    <div className="bg-blue-50 border border-blue-200 rounded p-2 mb-3">
-                        <p className="text-xs text-blue-700">Kameraga ulanyapti...</p>
-                    </div>
-                ) : (
-                    <div className="bg-gray-50 border border-gray-200 rounded p-2 mb-3">
-                        <p className="text-xs text-gray-600">Kamera o'chiq</p>
-                    </div>
-                )}
-
-                {/* Camera Preview */}
-                <div className="bg-black rounded h-40 flex items-center justify-center overflow-hidden relative mb-3">
-                    {state.isActive && !state.error ? (
-                        <div className="relative w-full h-full bg-black">
-                            <video
-                                autoPlay
-                                playsInline
-                                muted
-                                className="w-full h-full object-cover"
-                                style={{
-                                    transform: 'scaleX(-1)',
-                                }}
-                            />
-                            <div className={`absolute inset-0 border-2 ${state.isDifferentPerson ? 'border-red-500 animate-pulse' : 'border-green-500'} rounded pointer-events-none`} />
-                        </div>
+        <div className="fixed bottom-6 right-6 z-50 group">
+            <div className={`relative transition-all duration-500 ease-in-out transform ${state.isActive ? 'scale-100 opacity-100' : 'scale-75 opacity-0'}`}>
+                
+                {/* Minimalist Icon Bubble */}
+                <div className={`relative w-16 h-16 rounded-full flex items-center justify-center shadow-lg border-2 transition-all duration-500 ${
+                    !state.isConnected ? 'border-gray-200 text-gray-400 bg-white' :
+                    isIssue ? 'border-red-500 text-red-500 bg-red-50' :
+                    isOk ? 'border-green-500 text-green-500 bg-green-50' :
+                    'border-primary/30 text-primary bg-primary/5'
+                }`}>
+                    {!state.isConnected ? (
+                        <UserSearch className="h-7 w-7 animate-pulse" />
+                    ) : isIssue ? (
+                        <UserX className="h-7 w-7 animate-bounce" />
                     ) : (
-                        <div className="flex flex-col items-center justify-center text-gray-400">
-                            <Camera className="h-8 w-8 mb-2" />
-                            <p className="text-xs">Kamera faol emas</p>
+                        <UserCheck className={`h-7 w-7 ${isOk ? 'scale-110' : ''} transition-transform duration-500`} />
+                    )}
+
+                    {/* Warning Counter Badge */}
+                    {warnings > 0 && (
+                        <div className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center border-2 border-white shadow-sm">
+                            {warnings}
                         </div>
                     )}
                 </div>
 
-                {/* Info Text */}
-                <div className="text-xs text-gray-600 bg-gray-50 rounded p-2">
-                    <p className="font-medium mb-1">Qoidalar:</p>
-                    <ul className="space-y-0.5 text-gray-700">
-                        <li>• Faqat siz bo'lishingiz kerak</li>
-                        <li>• Boshqa shaxs aniqlansa test to'xtatildi</li>
-                        <li>• Ikki yoki ko'proq juz taqiqlangan</li>
-                    </ul>
+                {/* Warning Text Banner */}
+                {showWarningText && (
+                    <div className="absolute bottom-full mb-4 right-0 w-64 bg-red-600 text-white p-3 rounded-xl shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <div className="flex items-start gap-2">
+                            <AlertTriangle className="h-4 w-4 shrink-0" />
+                            <div>
+                                <p className="text-[11px] font-extrabold uppercase tracking-tight">Ogohlantirish {warnings}/3</p>
+                                <p className="text-[10px] leading-tight opacity-90 mt-0.5">
+                                    {state.lastFaceCount > 1 ? 'Ekranda begona shaxs aniqlandi!' : 'Shaxsingizni tasdiqlashda xatolik!'}
+                                    <br/>3 tadan so'ng test avtomatik to'xtatiladi.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Hover Status Details */}
+                <div className="absolute right-full mr-4 bottom-0 w-44 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-500 translate-x-4 group-hover:translate-x-0">
+                    <div className="bg-white/95 backdrop-blur-md rounded-2xl p-3 shadow-xl border border-gray-100">
+                        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-50">
+                            <UserCheck className="h-3.5 w-3.5 text-primary" />
+                            <span className="text-[11px] font-bold text-gray-800">Tizim holati</span>
+                        </div>
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between items-center text-[10px]">
+                                <span className="text-gray-500">Holat:</span>
+                                <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${isOk ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                    {isOk ? 'Normal' : 'Xatolik'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between text-[10px]">
+                                <span className="text-gray-500">Yuzlar:</span>
+                                <span className="font-bold text-gray-700">{state.lastFaceCount}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
