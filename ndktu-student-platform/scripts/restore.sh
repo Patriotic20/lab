@@ -107,7 +107,7 @@ if [ -z "$BACKEND_CONTAINER" ]; then
     exit 1
 fi
 
-echo "🐳 Running alembic stamp head in container $BACKEND_CONTAINER..."
-docker exec -i "$BACKEND_CONTAINER" sh -c "cd /face/app && uv run alembic stamp head"
+echo "🐳 Running alembic upgrade head in container $BACKEND_CONTAINER..."
+docker exec -i "$BACKEND_CONTAINER" sh -c "cd /face && uv run alembic upgrade head"
 
 echo "✅ Stamp complete!"
