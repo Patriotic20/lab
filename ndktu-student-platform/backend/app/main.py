@@ -1,4 +1,3 @@
-
 import uvicorn
 import app.core.logging  # Trigger logging/logfire configuration
 from app.core.config import settings
@@ -16,6 +15,9 @@ from fastapi.staticfiles import StaticFiles
 import os
 from app.lifespan.lifespan import lifespan
 
+# --- Logfire Setup ---
+logfire.configure()
+
 app = FastAPI(lifespan=lifespan)
 
 # --- Logfire Instrumentation ---
@@ -24,13 +26,12 @@ logfire.instrument_fastapi(app)
 authentication_backend = AdminAuth(secret_key=settings.admin.secret_key)
 
 # Ensure upload directory exists
-os.makedirs(settings.file_url.upload_dir, exist_ok=True)
-
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+os.makedirs(settings.absolute_upload_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=settings.absolute_upload_dir), name="uploads")
 
 # Ensure cheating evidence directory exists
-os.makedirs("cheating_evidence", exist_ok=True)
-app.mount("/evidence", StaticFiles(directory="cheating_evidence"), name="evidence")
+os.makedirs(settings.evidence_dir, exist_ok=True)
+app.mount("/evidence", StaticFiles(directory=settings.evidence_dir), name="evidence")
 
 
 app.add_middleware(

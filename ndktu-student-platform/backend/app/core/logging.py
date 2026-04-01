@@ -1,4 +1,3 @@
-
 import logging
 import os
 from datetime import datetime
@@ -6,11 +5,11 @@ from logging.handlers import TimedRotatingFileHandler
 import logfire
 from logfire import LogfireLoggingHandler
 
-# --- Logfire Setup ---
-logfire.configure()
-
 # --- Base setup ---
-LOG_DIR = "logs"
+# Delayed import to avoid circular dependency if config imports logging
+from app.core.config import settings
+
+LOG_DIR = settings.logs_dir
 LEVELS = ["debug", "info", "warning", "error", "critical"]
 RETENTION_DAYS = {"debug": 5, "info": 7, "warning": 30, "error": 30, "critical": 30}
 

@@ -65,46 +65,29 @@ class QuizProcessRepository:
         result_student = await session.execute(stmt_student)
         student = result_student.scalar_one_or_none()
 
+        is_admin = any(role.name.lower() == "admin" for role in user.roles)
+        student_image_url = None
+
         if student:
-            # If user is a student, they must have a group and it must match the quiz's group if the quiz has one
-            # Logic: 
-            # 1. If quiz has a group_id, student must belong to that group.
-            # 2. If quiz has NO group_id, looks like it's open to all? Or logic says "show only match group".
-            # The prompt says: "user need show only matcvh group if user id not in student model show all quiz"
-            # This implies:
-            # - If Student: Access ONLY if quiz.group_id == student.group_id
-            # - If Not Student: Access ALL (or at least no group restriction from this logic)
+            # Mandate student image for quiz (Admins take it anyway)
+            if not student.image_path and not is_admin:
+                 raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="Sizning suratingiz topilmadi. Profilingizga surat yuklang."
+                )
             
-            # Additional clarification: "quiz have group id and user need show only matcvh group"
-            
+            student_image_url = student.image_path
+
             if quiz.group_id is not None:
                 if student.group_id != quiz.group_id:
                      raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN, 
                         detail="This quiz is not available for your group"
                     )
-            else:
-                 # Boolean: if quiz has no group, can student take it? 
-                 # Usually general quizzes are for everyone.
-                 # But if the requirement "show only match group" is strict, maybe they can't see general ones?
-                 # Assume general quizzes (group_id=None) are open to everyone.
-                 pass
-
 
         # Prepare questions with shuffled options
-        question_dtos = []
-        # Accessing questions via quiz_questions association
-        # quiz.quiz_questions is a list of QuizQuestion objects
-        # each has a .question attribute
-        
-        # We might want to limit the number of questions if quiz.question_number is set
-        # But for now, let's take all or slice? 
-        # The user didn't specify random selection logic from pool, so let's assume all linked questions or slice.
-        # Let's shuffle the questions themselves too?
-        
         quiz_questions = [qq.question for qq in quiz.quiz_questions if qq.question]
         
-        # Determine how many questions to show
         num_questions = quiz.question_number
         if len(quiz_questions) > num_questions:
             random.shuffle(quiz_questions)
@@ -112,6 +95,7 @@ class QuizProcessRepository:
         else:
             random.shuffle(quiz_questions)
 
+        question_dtos = []
         for q in quiz_questions:
             q_dict = q.to_dict(randomize_options=True)
             opts = q_dict["options"]
@@ -131,7 +115,8 @@ class QuizProcessRepository:
             quiz_id=quiz.id,
             title=quiz.title,
             duration=quiz.duration,
-            questions=question_dtos
+            questions=question_dtos,
+            image_url=student_image_url
         )
 
     async def end_quiz(

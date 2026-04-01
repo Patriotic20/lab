@@ -18,6 +18,8 @@ class StartQuizResponse(BaseModel):
     title: str
     duration: int
     questions: list[QuestionDTO]
+    image_url: Optional[str] = None
+
 
 class AnswerDTO(BaseModel):
     question_id: int

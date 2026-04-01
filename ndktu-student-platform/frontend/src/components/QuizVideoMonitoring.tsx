@@ -7,6 +7,7 @@ export interface QuizVideoMonitoringProps {
     onCheatingDetected: (imageData: string) => void;
     onDifferentPersonDetected: (imageData: string) => void;
     faceDetectionServiceUrl: string;
+    imageUrl?: string;
 }
 
 export function QuizVideoMonitoring({
@@ -14,13 +15,16 @@ export function QuizVideoMonitoring({
     onCheatingDetected,
     onDifferentPersonDetected,
     faceDetectionServiceUrl,
+    imageUrl,
 }: QuizVideoMonitoringProps) {
     const { state, startMonitoring, stopMonitoring } = useVideoMonitoring({
         faceDetectionServiceUrl,
         onMultipleFacesDetected: onCheatingDetected,
         onDifferentPersonDetected,
         frameInterval: 500, // Send frame every 500ms
+        imageUrl,
     });
+
 
     useEffect(() => {
         if (active && !state.isActive) {

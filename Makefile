@@ -110,7 +110,7 @@ deploy:
 # Usage: make migrate MSG="your_migration_message"
 migrate:
 	@if [ -z "$(MSG)" ]; then echo "Usage: make migrate MSG='your_migration_message'"; exit 1; fi
-	docker exec nusmt_backend sh -c "cd /face/app && uv run alembic revision --autogenerate -m '$(MSG)'"
+	docker exec nusmt_backend sh -c "uv run alembic -c app/alembic.ini revision --autogenerate -m '$(MSG)'"
 	docker cp nusmt_backend:/face/app/migrations/versions/. ./ndktu-student-platform/backend/app/migrations/versions/
-	docker exec nusmt_backend sh -c "cd /face/app && uv run alembic upgrade head"
+	docker exec nusmt_backend sh -c "uv run alembic -c app/alembic.ini upgrade head"
 

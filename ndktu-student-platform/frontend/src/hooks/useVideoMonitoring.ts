@@ -6,6 +6,7 @@ export interface VideoMonitoringConfig {
     onDifferentPersonDetected?: (imageData: string) => void;
     onError?: (error: string) => void;
     frameInterval?: number;
+    imageUrl?: string;
 }
 
 export interface VideoMonitoringState {
@@ -90,7 +91,11 @@ export function useVideoMonitoring(config: VideoMonitoringConfig) {
             canvas.height = video.videoHeight;
 
             // Establish WebSocket connection
-            const ws = new WebSocket(config.faceDetectionServiceUrl);
+            const wsUrl = new URL(config.faceDetectionServiceUrl);
+            if (config.imageUrl) {
+                wsUrl.searchParams.append('image_url', config.imageUrl);
+            }
+            const ws = new WebSocket(wsUrl.toString());
 
             ws.onopen = () => {
                 setState((prev: VideoMonitoringState) => ({ ...prev, isConnected: true }));
@@ -101,7 +106,7 @@ export function useVideoMonitoring(config: VideoMonitoringConfig) {
                     if (ws.readyState === WebSocket.OPEN && videoRef.current) {
                         const jpeg = captureAndEncodeFrame();
                         lastImageCapture.current = jpeg;
-                        ws.send(JSON.stringify({ image: jpeg }));
+                        ws.send(jpeg);
                     }
                 }, intervalMs);
             };

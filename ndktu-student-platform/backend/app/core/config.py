@@ -1,10 +1,13 @@
 from typing import Any
-
+from pathlib import Path
 from dotenv import load_dotenv
 from pydantic import BaseModel, PostgresDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
+
+# Project Directories
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 class ServerConfig(BaseModel):
@@ -106,6 +109,19 @@ class AppConfig(BaseSettings):
     hemis: HemisConfig
     file_url: FileUrl
     redis: RedisConfig
+
+    # Add derived absolute paths
+    @property
+    def logs_dir(self) -> Path:
+        return BASE_DIR / "logs"
+
+    @property
+    def absolute_upload_dir(self) -> Path:
+        return BASE_DIR / self.file_url.upload_dir
+
+    @property
+    def evidence_dir(self) -> Path:
+        return BASE_DIR / "cheating_evidence"
 
 
 settings = AppConfig()

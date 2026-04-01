@@ -19,6 +19,7 @@ export interface StartQuizResponse {
     title: string;
     duration: number;
     questions: QuestionDTO[];
+    image_url?: string;
 }
 
 export interface AnswerDTO {

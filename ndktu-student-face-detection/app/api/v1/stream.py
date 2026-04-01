@@ -8,7 +8,10 @@ ws://host/v1/video/stream
 """
 
 import base64
-
+import os
+import tempfile
+import time
+import httpx
 import cv2
 import numpy as np
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -21,27 +24,54 @@ logger = get_logger(__name__)
 
 
 @router.websocket("/stream")
-async def realtime_stream(websocket: WebSocket) -> None:
+async def realtime_stream(websocket: WebSocket, image_url: str | None = None) -> None:
     """
     Real-time face detection over WebSocket.
 
     The browser captures webcam frames and sends them as base64 JPEG strings.
     For every frame the server replies with the detection result.
+    
+    If image_url is provided, it's used as the initial reference face.
     """
     await websocket.accept()
     detector = get_detector()
     logger.info("WebSocket client connected: %s", websocket.client)
 
     reference_encoding = None
+    
+    # 0. If image_url is provided, download and initialize reference_encoding
+    if image_url:
+        logger.info(f"Downloading reference image from: {image_url}")
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(image_url, timeout=10.0)
+                response.raise_for_status()
+                
+                # Save to temp file and get encoding
+                with tempfile.NamedTemporaryFile(delete=True, suffix=".jpg") as tmp:
+                    tmp.write(response.content)
+                    tmp.flush()
+                    
+                    # Read the temp file back into an OpenCV frame
+                    ref_frame = cv2.imread(tmp.name)
+                    if ref_frame is not None:
+                        reference_encoding = detector.get_face_encoding(ref_frame)
+                        if reference_encoding is not None:
+                            logger.info("Reference face successfully initialized from URL.")
+                        else:
+                            logger.warning("Could not find a face in the provided URL image.")
+                    else:
+                        logger.error("Failed to decode reference image from URL.")
+        except Exception as e:
+            logger.error(f"Error processing reference image URL: {e}")
+
     last_recognition_time = 0
-    import time
 
     try:
         while True:
             # 1. Receive base64 JPEG frame from browser
             data: str = await websocket.receive_text()
 
-            # Strip the data-URL header if present
             if "," in data:
                 _, data = data.split(",", 1)
 
@@ -62,17 +92,16 @@ async def realtime_stream(websocket: WebSocket) -> None:
             is_different_person = False
             current_time = time.time()
 
-            # Recognition logic: Frequent counting but infrequent identity check
+            # Recognition logic
             if face_count == 1:
-                # 1. Check if we need to capture or verify identity (every 5 seconds)
                 if reference_encoding is None or (current_time - last_recognition_time >= 5.0):
                     current_encoding = detector.get_face_encoding(frame)
                     
                     if reference_encoding is None and current_encoding is not None:
-                        # Capture the FIRST face as the owner
+                        # Fallback capture if no URL was provided or URL failed
                         reference_encoding = current_encoding
                         last_recognition_time = current_time
-                        logger.info("Reference face captured for session.")
+                        logger.info("Reference face captured for session (fallback).")
                     elif reference_encoding is not None and current_encoding is not None:
                         # Periodic identity verification
                         is_match = detector.compare_faces(reference_encoding, current_encoding)
@@ -93,3 +122,4 @@ async def realtime_stream(websocket: WebSocket) -> None:
         logger.info("WebSocket client disconnected.")
     except Exception as exc:
         logger.exception("WebSocket error: %s", exc)
+

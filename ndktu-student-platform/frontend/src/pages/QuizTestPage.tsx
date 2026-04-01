@@ -488,11 +488,13 @@ const QuizTestPage = () => {
             {ENABLE_QUIZ_PROCTORING && (
                 <QuizVideoMonitoring
                     active={phase === 'quiz' && !cheatingDetected}
-                    onCheatingDetected={handleDifferentPersonDetected} // Reuse or separate if needed
+                    onCheatingDetected={handleDifferentPersonDetected}
                     onDifferentPersonDetected={handleDifferentPersonDetected}
                     faceDetectionServiceUrl={FACE_DETECTION_SERVICE_URL}
+                    imageUrl={quizData.image_url}
                 />
             )}
+
             {/* Header with timer and progress */}
             <div className="flex items-center justify-between">
                 <div>
