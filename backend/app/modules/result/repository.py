@@ -198,6 +198,9 @@ class ResultRepository:
     async def delete_result(
         self, session: AsyncSession, result_id: int
     ) -> None:
+        from app.models.user_answers.model import UserAnswers
+        from sqlalchemy import delete
+
         stmt = select(Result).where(Result.id == result_id)
         result = await session.execute(stmt)
         obj = result.scalar_one_or_none()
@@ -207,8 +210,19 @@ class ResultRepository:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Result not found"
             )
 
+        # Delete associated user answers
+        # We match by user_id, quiz_id and the exact created_at timestamp 
+        # since they were created in the same transaction.
+        delete_answers_stmt = delete(UserAnswers).where(
+            UserAnswers.user_id == obj.user_id,
+            UserAnswers.quiz_id == obj.quiz_id,
+            UserAnswers.created_at == obj.created_at
+        )
+        await session.execute(delete_answers_stmt)
+
         await session.delete(obj)
         await session.commit()
+
 
 
 get_result_repository = ResultRepository()
