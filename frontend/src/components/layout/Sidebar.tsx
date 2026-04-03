@@ -24,6 +24,7 @@ import {
     PlayCircle,
     X,
     Trophy,
+    ClipboardList,
 } from 'lucide-react';
 import { cn } from '@/utils/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -77,6 +78,7 @@ const adminSections: NavSection[] = [
             { name: 'Testlar', href: '/quizzes', icon: BookOpen },
             { name: 'Test ishlash', href: '/quiz-test', icon: PlayCircle },
             { name: 'Natijalar', href: '/results', icon: FileText },
+            { name: 'Yakuniy', href: '/yakuniy', icon: ClipboardList },
         ],
     },
 ];

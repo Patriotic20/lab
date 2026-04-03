@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from app.models.teacher.model import Teacher
     from app.models.user_answers.model import UserAnswers
     from app.models.group_teachers.model import GroupTeacher
+    from app.models.yakuniy.model import Yakuniy
 
 
 class User(Base, IdIntPk, TimestampMixin):
@@ -56,6 +57,11 @@ class User(Base, IdIntPk, TimestampMixin):
         "GroupTeacher", 
         back_populates="teacher",
         cascade="all, delete-orphan"
+    )
+
+    yakuniy_results: Mapped[list["Yakuniy"]] = relationship(
+        "Yakuniy", 
+        back_populates="user"
     )
 
     def __str__(self):
