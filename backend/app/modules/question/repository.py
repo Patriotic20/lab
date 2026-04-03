@@ -277,4 +277,100 @@ class QuestionRepository:
 
         return questions
 
+    async def download_questions_excel(
+        self,
+        session: AsyncSession,
+        subject_id: int | None = None,
+        user_id: int | None = None,
+        text: str | None = None,
+    ) -> bytes:
+        import io
+        import re
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+
+        def strip_html(html: str) -> str:
+            """Remove HTML tags and return plain text."""
+            clean = re.sub(r'<[^>]+>', '', html or '')
+            return clean.strip()
+
+        # Query all matching questions (no pagination)
+        stmt = select(Question).options(
+            selectinload(Question.subject),
+            selectinload(Question.user),
+        )
+
+        if text:
+            stmt = stmt.where(Question.text.ilike(f"%{text}%"))
+        if subject_id:
+            stmt = stmt.where(Question.subject_id == subject_id)
+        if user_id:
+            stmt = stmt.where(Question.user_id == user_id)
+
+        stmt = stmt.order_by(desc(Question.created_at))
+
+        result = await session.execute(stmt)
+        questions = result.scalars().all()
+
+        # Create Excel workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Savollar"
+
+        # Header styling
+        header_font = Font(bold=True, color="FFFFFF", size=11)
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        thin_border = Border(
+            left=Side(style="thin"),
+            right=Side(style="thin"),
+            top=Side(style="thin"),
+            bottom=Side(style="thin"),
+        )
+
+        headers = ["№", "Savol", "A variant", "B variant", "C variant", "D variant", "Fan", "Foydalanuvchi"]
+        for col_idx, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_idx, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+            cell.border = thin_border
+
+        # Data rows
+        cell_alignment = Alignment(vertical="top", wrap_text=True)
+        for row_idx, q in enumerate(questions, 2):
+            subject_name = q.subject.name if q.subject else "-"
+            username = q.user.username if q.user else "-"
+
+            values = [
+                row_idx - 1,
+                strip_html(q.text),
+                strip_html(q.option_a),
+                strip_html(q.option_b),
+                strip_html(q.option_c),
+                strip_html(q.option_d),
+                subject_name,
+                username,
+            ]
+            for col_idx, value in enumerate(values, 1):
+                cell = ws.cell(row=row_idx, column=col_idx, value=value)
+                cell.alignment = cell_alignment
+                cell.border = thin_border
+
+        # Column widths
+        ws.column_dimensions["A"].width = 6    # №
+        ws.column_dimensions["B"].width = 50   # Savol
+        ws.column_dimensions["C"].width = 25   # A
+        ws.column_dimensions["D"].width = 25   # B
+        ws.column_dimensions["E"].width = 25   # C
+        ws.column_dimensions["F"].width = 25   # D
+        ws.column_dimensions["G"].width = 20   # Fan
+        ws.column_dimensions["H"].width = 18   # Foydalanuvchi
+
+        # Save to buffer
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        return buffer.getvalue()
+
 get_question_repository = QuestionRepository()

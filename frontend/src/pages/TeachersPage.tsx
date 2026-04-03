@@ -23,10 +23,10 @@ import { useUsers } from '@/hooks/useUsers';
 import { useGroups } from '@/hooks/useGroups';
 import { useSubjects } from '@/hooks/useSubjects';
 import { useForm } from 'react-hook-form';
-import { useQuestions, useDeleteQuestion, useBulkDeleteQuestions } from '@/hooks/useQuestions';
+import { useQuestions, useDeleteQuestion, useBulkDeleteQuestions, useDownloadQuestionsExcel } from '@/hooks/useQuestions';
 import { useNavigate } from 'react-router-dom';
 import type { Question } from '@/services/questionService';
-import { FileQuestion, BookOpen, ArrowRight } from 'lucide-react';
+import { FileQuestion, BookOpen, ArrowRight, Download } from 'lucide-react';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
@@ -444,6 +444,7 @@ const TeacherQuestionsList = ({
 
     const deleteQuestionMutation = useDeleteQuestion();
     const bulkDeleteMutation = useBulkDeleteQuestions();
+    const downloadExcelMutation = useDownloadQuestionsExcel();
 
     const questions = questionsData?.questions || [];
     const totalPages = questionsData ? Math.ceil(questionsData.total / pageSize) : 1;
@@ -521,6 +522,18 @@ const TeacherQuestionsList = ({
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
+                    <Button
+                        variant="outline"
+                        onClick={() => downloadExcelMutation.mutate({ subject_id: subject.id, user_id: teacher.user_id })}
+                        disabled={downloadExcelMutation.isPending}
+                    >
+                        {downloadExcelMutation.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <Download className="mr-2 h-4 w-4" />
+                        )}
+                        Excel yuklab olish
+                    </Button>
                     <Button variant="outline" className="text-destructive border-destructive hover:bg-destructive/10" onClick={handleBulkDelete}>
                         <Trash2 className="mr-2 h-4 w-4" />
                         Barcha savollarni o'chirish

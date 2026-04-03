@@ -85,4 +85,33 @@ export const questionService = {
         const response = await api.delete('/question/bulk/subject-user', { data });
         return response.data;
     },
+
+    downloadQuestionsExcel: async (params?: { subject_id?: number; user_id?: number; text?: string }) => {
+        const response = await api.get('/question/download_excel', {
+            params,
+            responseType: 'blob',
+        });
+
+        // Trigger browser download
+        const blob = new Blob([response.data], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+
+        // Extract filename from Content-Disposition header or use default
+        const contentDisposition = response.headers['content-disposition'];
+        let filename = 'savollar.xlsx';
+        if (contentDisposition) {
+            const match = contentDisposition.match(/filename="?(.+?)"?$/);
+            if (match) filename = match[1];
+        }
+
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    },
 };

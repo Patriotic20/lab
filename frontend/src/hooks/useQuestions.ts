@@ -73,3 +73,10 @@ export const useBulkDeleteQuestions = () => {
         },
     });
 };
+
+export const useDownloadQuestionsExcel = () => {
+    return useMutation({
+        mutationFn: (params?: { subject_id?: number; user_id?: number; text?: string }) =>
+            questionService.downloadQuestionsExcel(params),
+    });
+};

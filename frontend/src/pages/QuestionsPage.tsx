@@ -13,10 +13,10 @@ import {
     TableRow,
 } from '@/components/ui/Table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
-import { Plus, Pencil, Trash2, Loader2, FileQuestion, Upload, FileUp, Search, BookOpen, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, FileQuestion, Upload, FileUp, Search, BookOpen, ArrowRight, ArrowLeft, Download } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { useQuestions, useDeleteQuestion, useUploadQuestions, useBulkDeleteQuestions } from '@/hooks/useQuestions';
+import { useQuestions, useDeleteQuestion, useUploadQuestions, useBulkDeleteQuestions, useDownloadQuestionsExcel } from '@/hooks/useQuestions';
 import { useSubjects, useTeacherAssignedSubjects } from '@/hooks/useSubjects';
 import { useUsers } from '@/hooks/useUsers';
 import { Input } from '@/components/ui/Input';
@@ -105,6 +105,7 @@ const QuestionsTable = ({ subjectId, subjects, onBack, selectedSubjectName }: Qu
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+    const downloadExcelMutation = useDownloadQuestionsExcel();
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -197,6 +198,18 @@ const QuestionsTable = ({ subjectId, subjects, onBack, selectedSubjectName }: Qu
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
+                    <Button
+                        variant="outline"
+                        onClick={() => downloadExcelMutation.mutate(subjectId ? { subject_id: subjectId } : undefined)}
+                        disabled={downloadExcelMutation.isPending}
+                    >
+                        {downloadExcelMutation.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <Download className="mr-2 h-4 w-4" />
+                        )}
+                        Excel yuklab olish
+                    </Button>
                     <Button variant="outline" onClick={() => setIsUploadModalOpen(true)}>
                         <Upload className="mr-2 h-4 w-4" />
                         Excel import
