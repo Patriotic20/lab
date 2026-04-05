@@ -6,6 +6,8 @@ from pydantic import BaseModel
 class HemisLoginRequest(BaseModel):
     login: str
     password: str
+    faculty_id: Optional[int] = None
+    group_id: Optional[int] = None
 
 
 class HemisLoginResponse(BaseModel):
@@ -42,6 +44,8 @@ class HemisPreviewResponse(BaseModel):
     user_exists: bool
     faculty_exists: bool
     group_exists: bool
+    existing_results: list[dict] = []
+    suggested_group: str = "N/A"
 
 
 class HemisSyncResponse(BaseModel):

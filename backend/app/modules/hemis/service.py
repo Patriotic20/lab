@@ -23,7 +23,9 @@ from .schemas import (
     HemisLoginResponse,
     HemisTransactionResponse,
     HemisTransactionListResponse,
+    HemisPreviewResponse,
 )
+from app.models.results.model import Result
 
 logger = logging.getLogger(__name__)
 
@@ -191,17 +193,43 @@ class HemisLoginService:
     async def preview_hemis_data(self, session: AsyncSession, data: HemisLoginRequest) -> dict:
         me_data = await self._fetch_hemis_data(data.login, data.password)
 
-        # Check User
-        stmt_user = select(User.id).where(User.username == data.login)
-        user_id = (await session.execute(stmt_user)).scalar_one_or_none()
+        # 1. Check if User exists & Fetch existing results
+        stmt_user = select(User).where(User.username == data.login)
+        user = (await session.execute(stmt_user)).scalar_one_or_none()
+        user_id = user.id if user else None
 
-        # Check Faculty
+        existing_results_list = []
+        if user_id:
+            res_stmt = (
+                select(Result)
+                .options(
+                    selectinload(Result.quiz),
+                    selectinload(Result.subject),
+                )
+                .where(Result.user_id == user_id)
+                .order_by(desc(Result.created_at))
+                .limit(10)
+            )
+            res_res = await session.execute(res_stmt)
+            results = res_res.scalars().all()
+            for r in results:
+                existing_results_list.append({
+                    "id": r.id,
+                    "quiz": {"title": r.quiz.title if r.quiz else "N/A"},
+                    "subject": {"name": r.subject.name if r.subject else "N/A"},
+                    "grade": float(r.grade),
+                    "created_at": r.created_at.isoformat()
+                })
+
+        # 2. Check Faculty
         faculty_name = self._extract_name(me_data.get("faculty")) or "Unknown"
         stmt_fac = select(Faculty.id).where(Faculty.name == faculty_name)
         faculty_id = (await session.execute(stmt_fac)).scalar_one_or_none()
 
-        # Check Group
-        group_name = self._extract_name(me_data.get("group")) or "Unknown"
+        # 3. Check Group
+        group_info = me_data.get("group")
+        group_name = self._extract_name(group_info) or "Unknown"
+        
         clean_name = group_name.lower().strip()
         normalized = re.sub(r"(\d)([a-z])", r"\1 \2", clean_name)
         normalized = re.sub(r"(\d+)([a-z]{2})$", r"\1 \2", normalized)
@@ -217,14 +245,26 @@ class HemisLoginService:
 
         return {
             "hemis_data": me_data,
+            "user_id": user_id,
             "user_exists": user_id is not None,
+            "faculty_id": faculty_id,
             "faculty_exists": faculty_id is not None,
+            "group_id": group_id,
             "group_exists": group_id is not None,
+            "existing_results": existing_results_list,
+            "suggested_group": normalized if not group_id else group_name
         }
 
     async def sync_hemis_data(self, session: AsyncSession, data: HemisLoginRequest) -> dict:
         me_data = await self._fetch_hemis_data(data.login, data.password)
-        user = await self.save_user_data(session, data.login, data.password, me_data)
+        user = await self.save_user_data(
+            session=session,
+            username=data.login,
+            password=data.password,
+            me_data=me_data,
+            faculty_id=data.faculty_id,
+            group_id=data.group_id
+        )
         
         return {
             "success": True,
@@ -281,17 +321,31 @@ class HemisLoginService:
     #  SAVE USER DATA
     # ------------------------------------------------------------------ #
     async def save_user_data(
-        self, session: AsyncSession, username: str, password: str, me_data: dict
+        self,
+        session: AsyncSession,
+        username: str,
+        password: str,
+        me_data: dict,
+        faculty_id: int | None = None,
+        group_id: int | None = None,
     ) -> User:
-        # Save Faculty
-        faculty_name = self._extract_name(me_data.get("faculty")) or "Unknown"
-        faculty = await self.get_or_create_faculty(session, faculty_name)
+        # Load or Identify Faculty
+        if faculty_id:
+            faculty = await session.get(Faculty, faculty_id)
+            if not faculty:
+                raise HTTPException(status_code=404, detail=f"Fakultet (id={faculty_id}) topilmadi")
+        else:
+            faculty_name = self._extract_name(me_data.get("faculty")) or "Unknown"
+            faculty = await self.get_or_create_faculty(session, faculty_name)
 
-        # Save Group
-        group_name = self._extract_name(me_data.get("group")) or "Unknown"
-
-        # Ensure group is linked to the faculty
-        group = await self.get_or_create_group(session, group_name, faculty.id)
+        # Load or Identify Group
+        if group_id:
+            group = await session.get(Group, group_id)
+            if not group:
+                raise HTTPException(status_code=404, detail=f"Guruh (id={group_id}) topilmadi")
+        else:
+            group_name = self._extract_name(me_data.get("group")) or "Unknown"
+            group = await self.get_or_create_group(session, group_name, faculty.id)
 
         # Save User (or Update)
         stmt = (

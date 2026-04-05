@@ -4,6 +4,8 @@ export interface HemisLoginRequest {
     login: string;
     password?: string;
     pin?: string; 
+    faculty_id?: number;
+    group_id?: number;
 }
 
 export interface HemisLoginResponse {
