@@ -85,3 +85,42 @@ class StudentListResponse(BaseModel):
     page: int
     limit: int
     students: list[StudentResponse]
+
+
+class UserInfoResponse(BaseModel):
+    id: int
+    username: str
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class StudentWithUserResponse(BaseModel):
+    student_id: int
+    user_id: Optional[int]
+    username: Optional[str]
+    is_active: Optional[bool]
+    first_name: str
+    last_name: str
+    full_name: str
+    student_id_number: str
+    phone: Optional[str]
+    gender: str
+    faculty: str
+    level: str
+    semester: str
+    specialty: str
+    student_status: str
+    avg_gpa: float
+    group_id: Optional[int]
+    created_at: datetime
+    updated_at: datetime
+
+
+class StudentWithUserListResponse(BaseModel):
+    total: int
+    page: int
+    limit: int
+    students: list[StudentWithUserResponse]

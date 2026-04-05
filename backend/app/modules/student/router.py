@@ -14,6 +14,7 @@ from .schemas import (
     StudentListResponse,
     StudentResponse,
     StudentUpdateRequest,
+    StudentWithUserListResponse,
 )
 # from app.core.cache import clear_cache, custom_key_builder
 
@@ -36,14 +37,13 @@ router = APIRouter(prefix="/students", tags=["Students"])
 #     return await student_repository.create_student(session, data)
 
 
-@router.get("/{student_id}", response_model=StudentResponse)
-# @cache(expire=60, key_builder=custom_key_builder)
-async def get_student(
-    student_id: int, 
+@router.get("/with-users", response_model=StudentWithUserListResponse)
+async def list_students_with_users(
+    data: StudentListRequest = Depends(),
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:student")),
 ):
-    return await student_repository.get_student(session, student_id)
+    return await student_repository.list_students_with_users(session=session, request=data)
 
 
 @router.get("/", response_model=StudentListResponse)
@@ -54,6 +54,16 @@ async def list_students(
     _: PermissionRequired = Depends(PermissionRequired("read:student")),
 ):
     return await student_repository.list_students(session=session, request=data)
+
+
+@router.get("/{student_id}", response_model=StudentResponse)
+# @cache(expire=60, key_builder=custom_key_builder)
+async def get_student(
+    student_id: int, 
+    session: AsyncSession = Depends(db_helper.session_getter),
+    _: PermissionRequired = Depends(PermissionRequired("read:student")),
+):
+    return await student_repository.get_student(session, student_id)
 
 
 @router.put("/{student_id}", response_model=StudentResponse, dependencies=[Depends(RateLimiter(times=5, seconds=60))])

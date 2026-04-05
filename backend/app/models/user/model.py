@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from app.models.user_answers.model import UserAnswers
     from app.models.group_teachers.model import GroupTeacher
     from app.models.yakuniy.model import Yakuniy
+    from app.models.hemis_transaction.model import HemisTransaction
 
 
 class User(Base, IdIntPk, TimestampMixin):
@@ -61,6 +62,11 @@ class User(Base, IdIntPk, TimestampMixin):
 
     yakuniy_results: Mapped[list["Yakuniy"]] = relationship(
         "Yakuniy", 
+        back_populates="user"
+    )
+
+    hemis_transactions: Mapped[list["HemisTransaction"]] = relationship(
+        "HemisTransaction", 
         back_populates="user"
     )
 

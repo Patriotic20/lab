@@ -25,6 +25,7 @@ import {
     X,
     Trophy,
     ClipboardList,
+    LogIn,
 } from 'lucide-react';
 import { cn } from '@/utils/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -69,6 +70,7 @@ const adminSections: NavSection[] = [
             { name: 'Foydalanuvchilar', href: '/users', icon: Users },
             { name: "O'qituvchilar", href: '/teachers', icon: GraduationCap },
             { name: 'Talabalar', href: '/students', icon: GraduationCap },
+            { name: 'Talabalar Foydalanuvchilar', href: '/student-users', icon: Users },
         ],
     },
     {
@@ -79,6 +81,12 @@ const adminSections: NavSection[] = [
             { name: 'Test ishlash', href: '/quiz-test', icon: PlayCircle },
             { name: 'Natijalar', href: '/results', icon: FileText },
             { name: 'Yakuniy', href: '/yakuniy', icon: ClipboardList },
+        ],
+    },
+    {
+        label: 'Xavfsizlik',
+        items: [
+            { name: 'HEMIS Kirish', href: '/hemis-transactions', icon: LogIn },
         ],
     },
 ];

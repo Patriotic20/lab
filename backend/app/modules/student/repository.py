@@ -11,6 +11,7 @@ from .schemas import (
     StudentListRequest,
     StudentListResponse,
     StudentUpdateRequest,
+    StudentWithUserListResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -99,6 +100,92 @@ class StudentRepository:
             page=request.page,
             limit=request.limit,
             students=students,
+        )
+
+    async def list_students_with_users(
+        self, session: AsyncSession, request: StudentListRequest
+    ) -> StudentWithUserListResponse:
+        from app.models.user.model import User
+        from app.models.user_role.model import UserRole
+        from app.models.role.model import Role
+
+        # Query students that have a user_id and filter by student role
+        stmt = (
+            select(Student)
+            .join(User, Student.user_id == User.id)
+            .options(selectinload(Student.user), selectinload(Student.group))
+            .where(Student.user_id.isnot(None))
+        )
+
+        # Filter by search (name, username, or student_id_number)
+        if request.search:
+            stmt = stmt.where(
+                (Student.first_name.ilike(f"%{request.search}%"))
+                | (Student.last_name.ilike(f"%{request.search}%"))
+                | (Student.student_id_number.ilike(f"%{request.search}%"))
+                | (User.username.ilike(f"%{request.search}%"))
+            )
+
+        if request.group_id is not None:
+            stmt = stmt.where(Student.group_id == request.group_id)
+
+        stmt = stmt.order_by(desc(Student.created_at))
+        stmt = stmt.offset(request.offset).limit(request.limit)
+
+        result = await session.execute(stmt)
+        students = result.scalars().all()
+
+        # Convert to response format
+        students_with_users = []
+        for student in students:
+            students_with_users.append({
+                "student_id": student.id,
+                "user_id": student.user_id,
+                "username": student.user.username if student.user else None,
+                "is_active": student.user.is_active if student.user else None,
+                "first_name": student.first_name,
+                "last_name": student.last_name,
+                "full_name": student.full_name,
+                "student_id_number": student.student_id_number,
+                "phone": student.phone,
+                "gender": student.gender,
+                "faculty": student.faculty,
+                "level": student.level,
+                "semester": student.semester,
+                "specialty": student.specialty,
+                "student_status": student.student_status,
+                "avg_gpa": student.avg_gpa,
+                "group_id": student.group_id,
+                "created_at": student.created_at,
+                "updated_at": student.updated_at,
+            })
+
+        # Count total students with users matching filters
+        count_stmt = (
+            select(func.count()).select_from(Student)
+            .join(User, Student.user_id == User.id)
+            .where(Student.user_id.isnot(None))
+        )
+
+        if request.search:
+            count_stmt = count_stmt.where(
+                (Student.first_name.ilike(f"%{request.search}%"))
+                | (Student.last_name.ilike(f"%{request.search}%"))
+                | (Student.student_id_number.ilike(f"%{request.search}%"))
+                | (User.username.ilike(f"%{request.search}%"))
+            )
+
+        if request.group_id is not None:
+            count_stmt = count_stmt.where(Student.group_id == request.group_id)
+
+        total_result = await session.execute(count_stmt)
+        total = total_result.scalar() or 0
+
+        return StudentWithUserListResponse(
+            total=total,
+            page=request.page,
+            limit=request.limit,
+            students=students_with_users,
         )
 
     async def update_student(

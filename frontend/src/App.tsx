@@ -22,6 +22,9 @@ import TeacherGroupsPage from '@/pages/TeacherGroupsPage';
 import TeacherSubjectsPage from '@/pages/TeacherSubjectsPage';
 import TeacherRankingPage from '@/pages/TeacherRankingPage';
 import YakuniyPage from '@/pages/YakuniyPage';
+import HemisTransactionsPage from '@/pages/HemisTransactionsPage';
+import StudentUsersPage from '@/pages/StudentUsersPage';
+import HemisSyncPage from '@/pages/HemisSyncPage';
 
 const ProtectedRoute = () => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -87,7 +90,10 @@ function App() {
                 <Route path="/kafedras" element={<RoleRoute allowedRoles={['admin']}><KafedraPage /></RoleRoute>} />
                 <Route path="/groups" element={<RoleRoute allowedRoles={['admin']}><GroupsPage /></RoleRoute>} />
                 <Route path="/students" element={<RoleRoute allowedRoles={['admin']}><StudentsPage /></RoleRoute>} />
+                <Route path="/student-users" element={<RoleRoute allowedRoles={['admin']}><StudentUsersPage /></RoleRoute>} />
+                <Route path="/admin/hemis-sync" element={<RoleRoute allowedRoles={['admin']}><HemisSyncPage /></RoleRoute>} />
                 <Route path="/yakuniy" element={<RoleRoute allowedRoles={['admin']}><YakuniyPage /></RoleRoute>} />
+                <Route path="/hemis-transactions" element={<RoleRoute allowedRoles={['admin']}><HemisTransactionsPage /></RoleRoute>} />
 
                 {/* Admin + Teacher routes */}
                 <Route path="/subjects" element={<RoleRoute allowedRoles={['admin', 'teacher']}><SubjectsPage /></RoleRoute>} />
