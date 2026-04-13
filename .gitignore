@@ -31,3 +31,5 @@ ndktu-student-platform/backend/cheating_evidence/
 ndktu-student-platform/backend/.env
 ndktu-student-face-detection/.env
 .env
+
+prompts/
