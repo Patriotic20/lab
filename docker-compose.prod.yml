@@ -34,6 +34,11 @@ services:
       - "80"
 
   face-detection:
+    environment:
+      - MODEL_PATH=/face/blaze_face_short_range.tflite
+      - LOG_LEVEL=INFO
+    volumes:
+      - backend_uploads:/face/uploads:ro
     ports: !reset []
     expose:
       - "8000"

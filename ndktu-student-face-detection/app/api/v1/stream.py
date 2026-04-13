@@ -39,31 +39,51 @@ async def realtime_stream(websocket: WebSocket, image_url: str | None = None) ->
 
     reference_encoding = None
     
-    # 0. If image_url is provided, download and initialize reference_encoding
+    # 0. If image_url is provided, initialize reference_encoding
     if image_url:
-        logger.info(f"Downloading reference image from: {image_url}")
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(image_url, timeout=10.0)
-                response.raise_for_status()
-                
-                # Save to temp file and get encoding
-                with tempfile.NamedTemporaryFile(delete=True, suffix=".jpg") as tmp:
-                    tmp.write(response.content)
-                    tmp.flush()
-                    
-                    # Read the temp file back into an OpenCV frame
-                    ref_frame = cv2.imread(tmp.name)
-                    if ref_frame is not None:
-                        reference_encoding = detector.get_face_encoding(ref_frame)
-                        if reference_encoding is not None:
-                            logger.info("Reference face successfully initialized from URL.")
-                        else:
-                            logger.warning("Could not find a face in the provided URL image.")
+        logger.info(f"Initializing reference image from: {image_url}")
+        
+        # Handle local relative URL directly from mounted volume mapping
+        if image_url.startswith("/uploads/"):
+            local_path = f"/face{image_url}"
+            logger.info(f"Reading local mounted file: {local_path}")
+            
+            if os.path.exists(local_path):
+                ref_frame = cv2.imread(local_path)
+                if ref_frame is not None:
+                    reference_encoding = detector.get_face_encoding(ref_frame)
+                    if reference_encoding is not None:
+                        logger.info("Reference face successfully initialized from local file.")
                     else:
-                        logger.error("Failed to decode reference image from URL.")
-        except Exception as e:
-            logger.error(f"Error processing reference image URL: {e}")
+                        logger.warning("Could not find a face in the local image.")
+                else:
+                    logger.error("Failed to decode local reference image.")
+            else:
+                logger.error(f"Local file not found: {local_path}")
+                
+        else:
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(image_url, timeout=10.0)
+                    response.raise_for_status()
+                    
+                    # Save to temp file and get encoding
+                    with tempfile.NamedTemporaryFile(delete=True, suffix=".jpg") as tmp:
+                        tmp.write(response.content)
+                        tmp.flush()
+                        
+                        # Read the temp file back into an OpenCV frame
+                        ref_frame = cv2.imread(tmp.name)
+                        if ref_frame is not None:
+                            reference_encoding = detector.get_face_encoding(ref_frame)
+                            if reference_encoding is not None:
+                                logger.info("Reference face successfully initialized from URL.")
+                            else:
+                                logger.warning("Could not find a face in the provided URL image.")
+                        else:
+                            logger.error("Failed to decode reference image from URL.")
+            except Exception as e:
+                logger.error(f"Error processing reference image URL: {e}")
 
     last_recognition_time = 0
 
