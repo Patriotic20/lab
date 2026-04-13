@@ -18,31 +18,30 @@ export function QuizVideoMonitoring({
     imageUrl,
 }: QuizVideoMonitoringProps) {
     const [warnings, setWarnings] = useState(0);
-    const [lastWarningTime, setLastWarningTime] = useState(0);
+    const warningsRef = useRef(0);
+    const lastWarningTimeRef = useRef(0);
     const [showWarningText, setShowWarningText] = useState(false);
     const warningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const handleViolation = useCallback((imageData: string, type: 'multiple' | 'different') => {
         const now = Date.now();
         // Prevent rapid warning increments (de-bounce warnings every 3 seconds)
-        if (now - lastWarningTime < 3000) return;
+        if (now - lastWarningTimeRef.current < 3000) return;
 
-        setWarnings(prev => {
-            const next = prev + 1;
-            setLastWarningTime(now);
-            setShowWarningText(true);
+        lastWarningTimeRef.current = now;
+        const nextWarnings = warningsRef.current + 1;
+        warningsRef.current = nextWarnings;
+        setWarnings(nextWarnings);
+        setShowWarningText(true);
 
-            // Hide warning text after 4 seconds
-            if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
-            warningTimeoutRef.current = setTimeout(() => setShowWarningText(false), 4000);
+        if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
+        warningTimeoutRef.current = setTimeout(() => setShowWarningText(false), 4000);
 
-            if (next >= 3) {
-                if (type === 'multiple') onCheatingDetected(imageData);
-                else onDifferentPersonDetected(imageData);
-            }
-            return next;
-        });
-    }, [onCheatingDetected, onDifferentPersonDetected, lastWarningTime]);
+        if (nextWarnings >= 3) {
+            if (type === 'multiple') onCheatingDetected(imageData);
+            else onDifferentPersonDetected(imageData);
+        }
+    }, [onCheatingDetected, onDifferentPersonDetected]);
 
     const { state, startMonitoring, stopMonitoring } = useVideoMonitoring({
         faceDetectionServiceUrl,

@@ -36,6 +36,8 @@ export function useVideoMonitoring(config: VideoMonitoringConfig) {
     const frameIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const lastImageCapture = useRef<string>('');
+    const configRef = useRef<VideoMonitoringConfig>(config);
+    const isStartingRef = useRef(false);
 
     const captureAndEncodeFrame = useCallback((): string => {
         if (!videoRef.current || !canvasRef.current) return '';
@@ -48,7 +50,15 @@ export function useVideoMonitoring(config: VideoMonitoringConfig) {
         return '';
     }, []);
 
+    useEffect(() => {
+        configRef.current = config;
+    }, [config]);
+
     const startMonitoring = useCallback(async () => {
+        if (isStartingRef.current || wsRef.current || streamRef.current) return;
+
+        isStartingRef.current = true;
+
         try {
             // Request camera permission
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -63,6 +73,7 @@ export function useVideoMonitoring(config: VideoMonitoringConfig) {
                 const video = document.createElement('video');
                 video.autoplay = true;
                 video.playsInline = true;
+                video.muted = true;
                 videoRef.current = video;
             }
 
@@ -75,6 +86,10 @@ export function useVideoMonitoring(config: VideoMonitoringConfig) {
                     resolve();
                 };
                 videoRef.current?.addEventListener('loadedmetadata', handler);
+            });
+
+            await videoRef.current.play().catch((err) => {
+                console.warn('Detached monitoring video playback failed:', err);
             });
 
             setState((prev: VideoMonitoringState) => ({ ...prev, hasPermission: true, isActive: true, error: null }));
@@ -100,8 +115,8 @@ export function useVideoMonitoring(config: VideoMonitoringConfig) {
             ws.onopen = () => {
                 setState((prev: VideoMonitoringState) => ({ ...prev, isConnected: true }));
 
-                // Start sending frames at specified interval
-                const intervalMs = config.frameInterval || 1000;
+                const currentConfig = configRef.current;
+                const intervalMs = currentConfig.frameInterval || 1000;
                 frameIntervalRef.current = setInterval(() => {
                     if (ws.readyState === WebSocket.OPEN && videoRef.current) {
                         const jpeg = captureAndEncodeFrame();
@@ -113,6 +128,7 @@ export function useVideoMonitoring(config: VideoMonitoringConfig) {
 
             ws.onmessage = (event) => {
                 try {
+                    const currentConfig = configRef.current;
                     const data = JSON.parse(event.data);
                     const faceCount = data.face_count || 0;
                     const hasTwoFaces = data.has_two_faces || false;
@@ -129,11 +145,11 @@ export function useVideoMonitoring(config: VideoMonitoringConfig) {
                     // Check for violations
                     if (hasTwoFaces) {
                         const imageData = lastImageCapture.current || captureAndEncodeFrame();
-                        config.onMultipleFacesDetected(imageData);
+                        currentConfig.onMultipleFacesDetected(imageData);
                     } else if (isDifferentPerson) {
                         const imageData = lastImageCapture.current || captureAndEncodeFrame();
-                        if (config.onDifferentPersonDetected) {
-                            config.onDifferentPersonDetected(imageData);
+                        if (currentConfig.onDifferentPersonDetected) {
+                            currentConfig.onDifferentPersonDetected(imageData);
                         }
                     }
                 } catch (error) {
@@ -149,8 +165,8 @@ export function useVideoMonitoring(config: VideoMonitoringConfig) {
                     isConnected: false,
                     error: errorMsg,
                 }));
-                if (config.onError) {
-                    config.onError(errorMsg);
+                if (configRef.current.onError) {
+                    configRef.current.onError(errorMsg);
                 }
             };
 
@@ -174,11 +190,13 @@ export function useVideoMonitoring(config: VideoMonitoringConfig) {
                 isActive: false,
             }));
 
-            if (config.onError) {
-                config.onError(errorMsg);
+            if (configRef.current.onError) {
+                configRef.current.onError(errorMsg);
             }
+        } finally {
+            isStartingRef.current = false;
         }
-    }, [config, captureAndEncodeFrame]);
+    }, [captureAndEncodeFrame]);
 
     const stopMonitoring = useCallback(() => {
         // Clear frame interval
