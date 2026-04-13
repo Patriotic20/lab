@@ -210,13 +210,12 @@ class ResultRepository:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Result not found"
             )
 
-        # Delete associated user answers
-        # We match by user_id, quiz_id and the exact created_at timestamp 
-        # since they were created in the same transaction.
+        # Delete associated user answers by user_id + quiz_id.
+        # Bug#3 fix: do NOT match by created_at — timestamps between Result and UserAnswers
+        # may differ by milliseconds, causing answers to be left as orphans.
         delete_answers_stmt = delete(UserAnswers).where(
             UserAnswers.user_id == obj.user_id,
             UserAnswers.quiz_id == obj.quiz_id,
-            UserAnswers.created_at == obj.created_at
         )
         await session.execute(delete_answers_stmt)
 

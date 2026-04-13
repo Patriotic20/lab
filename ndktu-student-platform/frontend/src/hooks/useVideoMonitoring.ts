@@ -68,7 +68,8 @@ export function useVideoMonitoring(config: VideoMonitoringConfig) {
 
             streamRef.current = stream;
 
-            // Create video element
+            // Bug#11 fix: only create a new video element if videoRef hasn't been
+            // assigned by a JSX <video ref={videoRef}> element (QuizVideoMonitoring renders one).
             if (!videoRef.current) {
                 const video = document.createElement('video');
                 video.autoplay = true;
@@ -102,8 +103,10 @@ export function useVideoMonitoring(config: VideoMonitoringConfig) {
             const canvas = canvasRef.current;
             const video = videoRef.current;
 
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            // Bug#10 fix: fallback to 640x480 if videoWidth/videoHeight are still 0
+            // (happens on some mobile browsers even after loadedmetadata)
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
 
             // Establish WebSocket connection
             const wsUrl = new URL(config.faceDetectionServiceUrl);

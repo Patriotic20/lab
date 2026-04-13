@@ -29,6 +29,7 @@ export interface Student {
     image_path: string | null;
     group_id: number;
     group: Group;
+    student_id_number: string | null;  // Bug#16 fix: was missing from type definition
     university: string | null;
     specialty: string | null;
     education_form: string | null;

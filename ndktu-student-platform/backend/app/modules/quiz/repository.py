@@ -15,7 +15,6 @@ from app.models.student.model import Student
 from .schemas import (
     QuizCreateRequest,
     QuizListRequest,
-    QuizListRequest,
     QuizListResponse,
 )
 from core.config import settings

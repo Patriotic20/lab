@@ -14,7 +14,6 @@ from app.models.quiz.model import Quiz
 from app.models.question.model import Question
 from app.models.results.model import Result
 from app.models.quiz_questions.model import QuizQuestion
-from app.models.quiz_questions.model import QuizQuestion
 from app.models.user_answers.model import UserAnswers
 from app.models.student.model import Student
 from app.models.user.model import User
@@ -75,8 +74,10 @@ class QuizProcessRepository:
                     status_code=status.HTTP_400_BAD_REQUEST, 
                     detail="Sizning suratingiz topilmadi. Profilingizga surat yuklang."
                 )
-            
-            student_image_url = student.image_path
+
+            # Bug#1 fix: only set image_url when it actually exists (avoid sending "None" string to WebSocket)
+            if student.image_path:
+                student_image_url = student.image_path
 
             if quiz.group_id is not None:
                 if student.group_id != quiz.group_id:
@@ -87,7 +88,14 @@ class QuizProcessRepository:
 
         # Prepare questions with shuffled options
         quiz_questions = [qq.question for qq in quiz.quiz_questions if qq.question]
-        
+
+        # Bug#7 fix: raise error if quiz has no questions
+        if not quiz_questions:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Bu testda savollar yo'q. Iltimos administratorga murojaat qiling."
+            )
+
         num_questions = quiz.question_number
         if len(quiz_questions) > num_questions:
             random.shuffle(quiz_questions)
@@ -248,9 +256,11 @@ class QuizProcessRepository:
                     detail="Quiz not found"
                 )
 
-            # Create directory for cheating evidence
-            evidence_dir = Path("cheating_evidence")
-            evidence_dir.mkdir(exist_ok=True)
+            # Bug#4 fix: use settings.evidence_dir (absolute path mapped to Docker volume)
+            # so files survive container restarts. /evidence/ is mounted in main.py.
+            from core.config import settings as app_settings
+            evidence_dir = app_settings.evidence_dir
+            evidence_dir.mkdir(parents=True, exist_ok=True)
 
             # Generate filename with timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -273,7 +283,7 @@ class QuizProcessRepository:
 
             logger.info(f"Cheating evidence saved: {filepath}")
 
-            # Return response with relative path
+            # /evidence/ is mounted as StaticFiles in main.py — URL is valid
             image_url = f"/evidence/{filename}"
 
             return UploadCheatingImageResponse(

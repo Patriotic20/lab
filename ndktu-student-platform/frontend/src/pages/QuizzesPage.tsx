@@ -540,8 +540,9 @@ const QuizModal = ({
     const effectiveUserId = isTeacher ? user?.id?.toString() : selectedUserId;
 
     // Fetch ALL subjects and groups for admin/fallback
-    const { data: allSubjectsData } = useSubjects(1, 200);
-    const { data: allGroupsData } = useGroups(1, 200, '');
+    // Bug#17 fix: increased limit from 200 to 1000 to avoid missing groups/subjects
+    const { data: allSubjectsData } = useSubjects(1, 1000);
+    const { data: allGroupsData } = useGroups(1, 1000, '');
 
     // Fetch teachers with search capability
     const { data: searchTeachersData } = useTeachers(1, 100, debouncedTeacherSearch);

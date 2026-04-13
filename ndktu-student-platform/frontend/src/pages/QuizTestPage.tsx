@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { type StartQuizResponse, type EndQuizResponse, type AnswerDTO } from '@/services/quizProcessService';
 import { Button } from '@/components/ui/Button';
@@ -32,6 +32,10 @@ import {
 } from '@/components/ui/Table';
 import { Pagination } from '@/components/ui/Pagination';
 import { cn } from '@/utils/utils';
+import DOMPurify from 'dompurify';
+
+// Bug#13 fix: sanitize HTML content to prevent XSS attacks
+const sanitize = (html: string) => DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
 
 type QuizPhase = 'start' | 'quiz' | 'results';
 
@@ -170,9 +174,11 @@ const QuizTestPage = () => {
                 }
             }
         });
-    }, [quizData, answers, user, endQuizMutation, cheatingDetected, cheatingReason]);
+    // Bug#4 fix: added cheatingImageUrl to dependency list to avoid stale closure
+    }, [quizData, answers, user, endQuizMutation, cheatingDetected, cheatingReason, cheatingImageUrl]);
 
-    // Timer
+    // Timer — Bug#12 fix: use a ref to prevent duplicate submit on cheating race condition
+    const isSubmittingRef = useRef(false);
     useEffect(() => {
         if (phase !== 'quiz' || timeLeft <= 0 || cheatingDetected) return;
 
@@ -203,12 +209,14 @@ const QuizTestPage = () => {
     }, []);
 
     const handleDifferentPersonDetected = useCallback(async (imageData: string) => {
-        if (cheatingDetected) return;
+        // Bug#12 fix: guard against race condition where both timer & cheating trigger submit
+        if (cheatingDetected || isSubmittingRef.current) return;
+        isSubmittingRef.current = true;
 
         setCheatingDetected(true);
         const reason = 'Different person detected';
         setCheatingReason(reason);
-        
+
         if (quizData && user) {
             try {
                 const response = await cheatingImageService.uploadCheatingImage({
@@ -576,7 +584,7 @@ const QuizTestPage = () => {
                         </span>
                         <div
                             className="text-lg font-medium leading-relaxed"
-                            dangerouslySetInnerHTML={{ __html: currentQuestion.text }}
+                            dangerouslySetInnerHTML={{ __html: sanitize(currentQuestion.text) }}
                         />
                     </div>
                 </CardHeader>
@@ -601,7 +609,7 @@ const QuizTestPage = () => {
                                     </span>
                                     <span
                                         className="pt-0.5"
-                                        dangerouslySetInnerHTML={{ __html: option.value }}
+                                        dangerouslySetInnerHTML={{ __html: sanitize(option.value) }}
                                     />
                                 </button>
                             );

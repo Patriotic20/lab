@@ -47,6 +47,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('token');
         localStorage.removeItem('refresh_token');
         setUser(null);
+        // Bug#14 fix: always clear loading state on explicit logout
+        setIsLoading(false);
     };
 
     const isAuthenticated = !!user;
