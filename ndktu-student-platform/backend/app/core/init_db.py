@@ -120,7 +120,9 @@ async def init_db(app: FastAPI, session: AsyncSession):
         teacher_perms = {
             p for p in discovered_permissions
             if any(keyword in p for keyword in ("question", "quiz", "statistics", "result", "teacher", "subject"))
+            and not p.startswith("delete:result")
         }
+
         if "read:role" in discovered_permissions:
             teacher_perms.add("read:role")
         if "user:me" in discovered_permissions:

@@ -2,7 +2,7 @@ import logging
 
 from fastapi import HTTPException, status
 from app.models.subject.model import Subject
-from sqlalchemy import func, select
+from sqlalchemy import func, select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.subject_teacher.model import SubjectTeacher
 from app.models.user.model import User
@@ -46,6 +46,8 @@ class SubjectRepository:
     async def get_subject(
         self, session: AsyncSession, subject_id: int
     ) -> Subject:
+        # Use primary key id descending if created_at is not available, 
+        # but all models here inherit from TimestampMixin based on previous checks.
         stmt = select(Subject).where(Subject.id == subject_id)
         result = await session.execute(stmt)
         subject = result.scalar_one_or_none()
@@ -84,10 +86,11 @@ class SubjectRepository:
         if request.teacher_id:
              stmt = stmt.join(SubjectTeacher, Subject.id == SubjectTeacher.subject_id).where(SubjectTeacher.teacher_id == request.teacher_id)
 
-        stmt = stmt.offset(request.offset).limit(request.limit)
-
         if request.name:
             stmt = stmt.where(Subject.name.ilike(f"%{request.name}%"))
+
+        stmt = stmt.order_by(desc(Subject.created_at))
+        stmt = stmt.offset(request.offset).limit(request.limit)
 
         result = await session.execute(stmt)
         subjects = result.scalars().all()

@@ -26,6 +26,8 @@ class UserView(ModelView, model=User):
         "quizzes",
         "results",
         "student",
+        "yakuniy_results",
+        "hemis_transactions",
         "created_at",
         "updated_at",
     ]

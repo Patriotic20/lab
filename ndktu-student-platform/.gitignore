@@ -1,0 +1,45 @@
+# General
+.DS_Store
+Thumbs.db
+*.log
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+# Node.js
+dist/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+coverage/
+
+# Docker
+docker-compose.override.yml
+
+# Checkpoints / Data
+postgres_data_quiz/
+redis_data/
+pgadmin_data/
+
+backend/logs/
+frontend/logs/
+backend/.env
+
+backend/*.egg-info/
+backups/
+backend/uploads/

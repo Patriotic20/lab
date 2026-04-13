@@ -47,3 +47,7 @@ class Student(Base, TimestampMixin, IdIntPk):
 
     group: Mapped["Group"] = relationship("Group", back_populates="students")
     user: Mapped["User"] = relationship("User", back_populates="student")
+    hemis_transactions: Mapped[list["HemisTransaction"]] = relationship(
+        "HemisTransaction", 
+        back_populates="student"
+    )

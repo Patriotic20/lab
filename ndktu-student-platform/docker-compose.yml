@@ -1,0 +1,117 @@
+# ─────────────────────────────────────────────────────────────────
+#  DEVELOPMENT  (docker compose up)
+#  • No nginx reverse-proxy
+#  • Ports exposed directly on localhost
+#  • Use:  make up
+# ─────────────────────────────────────────────────────────────────
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nusmt_backend
+    restart: always
+    env_file: ./backend/.env
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        order: start-first
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - backend_logs:/face/logs
+      - backend_uploads:/face/uploads
+      - ~/.logfire:/root/.logfire:ro
+    networks:
+      - app_network
+    environment:
+      - APP_CONFIG__REDIS__HOST=redis
+      - APP_CONFIG__DATABASE__URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}
+      - LOGFIRE_PROJECT_NAME=${LOGFIRE_PROJECT_NAME}
+      - LOGFIRE_TOKEN=${LOGFIRE_TOKEN}
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: nusmt_frontend
+    restart: always
+    ports:
+      - "3000:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - app_network
+
+  database:
+    image: postgres:17
+    container_name: database
+    restart: always
+    env_file: ./backend/.env
+    ports:
+      - "5436:5432"
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -q -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data_quiz:/var/lib/postgresql/data
+
+  redis:
+    image: redis:alpine
+    container_name: redis_cache
+    restart: always
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    networks:
+      - app_network
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    restart: always
+    env_file: ./backend/.env
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@admin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_LISTEN_PORT: 5050
+      PGADMIN_CONFIG_SCRIPT_NAME: "'/pgadmin'"
+    ports:
+      - "5050:5050"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  postgres_data_quiz:
+  redis_data:
+  pgadmin_data:
+  backend_logs:
+  backend_uploads:

@@ -2,7 +2,7 @@ import logging
 
 from fastapi import HTTPException, status
 from app.models.permission.model import Permission
-from sqlalchemy import func, select
+from sqlalchemy import func, select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .schemas import (
@@ -57,10 +57,13 @@ class PermissionRepository:
     async def list_permissions(
         self, session: AsyncSession, request: PermissionListRequest
     ) -> PermissionListResponse:
-        stmt = select(Permission).offset(request.offset).limit(request.limit)
+        stmt = select(Permission)
 
         if request.name:
             stmt = stmt.where(Permission.name.ilike(f"%{request.name}%"))
+
+        stmt = stmt.order_by(desc(Permission.created_at))
+        stmt = stmt.offset(request.offset).limit(request.limit)
 
         result = await session.execute(stmt)
         permissions = result.scalars().all()

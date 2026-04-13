@@ -20,7 +20,7 @@ export function QuizVideoMonitoring({
     const [warnings, setWarnings] = useState(0);
     const [lastWarningTime, setLastWarningTime] = useState(0);
     const [showWarningText, setShowWarningText] = useState(false);
-    const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const warningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const handleViolation = useCallback((imageData: string, type: 'multiple' | 'different') => {
         const now = Date.now();

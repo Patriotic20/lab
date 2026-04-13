@@ -48,21 +48,6 @@ jobs:
         with:
           python-version: "3.12"
 
-<<<<<<< HEAD
-      - name: Create backend/.env for tests
-        working-directory: backend
-        run: |
-          # Start with template values (non-sensitive)
-          cp .env.template .env
-          
-          # Override CI test database settings
-          cat >> .env <<EOF
-          
-          # CI test database
-          APP_CONFIG__DATABASE__URL=postgresql+asyncpg://ci_user:ci_password@localhost:5436/test_db
-          APP_CONFIG__DATABASE__TEST_URL=postgresql+asyncpg://ci_user:ci_password@localhost:5436/test_db
-          APP_CONFIG__REDIS__HOST=localhost
-=======
       - name: Create root .env
         run: |
           cat > .env <<EOF
@@ -101,7 +86,6 @@ jobs:
           APP_CONFIG__REDIS__HOST=localhost
           APP_CONFIG__REDIS__PORT=6379
           APP_CONFIG__REDIS__PREFIX=fastapi-cache
->>>>>>> upstream-aligned-final
           POSTGRES_USER=ci_user
           POSTGRES_PASSWORD=ci_password
           POSTGRES_DB=test_db
@@ -153,11 +137,6 @@ jobs:
 
   # ──────────────────────────────────────────
   # JOB 3: Deploy to Production
-<<<<<<< HEAD
-  # Only runs on push to main (not PRs), after
-  # both CI jobs pass.
-=======
->>>>>>> upstream-aligned-final
   # ──────────────────────────────────────────
   deploy:
     name: Deploy to Production
@@ -169,20 +148,9 @@ jobs:
       - name: Checkout latest code
         uses: actions/checkout@v4
 
-<<<<<<< HEAD
-      - name: Write .env files for deployment
-        run: |
-          # Copy non-sensitive defaults from templates
-          cp .env.template .env
-          cp backend/.env.template backend/.env
-          
-          # Override with sensitive data from GitHub secrets
-          cat >> .env <<EOF
-=======
       - name: Write root .env
         run: |
           cat > .env <<EOF
->>>>>>> upstream-aligned-final
           POSTGRES_USER=${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           POSTGRES_DB=${{ secrets.POSTGRES_DB }}
@@ -190,17 +158,6 @@ jobs:
           LOGFIRE_TOKEN=${{ secrets.LOGFIRE_TOKEN }}
           PGADMIN_DEFAULT_EMAIL=${{ secrets.PGADMIN_DEFAULT_EMAIL }}
           PGADMIN_DEFAULT_PASSWORD=${{ secrets.PGADMIN_DEFAULT_PASSWORD }}
-<<<<<<< HEAD
-          EOF
-          
-          cat >> backend/.env <<EOF
-          
-          # Override template with production secrets
-          APP_CONFIG__DATABASE__URL=${{ secrets.APP_CONFIG__DATABASE__URL }}
-          APP_CONFIG__DATABASE__TEST_URL=${{ secrets.APP_CONFIG__DATABASE__TEST_URL }}
-          APP_CONFIG__JWT__ACCESS_TOKEN_SECRET=${{ secrets.APP_CONFIG__JWT__ACCESS_TOKEN_SECRET }}
-          APP_CONFIG__JWT__REFRESH_TOKEN_SECRET=${{ secrets.APP_CONFIG__JWT__REFRESH_TOKEN_SECRET }}
-=======
           LOGFIRE_TOKEN=${{ secrets.LOGFIRE_TOKEN }}
           EOF
 
@@ -222,7 +179,6 @@ jobs:
           APP_CONFIG__JWT__ACCESS_TOKEN_EXPIRES_MINUTES=${{ secrets.APP_CONFIG__JWT__ACCESS_TOKEN_EXPIRES_MINUTES }}
           APP_CONFIG__JWT__REFRESH_TOKEN_EXPIRES_DAYS=${{ secrets.APP_CONFIG__JWT__REFRESH_TOKEN_EXPIRES_DAYS }}
           APP_CONFIG__JWT__ALGORITHM=${{ secrets.APP_CONFIG__JWT__ALGORITHM }}
->>>>>>> upstream-aligned-final
           APP_CONFIG__ADMIN__USERNAME=${{ secrets.APP_CONFIG__ADMIN__USERNAME }}
           APP_CONFIG__ADMIN__PASSWORD=${{ secrets.APP_CONFIG__ADMIN__PASSWORD }}
           APP_CONFIG__ADMIN__SECRET_KEY=${{ secrets.APP_CONFIG__ADMIN__SECRET_KEY }}
@@ -230,28 +186,12 @@ jobs:
           APP_CONFIG__FILE_URL__UPLOAD_DIR=${{ secrets.APP_CONFIG__FILE_URL__UPLOAD_DIR }}
           APP_CONFIG__HEMIS__LOGIN_URL=${{ secrets.APP_CONFIG__HEMIS__LOGIN_URL }}
           APP_CONFIG__HEMIS__ME_URL=${{ secrets.APP_CONFIG__HEMIS__ME_URL }}
-<<<<<<< HEAD
-=======
           APP_CONFIG__REDIS__HOST=redis
           APP_CONFIG__REDIS__PORT=6379
->>>>>>> upstream-aligned-final
           APP_CONFIG__REDIS__PREFIX=${{ secrets.APP_CONFIG__REDIS__PREFIX }}
           POSTGRES_USER=${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-<<<<<<< HEAD
-          LOGFIRE_PROJECT_NAME=${{ secrets.LOGFIRE_PROJECT_NAME }}
-          LOGFIRE_TOKEN=${{ secrets.LOGFIRE_TOKEN }}
-          EOF
-
-      - name: Stop existing containers
-        run: docker compose -f docker-compose.yml -f docker-compose.prod.yml down --remove-orphans
-
-      - name: Pull & rebuild containers (Production)
-        run: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-
-      - name: Remove dangling Docker images
-=======
           POSTGRES_HOST=database
           POSTGRES_PORT=5432
           EOF
@@ -263,5 +203,4 @@ jobs:
 
       # Очистка теперь встроена в make deploy, но можно оставить для надежности
       - name: Clean up unused Docker resources
->>>>>>> upstream-aligned-final
         run: docker image prune -f

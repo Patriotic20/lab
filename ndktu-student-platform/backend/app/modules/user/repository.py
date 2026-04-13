@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from app.models.role.model import Role
 from app.models.user.model import User
 from app.models.student.model import Student
-from sqlalchemy import func, select
+from sqlalchemy import func, select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.models.teacher.model import Teacher
@@ -85,12 +85,13 @@ class UserRepository:
                 selectinload(User.teacher).selectinload(Teacher.kafedra),
                 selectinload(User.student).selectinload(Student.group)
             )
-            .offset(request.offset)
-            .limit(request.limit)
         )
 
         if request.username:
             stmt = stmt.where(User.username.ilike(f"%{request.username}%"))
+
+        stmt = stmt.order_by(desc(User.created_at))
+        stmt = stmt.offset(request.offset).limit(request.limit)
 
         result = await session.execute(stmt)
         users = result.scalars().all()

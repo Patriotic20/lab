@@ -33,7 +33,7 @@ export function useVideoMonitoring(config: VideoMonitoringConfig) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
-    const frameIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const frameIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const lastImageCapture = useRef<string>('');
 

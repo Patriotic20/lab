@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from app.models.quiz.model import Quiz
     from app.models.subject_teacher.model import SubjectTeacher
     from app.models.results.model import Result
+    from app.models.yakuniy.model import Yakuniy
 
 
 class Subject(Base, IdIntPk, TimestampMixin):
@@ -36,6 +37,11 @@ class Subject(Base, IdIntPk, TimestampMixin):
 
     results: Mapped[list["Result"]] = relationship(
         "Result", 
+        back_populates="subject"
+    )
+
+    yakuniy_results: Mapped[list["Yakuniy"]] = relationship(
+        "Yakuniy", 
         back_populates="subject"
     )
 

@@ -12,16 +12,20 @@ import {
     TableRow,
 } from '@/components/ui/Table';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { Loader2, Search, ArrowLeft, CheckCircle2, XCircle, Pencil, Trash2, FilterX } from 'lucide-react';
+import { Loader2, Search, ArrowLeft, CheckCircle2, XCircle, Pencil, Trash2, FilterX, Download, FolderEdit } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Combobox } from '@/components/ui/Combobox';
 import { useStudents, useDeleteStudent } from '@/hooks/useStudents';
 import { useUserResults } from '@/hooks/useResults';
 import { useGroups } from '@/hooks/useGroups';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { HemisImportModal } from '@/components/HemisImportModal';
+import { ChangeGroupModal } from '@/components/ChangeGroupModal';
 
 const StudentsPage = () => {
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+    const [studentToChangeGroup, setStudentToChangeGroup] = useState<Student | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
     const [currentPage, setCurrentPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
@@ -92,6 +96,10 @@ const StudentsPage = () => {
                     <p className="mt-0.5 text-sm text-muted-foreground">Talabalar ro'yxati va ma'lumotlarini boshqarish</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => setIsImportModalOpen(true)}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Hemisdan Import
+                    </Button>
                     <div className="w-[180px]">
                         <Combobox
                             options={groupOptions}
@@ -151,6 +159,17 @@ const StudentsPage = () => {
                                         <TableCell>{new Date(student.created_at).toLocaleDateString()}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    title="Guruhni o'zgartirish"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setStudentToChangeGroup(student);
+                                                    }}
+                                                >
+                                                    <FolderEdit className="h-4 w-4" />
+                                                </Button>
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
@@ -214,6 +233,17 @@ const StudentsPage = () => {
                 confirmText={cascadeWarnings.length > 0 ? "Ha, majburiy o'chirish" : "O'chirish"}
                 cancelText="Bekor qilish"
                 variant="danger"
+            />
+
+            <HemisImportModal 
+                isOpen={isImportModalOpen} 
+                onClose={() => setIsImportModalOpen(false)} 
+            />
+
+            <ChangeGroupModal
+                isOpen={!!studentToChangeGroup}
+                onClose={() => setStudentToChangeGroup(null)}
+                student={studentToChangeGroup}
             />
         </div>
     );

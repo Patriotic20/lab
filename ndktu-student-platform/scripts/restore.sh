@@ -8,23 +8,11 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-ROOT_MASTER_ENV="$(dirname "$PROJECT_DIR")/.env"
-ROOT_ENV="$PROJECT_DIR/.env"
-BACKEND_ENV="$PROJECT_DIR/backend/.env"
+ENV_FILE="$PROJECT_DIR/backend/.env"
 DB_CONTAINER="database"
 
-# Try to load from master root .env first, then sub-project root, then backend .env
-ENV_FILE=""
-if [ -f "$ROOT_MASTER_ENV" ]; then
-    ENV_FILE="$ROOT_MASTER_ENV"
-elif [ -f "$ROOT_ENV" ]; then
-    ENV_FILE="$ROOT_ENV"
-elif [ -f "$BACKEND_ENV" ]; then
-    ENV_FILE="$BACKEND_ENV"
-fi
-
-if [ -z "$ENV_FILE" ]; then
-    echo "❌ Neither .env nor backend/.env found"
+if [ ! -f "$ENV_FILE" ]; then
+    echo "❌ .env file not found at $ENV_FILE"
     exit 1
 fi
 
@@ -47,13 +35,7 @@ fi
 
 BACKUP_FILE="$1"
 if [[ "$BACKUP_FILE" != /* ]]; then
-    # First try relative to current PWD
-    if [ -f "$BACKUP_FILE" ]; then
-        BACKUP_FILE="$(realpath "$BACKUP_FILE")"
-    else
-        # Fallback to PROJECT_DIR relative
-        BACKUP_FILE="$PROJECT_DIR/$BACKUP_FILE"
-    fi
+    BACKUP_FILE="$PROJECT_DIR/$BACKUP_FILE"
 fi
 
 if [ ! -f "$BACKUP_FILE" ]; then
@@ -107,7 +89,7 @@ if [ -z "$BACKEND_CONTAINER" ]; then
     exit 1
 fi
 
-echo "🐳 Running alembic upgrade head in container $BACKEND_CONTAINER..."
-docker exec -i "$BACKEND_CONTAINER" sh -c "cd /face && uv run alembic upgrade head"
+echo "🐳 Running alembic stamp head in container $BACKEND_CONTAINER..."
+docker exec -i "$BACKEND_CONTAINER" sh -c "cd /face/app && uv run alembic stamp head"
 
 echo "✅ Stamp complete!"

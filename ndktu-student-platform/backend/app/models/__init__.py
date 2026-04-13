@@ -17,6 +17,8 @@ __all__ = [
     "Result",
     "UserAnswers",
     "GroupTeacher",
+    "Yakuniy",
+    "HemisTransaction",
 ]
 
 
@@ -40,3 +42,5 @@ from .quiz_questions.model import QuizQuestion
 from .results.model import Result
 from .user_answers.model import UserAnswers
 from .group_teachers.model import GroupTeacher
+from .yakuniy.model import Yakuniy
+from .hemis_transaction.model import HemisTransaction

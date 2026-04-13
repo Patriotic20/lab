@@ -64,8 +64,13 @@ export const studentService = {
         return response.data;
     },
 
-    updateStudent: async (id: number, data: StudentCreateRequest): Promise<Student> => {
+    updateStudent: async (id: number, data: Partial<StudentCreateRequest>): Promise<Student> => {
         const response = await api.put<Student>(`/students/${id}`, data);
+        return response.data;
+    },
+    
+    updateStudentGroup: async (id: number, group_id: number): Promise<Student> => {
+        const response = await api.put<Student>(`/students/${id}`, { group_id });
         return response.data;
     },
 

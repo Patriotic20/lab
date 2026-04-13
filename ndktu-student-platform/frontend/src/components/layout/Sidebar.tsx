@@ -17,8 +17,6 @@ import {
     GraduationCap,
     BookOpen,
     FileText,
-    Shield,
-    Key,
     Building2,
     Layers,
     UsersRound,
@@ -26,6 +24,8 @@ import {
     PlayCircle,
     X,
     Trophy,
+    ClipboardList,
+    LogIn,
 } from 'lucide-react';
 import { cn } from '@/utils/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -69,14 +69,7 @@ const adminSections: NavSection[] = [
         items: [
             { name: 'Foydalanuvchilar', href: '/users', icon: Users },
             { name: "O'qituvchilar", href: '/teachers', icon: GraduationCap },
-            { name: 'Talabalar', href: '/students', icon: GraduationCap },
-        ],
-    },
-    {
-        label: 'Kirish huquqlari',
-        items: [
-            { name: 'Rollar', href: '/roles', icon: Shield },
-            { name: 'Ruxsatlar', href: '/permissions', icon: Key },
+            { name: 'Talabalar Foydalanuvchilar', href: '/student-users', icon: Users },
         ],
     },
     {
@@ -86,6 +79,13 @@ const adminSections: NavSection[] = [
             { name: 'Testlar', href: '/quizzes', icon: BookOpen },
             { name: 'Test ishlash', href: '/quiz-test', icon: PlayCircle },
             { name: 'Natijalar', href: '/results', icon: FileText },
+            { name: 'Yakuniy', href: '/yakuniy', icon: ClipboardList },
+        ],
+    },
+    {
+        label: 'Xavfsizlik',
+        items: [
+            { name: 'HEMIS Kirish', href: '/hemis-transactions', icon: LogIn },
         ],
     },
 ];

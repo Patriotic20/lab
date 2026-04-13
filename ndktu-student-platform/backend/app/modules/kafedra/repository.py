@@ -2,7 +2,7 @@ import logging
 
 from fastapi import HTTPException, status
 from app.models.kafedra.model import Kafedra
-from sqlalchemy import func, select
+from sqlalchemy import func, select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .schemas import (
@@ -60,13 +60,16 @@ class KafedraRepository:
     async def list_kafedras(
         self, session: AsyncSession, request: KafedraListRequest
     ) -> KafedraListResponse:
-        stmt = select(Kafedra).offset(request.offset).limit(request.limit)
+        stmt = select(Kafedra)
 
         if request.name:
             stmt = stmt.where(Kafedra.name.ilike(f"%{request.name}%"))
         
         if request.faculty_id:
             stmt = stmt.where(Kafedra.faculty_id == request.faculty_id)
+
+        stmt = stmt.order_by(desc(Kafedra.created_at))
+        stmt = stmt.offset(request.offset).limit(request.limit)
 
         result = await session.execute(stmt)
         kafedras = result.scalars().all()

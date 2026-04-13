@@ -9,9 +9,9 @@ import UsersPage from '@/pages/UsersPage';
 import QuizzesPage from '@/pages/QuizzesPage';
 import ResultsPage from '@/pages/ResultsPage';
 import TeachersPage from '@/pages/TeachersPage';
-import RolesPage from '@/pages/RolesPage';
-import RolePermissionsPage from '@/pages/RolePermissionsPage';
-import PermissionsPage from '@/pages/PermissionsPage';
+import HemisTransactionsPage from '@/pages/HemisTransactionsPage';
+import StudentUsersPage from '@/pages/StudentUsersPage';
+import HemisSyncPage from '@/pages/HemisSyncPage';
 import FacultyPage from '@/pages/FacultyPage';
 import KafedraPage from '@/pages/KafedraPage';
 import GroupsPage from '@/pages/GroupsPage';
@@ -24,6 +24,7 @@ import UserAnswersPage from '@/pages/UserAnswersPage';
 import TeacherGroupsPage from '@/pages/TeacherGroupsPage';
 import TeacherSubjectsPage from '@/pages/TeacherSubjectsPage';
 import TeacherRankingPage from '@/pages/TeacherRankingPage';
+import YakuniyPage from '@/pages/YakuniyPage';
 
 const ProtectedRoute = () => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -85,13 +86,15 @@ function App() {
                 <Route path="/users" element={<RoleRoute allowedRoles={['admin']}><UsersPage /></RoleRoute>} />
                 <Route path="/teachers" element={<RoleRoute allowedRoles={['admin']}><TeachersPage /></RoleRoute>} />
                 <Route path="/teacher-ranking" element={<RoleRoute allowedRoles={['admin', 'teacher']}><TeacherRankingPage /></RoleRoute>} />
-                <Route path="/roles" element={<RoleRoute allowedRoles={['admin']}><RolesPage /></RoleRoute>} />
-                <Route path="/roles/:id/permissions" element={<RoleRoute allowedRoles={['admin']}><RolePermissionsPage /></RoleRoute>} />
-                <Route path="/permissions" element={<RoleRoute allowedRoles={['admin']}><PermissionsPage /></RoleRoute>} />
+
                 <Route path="/faculties" element={<RoleRoute allowedRoles={['admin']}><FacultyPage /></RoleRoute>} />
                 <Route path="/kafedras" element={<RoleRoute allowedRoles={['admin']}><KafedraPage /></RoleRoute>} />
                 <Route path="/groups" element={<RoleRoute allowedRoles={['admin']}><GroupsPage /></RoleRoute>} />
                 <Route path="/students" element={<RoleRoute allowedRoles={['admin']}><StudentsPage /></RoleRoute>} />
+                <Route path="/student-users" element={<RoleRoute allowedRoles={['admin']}><StudentUsersPage /></RoleRoute>} />
+                <Route path="/admin/hemis-sync" element={<RoleRoute allowedRoles={['admin']}><HemisSyncPage /></RoleRoute>} />
+                <Route path="/yakuniy" element={<RoleRoute allowedRoles={['admin']}><YakuniyPage /></RoleRoute>} />
+                <Route path="/hemis-transactions" element={<RoleRoute allowedRoles={['admin']}><HemisTransactionsPage /></RoleRoute>} />
 
                 {/* Admin + Teacher routes */}
                 <Route path="/subjects" element={<RoleRoute allowedRoles={['admin', 'teacher']}><SubjectsPage /></RoleRoute>} />

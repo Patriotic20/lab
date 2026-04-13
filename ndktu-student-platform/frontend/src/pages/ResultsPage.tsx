@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Pagination } from '@/components/ui/Pagination';
-import { useResults } from '@/hooks/useResults';
+import { useResults, useDeleteResult } from '@/hooks/useResults';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
     Table,
     TableBody,
@@ -11,7 +12,7 @@ import {
     TableRow,
 } from '@/components/ui/Table';
 import { Card, CardContent } from '@/components/ui/Card';
-import { Loader2, FileText, X, FileSpreadsheet } from 'lucide-react';
+import { Loader2, FileText, X, FileSpreadsheet, Trash2 } from 'lucide-react';
 import { Combobox } from '@/components/ui/Combobox';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -29,7 +30,26 @@ const ResultsPage = () => {
 
     // Role detection — backend enforces access, this is only for UI decisions
     const isStudent = user?.roles?.some(role => role.name.toLowerCase() === 'student');
+    const isAdmin = user?.roles?.some(role => role.name.toLowerCase() === 'admin');
     const isAdminOrTeacher = !isStudent;
+
+    const { mutate: deleteResult, isPending: isDeleting } = useDeleteResult();
+    const [resultToDelete, setResultToDelete] = useState<number | null>(null);
+
+    const handleDeleteClick = (e: React.MouseEvent, id: number) => {
+        e.stopPropagation();
+        setResultToDelete(id);
+    };
+
+    const handleConfirmDelete = () => {
+        if (resultToDelete) {
+            deleteResult(resultToDelete, {
+                onSuccess: () => {
+                    setResultToDelete(null);
+                }
+            });
+        }
+    };
 
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 10;
@@ -302,6 +322,7 @@ const ResultsPage = () => {
                                     <TableHead>Ball</TableHead>
                                     <TableHead>To'g'ri / Jami</TableHead>
                                     <TableHead>Sana</TableHead>
+                                    {isAdmin && <TableHead className="w-[80px]">Harakat</TableHead>}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -344,6 +365,19 @@ const ResultsPage = () => {
                                         </TableCell>
                                         <TableCell>{result.correct_answers} / {result.correct_answers + result.wrong_answers}</TableCell>
                                         <TableCell>{new Date(result.created_at).toLocaleString(undefined, { hour12: false })}</TableCell>
+                                        {isAdmin && (
+                                            <TableCell>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600"
+                                                    onClick={(e) => handleDeleteClick(e, result.id)}
+                                                    disabled={isDeleting}
+                                                >
+                                                    {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                                </Button>
+                                            </TableCell>
+                                        )}
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -351,6 +385,20 @@ const ResultsPage = () => {
                     )}
                 </CardContent>
             </Card>
+
+
+
+            <ConfirmDialog
+                isOpen={resultToDelete !== null}
+                onClose={() => setResultToDelete(null)}
+                onConfirm={handleConfirmDelete}
+                title="Natijani o'chirish"
+                description="Haqiqatan ham ushbu natijani va unga tegishli barcha javoblarni o'chirib tashlamoqchimisiz? Bu amalni ortga qaytarib bo'lmaydi."
+                confirmText="O'chirish"
+                cancelText="Bekor qilish"
+                isLoading={isDeleting}
+                variant="danger"
+            />
 
             <Pagination
                 currentPage={currentPage}
