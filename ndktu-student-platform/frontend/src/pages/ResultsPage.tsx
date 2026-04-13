@@ -33,6 +33,7 @@ const ResultsPage = () => {
     const isAdmin = user?.roles?.some(role => role.name.toLowerCase() === 'admin');
     const isAdminOrTeacher = !isStudent;
 
+
     const { mutate: deleteResult, isPending: isDeleting } = useDeleteResult();
     const [resultToDelete, setResultToDelete] = useState<number | null>(null);
 
@@ -50,6 +51,7 @@ const ResultsPage = () => {
             });
         }
     };
+
 
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 10;
@@ -387,7 +389,6 @@ const ResultsPage = () => {
             </Card>
 
 
-
             <ConfirmDialog
                 isOpen={resultToDelete !== null}
                 onClose={() => setResultToDelete(null)}
@@ -399,6 +400,7 @@ const ResultsPage = () => {
                 isLoading={isDeleting}
                 variant="danger"
             />
+
 
             <Pagination
                 currentPage={currentPage}

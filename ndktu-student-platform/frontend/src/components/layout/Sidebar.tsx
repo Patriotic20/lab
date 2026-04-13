@@ -69,6 +69,7 @@ const adminSections: NavSection[] = [
         items: [
             { name: 'Foydalanuvchilar', href: '/users', icon: Users },
             { name: "O'qituvchilar", href: '/teachers', icon: GraduationCap },
+            { name: 'Talabalar', href: '/students', icon: GraduationCap },
             { name: 'Talabalar Foydalanuvchilar', href: '/student-users', icon: Users },
         ],
     },

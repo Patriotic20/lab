@@ -26,6 +26,7 @@ import TeacherSubjectsPage from '@/pages/TeacherSubjectsPage';
 import TeacherRankingPage from '@/pages/TeacherRankingPage';
 import YakuniyPage from '@/pages/YakuniyPage';
 
+
 const ProtectedRoute = () => {
   const { isAuthenticated, isLoading } = useAuth();
 
