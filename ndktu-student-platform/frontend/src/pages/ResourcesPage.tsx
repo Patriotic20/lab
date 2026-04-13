@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useResources, useCreateResource, useUpdateResource, useDeleteResource } from '@/hooks/useResources';
 import { useTeachers } from '@/hooks/useTeachers';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
@@ -65,13 +65,13 @@ export default function ResourcesPage() {
     const [page, setPage] = useState(1);
     const pageSize = 10;
 
-    const { data, isLoading } = useResources(page, pageSize);
+    const { data, isLoading, isError, error } = useResources(page, pageSize);
     const createMutation = useCreateResource();
     const updateMutation = useUpdateResource();
     const deleteMutation = useDeleteResource();
 
     // Teachers list for subject_teacher selection (admin only)
-    const { data: teachersData } = useTeachers(1, 500);
+    const { data: teachersData } = useTeachers(1, 500, undefined, isAdmin);
 
     // ── Modal state ──────────────────────────────────────────────────────────
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -183,6 +183,18 @@ export default function ResourcesPage() {
                 <div className="flex h-48 items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
+            ) : isError ? (
+                <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                        <BookOpen className="mb-4 h-14 w-14 opacity-20 text-destructive" />
+                        <h3 className="text-lg font-semibold text-destructive">Yuklab bo'lmadi</h3>
+                        <p className="text-sm mt-1 text-muted-foreground">
+                            {(error as any)?.response?.status === 403
+                                ? 'Sizda bu sahifani ko\'rish uchun ruxsat yo\'q. Administrator bilan bog\'laning.'
+                                : 'Server bilan bog\'lanishda xatolik yuz berdi. Qayta urinib ko\'ring.'}
+                        </p>
+                    </CardContent>
+                </Card>
             ) : !data || data.resources.length === 0 ? (
                 <Card>
                     <CardContent className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
@@ -281,7 +293,7 @@ export default function ResourcesPage() {
                                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                             >
                                 <option value="">Tanlang...</option>
-                                {teachersData?.teachers.flatMap(t =>
+                                {(teachersData?.teachers || []).flatMap(t =>
                                     t.subject_teachers?.map((st: any) => (
                                         <option key={st.id} value={st.id}>
                                             #{st.id} — {t.full_name} / {st.subject?.name ?? '?'}
@@ -360,7 +372,7 @@ export default function ResourcesPage() {
                     <div className="flex justify-end gap-2">
                         <Button variant="outline" onClick={() => setDeleteTarget(null)}>Bekor</Button>
                         <Button
-                            variant="destructive"
+                            variant="danger"
                             onClick={handleDelete}
                             isLoading={deleteMutation.isPending}
                         >

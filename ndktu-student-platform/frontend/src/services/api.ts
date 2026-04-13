@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { API_BASE_URL } from '@/config/env';
 
 const api = axios.create({
-    baseURL: '', // Routes served directly without /api prefix
+    baseURL: API_BASE_URL, // Backend API base URL (e.g., http://localhost:8000/api)
     headers: {
         'Content-Type': 'application/json',
     },

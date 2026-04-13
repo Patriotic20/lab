@@ -116,10 +116,10 @@ async def init_db(app: FastAPI, session: AsyncSession):
         # Admin gets ALL permissions
         admin_perms = discovered_permissions
 
-        # Teacher gets questions, quizzes, statistics, results, subjects
+        # Teacher gets questions, quizzes, statistics, results, subjects, resources
         teacher_perms = {
             p for p in discovered_permissions
-            if any(keyword in p for keyword in ("question", "quiz", "statistics", "result", "teacher", "subject"))
+            if any(keyword in p for keyword in ("question", "quiz", "statistics", "result", "teacher", "subject", "resource"))
             and not p.startswith("delete:result")
         }
 
@@ -128,7 +128,7 @@ async def init_db(app: FastAPI, session: AsyncSession):
         if "user:me" in discovered_permissions:
             teacher_perms.add("user:me")
 
-        # Student gets read-only quiz/result + quiz process + user:me
+        # Student gets read-only quiz/result + quiz process + user:me + read:resource
         student_perms = {
             p for p in discovered_permissions
             if (
@@ -136,6 +136,7 @@ async def init_db(app: FastAPI, session: AsyncSession):
                 or p == "read:result"
                 or p.startswith("quiz_process:")
                 or p == "user_answers:read"
+                or p == "read:resource"
             )
         }
         if "user:me" in discovered_permissions:

@@ -64,7 +64,7 @@ class ForceHTTPSMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(ForceHTTPSMiddleware)
 
-app.include_router(router)
+app.include_router(router, prefix="/api")
 admin = Admin(
     app, engine=db_helper.engine, authentication_backend=authentication_backend
 )
