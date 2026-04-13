@@ -559,11 +559,11 @@ const QuizModal = ({
 
     // When a teacher (or selected user) is known, filter to their assigned subjects/groups
     // Otherwise show everything
-    const subjectOptions = effectiveUserId && assignedSubjectsData
+    const subjectOptions = (isTeacher && effectiveUserId && assignedSubjectsData)
         ? assignedSubjectsData.subject_teachers.map(st => ({ value: st.subject_id.toString(), label: st.subject.name }))
         : allSubjects.map(s => ({ value: s.id.toString(), label: s.name }));
 
-    const groupOptions = effectiveUserId && assignedGroupsData
+    const groupOptions = (isTeacher && effectiveUserId && assignedGroupsData)
         ? assignedGroupsData.group_teachers.map(gt => ({ value: gt.group_id.toString(), label: gt.group.name }))
         : allGroups.map(g => ({ value: g.id.toString(), label: g.name }));
 
