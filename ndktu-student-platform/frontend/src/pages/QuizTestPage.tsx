@@ -64,6 +64,10 @@ const QuizTestPage = () => {
     // Results phase
     const [results, setResults] = useState<EndQuizResponse | null>(null);
 
+    // Admin controls
+    const isAdmin = user?.roles?.some(role => role.name.toLowerCase() === 'admin');
+    const [adminProctoringEnabled, setAdminProctoringEnabled] = useState(false);
+
     const startQuizMutation = useStartQuiz();
     const endQuizMutation = useEndQuiz();
 
@@ -482,10 +486,13 @@ const QuizTestPage = () => {
 
     const timeWarning = timeLeft < 60;
 
+    const isMasofaviy = user?.student?.education_form?.toLowerCase().includes('masofaviy');
+    const shouldProctor = isAdmin ? adminProctoringEnabled : (ENABLE_QUIZ_PROCTORING && isMasofaviy);
+
     return (
         <div className="space-y-6 max-w-4xl mx-auto">
             {/* Video Monitoring Component */}
-            {ENABLE_QUIZ_PROCTORING && (
+            {shouldProctor && (
                 <QuizVideoMonitoring
                     active={phase === 'quiz' && !cheatingDetected}
                     onCheatingDetected={handleDifferentPersonDetected}
@@ -496,17 +503,45 @@ const QuizTestPage = () => {
             )}
 
             {/* Header with timer and progress */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">{quizData.title}</h1>
-                    <p className="text-sm text-muted-foreground">
-                        Savol: {currentQuestionIndex + 1} / {totalQuestions} • {answeredCount} javob berildi
-                    </p>
+            <div className="flex items-center justify-between bg-card p-4 rounded-xl shadow-sm border border-border">
+                <div className="flex items-center gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight">{quizData.title}</h1>
+                        <p className="text-sm text-muted-foreground">
+                            Savol: {currentQuestionIndex + 1} / {totalQuestions} • {answeredCount} javob berildi
+                        </p>
+                    </div>
                 </div>
-                <div className={`flex items-center gap-2 rounded-lg px-4 py-2 text-lg font-mono font-bold ${timeWarning ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-muted'
-                    }`}>
-                    <Clock className="h-5 w-5" />
-                    {formatTime(timeLeft)}
+                
+                <div className="flex items-center gap-4">
+                    {/* Admin Proctoring Toggle */}
+                    {isAdmin && (
+                        <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">
+                            <span className="text-[10px] font-bold text-primary uppercase leading-none">Admin Nazorat:</span>
+                            <button
+                                onClick={() => setAdminProctoringEnabled(!adminProctoringEnabled)}
+                                className={cn(
+                                    "relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none",
+                                    adminProctoringEnabled ? "bg-primary" : "bg-gray-200"
+                                )}
+                            >
+                                <span
+                                    className={cn(
+                                        "inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform",
+                                        adminProctoringEnabled ? "translate-x-5" : "translate-x-1"
+                                    )}
+                                />
+                            </button>
+                        </div>
+                    )}
+
+                    <div className={cn(
+                        "flex items-center gap-2 rounded-lg px-4 py-2 text-lg font-mono font-bold transition-all duration-300",
+                        timeWarning ? "bg-red-500 text-white animate-pulse shadow-lg shadow-red-200" : "bg-muted text-foreground"
+                    )}>
+                        <Clock className={cn("h-5 w-5", timeWarning ? "animate-spin-slow" : "")} />
+                        {formatTime(timeLeft)}
+                    </div>
                 </div>
             </div>
 

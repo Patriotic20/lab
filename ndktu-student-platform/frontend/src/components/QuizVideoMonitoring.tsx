@@ -43,7 +43,7 @@ export function QuizVideoMonitoring({
         }
     }, [onCheatingDetected, onDifferentPersonDetected]);
 
-    const { state, startMonitoring, stopMonitoring } = useVideoMonitoring({
+    const { state, startMonitoring, stopMonitoring, videoRef } = useVideoMonitoring({
         faceDetectionServiceUrl,
         onMultipleFacesDetected: (img) => handleViolation(img, 'multiple'),
         onDifferentPersonDetected: (img) => handleViolation(img, 'different'),
@@ -69,19 +69,26 @@ export function QuizVideoMonitoring({
 
     const isIssue = state.isDifferentPerson || state.lastFaceCount > 1;
     const isOk = state.isConnected && !isIssue && state.lastFaceCount === 1;
+    const hasError = !!state.error;
 
     return (
         <div className="fixed bottom-6 right-6 z-50 group">
-            <div className={`relative transition-all duration-500 ease-in-out transform ${state.isActive ? 'scale-100 opacity-100' : 'scale-75 opacity-0'}`}>
+            {/* Hidden video to ensure events fire reliably in all browsers */}
+            <video ref={videoRef} className="hidden" playsInline muted autoPlay />
+
+            <div className={`relative transition-all duration-500 ease-in-out transform ${(state.isActive || hasError) ? 'scale-100 opacity-100' : 'scale-75 opacity-0'}`}>
                 
                 {/* Minimalist Icon Bubble */}
                 <div className={`relative w-16 h-16 rounded-full flex items-center justify-center shadow-lg border-2 transition-all duration-500 ${
+                    hasError ? 'border-red-500 text-red-500 bg-red-50' :
                     !state.isConnected ? 'border-gray-200 text-gray-400 bg-white' :
                     isIssue ? 'border-red-500 text-red-500 bg-red-50' :
                     isOk ? 'border-green-500 text-green-500 bg-green-50' :
                     'border-primary/30 text-primary bg-primary/5'
                 }`}>
-                    {!state.isConnected ? (
+                    {hasError ? (
+                        <AlertTriangle className="h-7 w-7 text-red-500" />
+                    ) : !state.isConnected ? (
                         <UserSearch className="h-7 w-7 animate-pulse" />
                     ) : isIssue ? (
                         <UserX className="h-7 w-7 animate-bounce" />
@@ -90,7 +97,7 @@ export function QuizVideoMonitoring({
                     )}
 
                     {/* Warning Counter Badge */}
-                    {warnings > 0 && (
+                    {warnings > 0 && !hasError && (
                         <div className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center border-2 border-white shadow-sm">
                             {warnings}
                         </div>
@@ -98,7 +105,7 @@ export function QuizVideoMonitoring({
                 </div>
 
                 {/* Warning Text Banner */}
-                {showWarningText && (
+                {showWarningText && !hasError && (
                     <div className="absolute bottom-full mb-4 right-0 w-64 bg-red-600 text-white p-3 rounded-xl shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-300">
                         <div className="flex items-start gap-2">
                             <AlertTriangle className="h-4 w-4 shrink-0" />
@@ -117,20 +124,26 @@ export function QuizVideoMonitoring({
                 <div className="absolute right-full mr-4 bottom-0 w-44 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-500 translate-x-4 group-hover:translate-x-0">
                     <div className="bg-white/95 backdrop-blur-md rounded-2xl p-3 shadow-xl border border-gray-100">
                         <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-50">
-                            <UserCheck className="h-3.5 w-3.5 text-primary" />
+                            {hasError ? <AlertTriangle className="h-3.5 w-3.5 text-red-500" /> : <UserCheck className="h-3.5 w-3.5 text-primary" />}
                             <span className="text-[11px] font-bold text-gray-800">Tizim holati</span>
                         </div>
                         <div className="space-y-1.5">
                             <div className="flex justify-between items-center text-[10px]">
                                 <span className="text-gray-500">Holat:</span>
-                                <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${isOk ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                    {isOk ? 'Normal' : 'Xatolik'}
+                                <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${hasError || isIssue ? 'bg-red-100 text-red-700' : isOk ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                                    {hasError ? 'Xatolik' : isOk ? 'Normal' : isIssue ? 'Qoida buzilishi' : 'Ulanmoqda'}
                                 </span>
                             </div>
-                            <div className="flex justify-between text-[10px]">
-                                <span className="text-gray-500">Yuzlar:</span>
-                                <span className="font-bold text-gray-700">{state.lastFaceCount}</span>
-                            </div>
+                            {hasError ? (
+                                <div className="text-[10px] text-red-600 mt-1 leading-tight">
+                                    {state.error}
+                                </div>
+                            ) : (
+                                <div className="flex justify-between text-[10px]">
+                                    <span className="text-gray-500">Yuzlar:</span>
+                                    <span className="font-bold text-gray-700">{state.lastFaceCount}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
