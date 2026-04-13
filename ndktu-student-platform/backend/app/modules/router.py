@@ -17,6 +17,7 @@ from .user_answers.router import router as user_answers_router
 from .subject.router import router as subject_router
 from .student.router import router as student_router
 from .yakuniy.router import router as yakuniy_router
+from .resource.router import router as resource_router
 
 router = APIRouter()
 
@@ -37,3 +38,4 @@ router.include_router(user_answers_router)
 router.include_router(subject_router)
 router.include_router(student_router)
 router.include_router(yakuniy_router)
+router.include_router(resource_router)

@@ -26,6 +26,7 @@ import {
     Trophy,
     ClipboardList,
     LogIn,
+    Library,
 } from 'lucide-react';
 import { cn } from '@/utils/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -81,6 +82,7 @@ const adminSections: NavSection[] = [
             { name: 'Test ishlash', href: '/quiz-test', icon: PlayCircle },
             { name: 'Natijalar', href: '/results', icon: FileText },
             { name: 'Yakuniy', href: '/yakuniy', icon: ClipboardList },
+            { name: 'Resurslar', href: '/resources', icon: Library },
         ],
     },
     {
@@ -104,6 +106,7 @@ const teacherSections: NavSection[] = [
         items: [
             { name: 'Savollar', href: '/questions', icon: FileQuestion },
             { name: 'Natijalar', href: '/results', icon: FileText },
+            { name: 'Resurslar', href: '/resources', icon: Library },
         ],
     },
 ];
@@ -114,6 +117,7 @@ const studentSections: NavSection[] = [
         items: [
             { name: 'Test ishlash', href: '/quiz-test', icon: PlayCircle },
             { name: 'Natijalar', href: '/results', icon: FileText },
+            { name: 'Resurslar', href: '/resources', icon: Library },
         ],
     },
 ];

@@ -17,6 +17,7 @@ from app.models.results.view import ResultView
 from app.models.user_answers.view import UserAnswersView
 from app.models.group_teachers.view import GroupTeacherView
 from app.models.yakuniy.view import YakuniyView
+from app.models.resource.view import ResourceView
 from sqladmin import Admin
 
 
@@ -40,3 +41,4 @@ def register_models(admin: Admin):
     admin.add_view(UserAnswersView)
     admin.add_view(GroupTeacherView)
     admin.add_view(YakuniyView)
+    admin.add_view(ResourceView)

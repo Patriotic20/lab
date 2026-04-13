@@ -19,6 +19,7 @@ __all__ = [
     "GroupTeacher",
     "Yakuniy",
     "HemisTransaction",
+    "Resource",
 ]
 
 
@@ -44,3 +45,4 @@ from .user_answers.model import UserAnswers
 from .group_teachers.model import GroupTeacher
 from .yakuniy.model import Yakuniy
 from .hemis_transaction.model import HemisTransaction
+from .resource.model import Resource

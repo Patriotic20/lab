@@ -25,6 +25,7 @@ import TeacherGroupsPage from '@/pages/TeacherGroupsPage';
 import TeacherSubjectsPage from '@/pages/TeacherSubjectsPage';
 import TeacherRankingPage from '@/pages/TeacherRankingPage';
 import YakuniyPage from '@/pages/YakuniyPage';
+import ResourcesPage from '@/pages/ResourcesPage';
 
 
 const ProtectedRoute = () => {
@@ -96,6 +97,9 @@ function App() {
                 <Route path="/admin/hemis-sync" element={<RoleRoute allowedRoles={['admin']}><HemisSyncPage /></RoleRoute>} />
                 <Route path="/yakuniy" element={<RoleRoute allowedRoles={['admin']}><YakuniyPage /></RoleRoute>} />
                 <Route path="/hemis-transactions" element={<RoleRoute allowedRoles={['admin']}><HemisTransactionsPage /></RoleRoute>} />
+
+                {/* Admin + Teacher routes */}
+                <Route path="/resources" element={<RoleRoute allowedRoles={['admin', 'teacher', 'student']}><ResourcesPage /></RoleRoute>} />
 
                 {/* Admin + Teacher routes */}
                 <Route path="/subjects" element={<RoleRoute allowedRoles={['admin', 'teacher']}><SubjectsPage /></RoleRoute>} />
