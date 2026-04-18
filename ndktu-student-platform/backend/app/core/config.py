@@ -15,6 +15,18 @@ class ServerConfig(BaseModel):
     host: str
     port: int
     reload: bool = True
+    # When True, Swagger / ReDoc / OpenAPI endpoints are disabled at the app level.
+    # Keep False in dev; set APP_CONFIG__SERVER__IS_PROD=True in production.
+    is_prod: bool = False
+
+    @field_validator("reload", "is_prod", mode="before")
+    @classmethod
+    def coerce_server_bool(cls, v: Any) -> Any:
+        if v == "":
+            return False
+        if isinstance(v, str):
+            return v.strip().lower() in {"1", "true", "yes", "on"}
+        return v
 
 
 class JwtConfig(BaseModel):

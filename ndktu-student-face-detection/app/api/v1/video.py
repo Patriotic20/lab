@@ -3,10 +3,11 @@ POST /v1/video/analyze — detects whether a video contains a frame
 with exactly two simultaneous human faces.
 """
 
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, Depends, File, UploadFile
 
 from app.core.exceptions import NoFileProvidedError
 from app.core.logging import get_logger
+from app.core.security import verify_internal_token
 from app.models.schemas import AnalyzeVideoResponse
 from app.services import video_service
 from app.utils.file_utils import validate_and_read
@@ -19,8 +20,10 @@ logger = get_logger(__name__)
     "/analyze",
     response_model=AnalyzeVideoResponse,
     summary="Detect whether a video contains exactly two simultaneous faces",
+    dependencies=[Depends(verify_internal_token)],
     responses={
         400: {"description": "Unsupported format or unreadable video"},
+        401: {"description": "Missing or invalid internal token"},
         413: {"description": "File too large"},
         422: {"description": "No file provided"},
     },

@@ -17,6 +17,7 @@ import numpy as np
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.core.logging import get_logger
+from app.core.security import verify_ws_token
 from app.services.video_service import get_detector
 
 router = APIRouter()
@@ -24,15 +25,25 @@ logger = get_logger(__name__)
 
 
 @router.websocket("/stream")
-async def realtime_stream(websocket: WebSocket, image_url: str | None = None) -> None:
+async def realtime_stream(
+    websocket: WebSocket,
+    token: str | None = None,
+    image_url: str | None = None,
+) -> None:
     """
     Real-time face detection over WebSocket.
 
     The browser captures webcam frames and sends them as base64 JPEG strings.
     For every frame the server replies with the detection result.
-    
+
+    Auth: ``?token=<INTERNAL_SERVICE_TOKEN>`` (browsers cannot set custom WS
+    headers, so the shared secret is passed as a query parameter).
     If image_url is provided, it's used as the initial reference face.
     """
+    if not await verify_ws_token(websocket, token):
+        logger.warning("Rejected WebSocket connection from %s: missing/invalid token", websocket.client)
+        return
+
     await websocket.accept()
     detector = get_detector()
     logger.info("WebSocket client connected: %s", websocket.client)

@@ -18,7 +18,12 @@ from app.lifespan.lifespan import lifespan
 # --- Logfire Setup ---
 logfire.configure()
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    docs_url=None if settings.server.is_prod else "/docs",
+    redoc_url=None if settings.server.is_prod else "/redoc",
+    openapi_url=None if settings.server.is_prod else "/openapi.json",
+)
 
 # --- Logfire Instrumentation ---
 logfire.instrument_fastapi(app)

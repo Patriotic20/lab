@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
 
+    # Set to True in production — disables /docs, /redoc, /openapi.json.
+    is_prod: bool = False
+
+    # Shared secret with the main backend. Required on all endpoints.
+    # Value comes from env var INTERNAL_SERVICE_TOKEN.
+    internal_service_token: str
+
     @property
     def max_file_size_bytes(self) -> int:
         return self.max_file_size_mb * 1024 * 1024

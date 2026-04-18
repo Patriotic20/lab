@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.api.router import router
+from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.logging import get_logger, setup_logging
 from app.services import video_service
@@ -36,8 +37,9 @@ app = FastAPI(
     ),
     version="1.0.0",
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None if settings.is_prod else "/docs",
+    redoc_url=None if settings.is_prod else "/redoc",
+    openapi_url=None if settings.is_prod else "/openapi.json",
 )
 
 # ---------------------------------------------------------------------------
