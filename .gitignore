@@ -1,35 +1,68 @@
-# General
+# ── OS ────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 *.log
 
-# IDEs
+# ── IDEs ──────────────────────────────────────────────────────
 .idea/
 .vscode/
 *.swp
 *.swo
 
-# Project specific
-.env
-.venv/
+# ── Python ────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ── Env files (never commit real secrets) ─────────────────────
+.env
+.env.*
+!.env.example
+!.env.template
+
+# ── Node / Frontend ───────────────────────────────────────────
 node_modules/
 dist/
+build/
+.vite/
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+coverage/
 
-# Docker data / Volumes
+# ── Docker ────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ── Persistent data / volumes ─────────────────────────────────
 postgres_data_quiz/
 redis_data/
 pgadmin_data/
+grafana_data/
+loki_data/
+prometheus_data/
+
+# ── App runtime ───────────────────────────────────────────────
+backend/logs/
+frontend/logs/
+backend/uploads/
+
+# ── Backups / dumps / exports ─────────────────────────────────
 backups/
-ndktu-student-platform/backups/
-ndktu-student-platform/backend/logs/
-ndktu-student-platform/backend/uploads/
-ndktu-student-platform/backend/cheating_evidence/
+backup_*.sql
+backup_*.sql.gz
+*.dump
 
-# Ignore sub-project specific local envs
-ndktu-student-platform/backend/.env
-ndktu-student-face-detection/.env
-.env
-
-prompts/
+# ── Generated / tooling artifacts ─────────────────────────────
+repomix-output.xml
+.claude/plans/
+.claude/memory/

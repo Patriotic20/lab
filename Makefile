@@ -8,19 +8,20 @@ help:
 	@echo "║         Available commands (Development & Production)          ║"
 	@echo "╚════════════════════════════════════════════════════════════════╝"
 	@echo ""
-	@echo "DEVELOPMENT (localhost, no nginx):"
+	@echo "DEVELOPMENT (localhost, Traefik on :80, dashboard :8080):"
 	@echo "──────────────────────────────────"
-	@echo "make up               - Start all services (dev, localhost)"
+	@echo "make up               - Start all services (dev)"
 	@echo "make down             - Stop all services"
 	@echo "make restart          - Restart all services"
 	@echo "make logs             - View logs for all services"
 	@echo "make frontend-logs    - View frontend logs"
 	@echo "make backend-logs     - View backend logs"
 	@echo "make face-logs        - View face detection logs"
+	@echo "make traefik-logs     - View Traefik logs"
 	@echo ""
-	@echo "PRODUCTION (with nginx reverse proxy):"
+	@echo "PRODUCTION (Traefik + Let's Encrypt HTTPS):"
 	@echo "────────────────────────────────────"
-	@echo "make prod-up          - Start all services (prod, with nginx)"
+	@echo "make prod-up          - Start all services (prod, HTTPS)"
 	@echo "make prod-down        - Stop all services"
 	@echo "make prod-restart     - Restart all services"
 	@echo "make prod-logs        - View logs for all services"
@@ -61,7 +62,11 @@ backend-logs:
 face-logs:
 	docker compose logs -f face-detection
 
-# Start production services (with nginx reverse proxy)
+# View Traefik logs
+traefik-logs:
+	docker compose logs -f traefik
+
+# Start production services (Traefik + HTTPS)
 prod-up:
 	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
@@ -81,36 +86,27 @@ backup: backup-database backup-logs backup-images
 
 # Backup just the database
 backup-database:
-	./ndktu-student-platform/scripts/backup.sh
+	./scripts/backup.sh
 
 # Backup just the logs
 backup-logs:
-	./ndktu-student-platform/scripts/backup_logs.sh
+	./scripts/backup_logs.sh
 
 # Backup just the images
 backup-images:
-	./ndktu-student-platform/scripts/backup_images.sh
+	./scripts/backup_images.sh
 
 # Restore database from backup file
 restore:
 	@if [ -z "$(FILE)" ]; then echo "Usage: make restore FILE=path/to/backup.sql.gz"; exit 1; fi
-	./ndktu-student-platform/scripts/restore.sh $$(realpath $(FILE))
+	./scripts/restore.sh $$(realpath $(FILE))
 
 # Zero-Downtime Deployment (prod)
 deploy:
-	@echo "🚀 Starting Zero-Downtime Deployment..."
-	@echo "Updating Backend..."
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build backend
-	@echo "Updating Frontend..."
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build frontend
-	@echo "✅ Deployment finished successfully!"
-	docker image prune -f
+	@./scripts/deploy.sh
 
 # Run database migrations
-# Usage: make migrate MSG="your_migration_message"
 migrate:
-	@if [ -z "$(MSG)" ]; then echo "Usage: make migrate MSG='your_migration_message'"; exit 1; fi
-	docker exec nusmt_backend sh -c "uv run alembic -c app/alembic.ini revision --autogenerate -m '$(MSG)'"
-	docker cp nusmt_backend:/face/app/migrations/versions/. ./ndktu-student-platform/backend/app/migrations/versions/
-	docker exec nusmt_backend sh -c "uv run alembic -c app/alembic.ini upgrade head"
-
+	docker exec nusmt_backend sh -c "cd /face/app && uv run alembic revision --autogenerate -m 'add_cheating_image_url'"
+	docker cp nusmt_backend:/face/app/migrations/versions/. ./backend/app/migrations/versions/
+	docker exec nusmt_backend sh -c "cd /face/app && uv run alembic upgrade head"

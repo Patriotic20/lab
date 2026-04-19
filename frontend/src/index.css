@@ -1,0 +1,233 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+@layer base {
+  :root {
+    /* Warm off-white background */
+    --background: hsl(60 9% 97%);
+    --foreground: hsl(230 30% 12%);
+
+    --card: hsl(0 0% 100%);
+    --card-foreground: hsl(230 30% 12%);
+
+    --popover: hsl(0 0% 100%);
+    --popover-foreground: hsl(230 30% 12%);
+
+    /* Blue primary */
+    --primary: hsl(221 83% 53%);
+    --primary-foreground: hsl(0 0% 100%);
+
+    --secondary: hsl(60 9% 93%);
+    --secondary-foreground: hsl(230 30% 20%);
+
+    --muted: hsl(60 6% 94%);
+    --muted-foreground: hsl(230 12% 46%);
+
+    --accent: hsl(221 85% 95%);
+    --accent-foreground: hsl(221 83% 40%);
+
+    --destructive: hsl(0 65% 42%);
+    --destructive-foreground: hsl(0 0% 100%);
+
+    --success: hsl(155 43% 30%);
+    --success-foreground: hsl(0 0% 100%);
+
+    --warning: hsl(42 84% 42%);
+    --warning-foreground: hsl(0 0% 100%);
+
+    --border: hsl(220 13% 88%);
+    --input: hsl(220 13% 88%);
+    --ring: hsl(221 83% 53%);
+
+    /* 12px radius for cards, 8px for inputs/buttons */
+    --radius: 0.75rem;
+
+    --sidebar-width: 15rem;
+    --sidebar-width-collapsed: 3.5rem;
+    --navbar-height: 3.5rem;
+
+    /* Grade colors */
+    --grade-5: hsl(213 65% 38%);
+    --grade-4: hsl(221 83% 45%);
+    --grade-3: hsl(42 84% 38%);
+    --grade-low: hsl(0 65% 42%);
+  }
+
+  .dark {
+    --background: hsl(230 20% 8%);
+    --foreground: hsl(60 9% 93%);
+
+    --card: hsl(230 20% 11%);
+    --card-foreground: hsl(60 9% 93%);
+
+    --popover: hsl(230 20% 11%);
+    --popover-foreground: hsl(60 9% 93%);
+
+    --primary: hsl(221 83% 65%);
+    --primary-foreground: hsl(230 20% 8%);
+
+    --secondary: hsl(230 15% 16%);
+    --secondary-foreground: hsl(60 9% 88%);
+
+    --muted: hsl(230 15% 14%);
+    --muted-foreground: hsl(230 10% 55%);
+
+    --accent: hsl(221 50% 16%);
+    --accent-foreground: hsl(221 83% 70%);
+
+    --destructive: hsl(0 60% 52%);
+    --destructive-foreground: hsl(0 0% 100%);
+
+    --success: hsl(155 40% 48%);
+    --success-foreground: hsl(0 0% 100%);
+
+    --warning: hsl(42 80% 50%);
+    --warning-foreground: hsl(0 0% 100%);
+
+    --border: hsl(230 15% 18%);
+    --input: hsl(230 15% 18%);
+    --ring: hsl(221 83% 65%);
+
+    --grade-5: hsl(213 70% 55%);
+    --grade-4: hsl(221 83% 55%);
+    --grade-3: hsl(42 80% 50%);
+    --grade-low: hsl(0 60% 52%);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    line-height: 1.6;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+}
+
+@layer utilities {
+  .page-container {
+    @apply mx-auto w-full max-w-screen-xl space-y-6;
+  }
+
+  .page-header {
+    @apply flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between;
+  }
+
+  .page-title {
+    font-family: 'Fraunces', Georgia, serif;
+    @apply text-2xl font-semibold tracking-tight text-foreground;
+  }
+
+  .page-description {
+    @apply text-sm text-muted-foreground;
+  }
+
+  .font-display {
+    font-family: 'Fraunces', Georgia, serif;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+
+  /* Badge helpers */
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  .badge-primary {
+    @apply bg-primary/10 text-primary;
+  }
+
+  .badge-success {
+    background-color: hsl(var(--grade-4) / 0.12);
+    color: hsl(var(--grade-4));
+  }
+
+  .badge-destructive {
+    background-color: hsl(var(--grade-low) / 0.12);
+    color: hsl(var(--grade-low));
+  }
+
+  .badge-warning {
+    background-color: hsl(var(--grade-3) / 0.12);
+    color: hsl(var(--grade-3));
+  }
+
+  .badge-muted {
+    @apply bg-muted text-muted-foreground;
+  }
+
+  .section-divider {
+    @apply h-px w-full bg-border;
+  }
+
+  /* Grade badge utility */
+  .grade-badge {
+    font-family: 'JetBrains Mono', monospace;
+    @apply inline-flex items-center justify-center rounded-full font-semibold;
+  }
+}
