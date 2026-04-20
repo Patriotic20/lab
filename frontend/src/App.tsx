@@ -9,6 +9,7 @@ import UsersPage from '@/pages/UsersPage';
 import QuizzesPage from '@/pages/QuizzesPage';
 import ResultsPage from '@/pages/ResultsPage';
 import TeachersPage from '@/pages/TeachersPage';
+import TutorsPage from '@/pages/TutorsPage';
 import HemisTransactionsPage from '@/pages/HemisTransactionsPage';
 import StudentUsersPage from '@/pages/StudentUsersPage';
 import HemisSyncPage from '@/pages/HemisSyncPage';
@@ -91,6 +92,7 @@ function App() {
                 <Route path="/dashboard" element={<RoleRoute allowedRoles={['admin']}><Dashboard /></RoleRoute>} />
                 <Route path="/users" element={<RoleRoute allowedRoles={['admin']}><UsersPage /></RoleRoute>} />
                 <Route path="/teachers" element={<RoleRoute allowedRoles={['admin']}><TeachersPage /></RoleRoute>} />
+                <Route path="/tutors" element={<RoleRoute allowedRoles={['admin']}><TutorsPage /></RoleRoute>} />
                 <Route path="/teacher-ranking" element={<RoleRoute allowedRoles={['admin', 'teacher']}><TeacherRankingPage /></RoleRoute>} />
 
                 <Route path="/faculties" element={<RoleRoute allowedRoles={['admin']}><FacultyPage /></RoleRoute>} />

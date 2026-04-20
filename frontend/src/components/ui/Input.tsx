@@ -8,9 +8,12 @@
  * - Password toggle button is aria-labelled.
  * - Error state uses red ring + red text helper below.
  * - Optional `leftAddon`/`rightAddon` slots for icons inside the field.
+ * - When type="number", native spinner is hidden globally and custom
+ *   ChevronUp/ChevronDown buttons are rendered on the right. Steppers
+ *   respect min/max/step and dispatch a React-observable input event.
  */
-import React, { useState, forwardRef } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import React, { useRef, useState, forwardRef } from 'react';
+import { ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/utils/utils';
 
 interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'prefix'> {
@@ -32,8 +35,35 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
 }, ref) => {
     const [showPassword, setShowPassword] = useState(false);
     const isPassword = type === 'password';
+    const isNumber = type === 'number';
     const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
     const inputId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
+
+    const innerRef = useRef<HTMLInputElement | null>(null);
+
+    const setCombinedRef = (el: HTMLInputElement | null) => {
+        innerRef.current = el;
+        if (typeof ref === 'function') ref(el);
+        else if (ref) (ref as React.MutableRefObject<HTMLInputElement | null>).current = el;
+    };
+
+    const step = (dir: 1 | -1) => {
+        const el = innerRef.current;
+        if (!el || el.disabled || el.readOnly) return;
+        const stepAttr = Number(el.step) > 0 ? Number(el.step) : 1;
+        const current = Number(el.value);
+        const base = Number.isFinite(current) ? current : 0;
+        const next = base + dir * stepAttr;
+        const min = el.min !== '' ? Number(el.min) : -Infinity;
+        const max = el.max !== '' ? Number(el.max) : Infinity;
+        const clamped = Math.min(max, Math.max(min, next));
+        const setter = Object.getOwnPropertyDescriptor(
+            window.HTMLInputElement.prototype,
+            'value',
+        )?.set;
+        setter?.call(el, String(clamped));
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+    };
 
     return (
         <div className="w-full">
@@ -54,7 +84,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
                 )}
 
                 <input
-                    ref={ref}
+                    ref={setCombinedRef}
                     id={inputId}
                     type={inputType}
                     className={cn(
@@ -66,7 +96,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
                         error && 'border-destructive focus-visible:ring-destructive',
                         leftAddon && 'pl-9',
                         (rightAddon || isPassword) && 'pr-9',
-                        className
+                        isNumber && 'pr-8 tabular-nums',
+                        className,
                     )}
                     {...props}
                 />
@@ -82,9 +113,34 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
                     </button>
                 )}
 
-                {rightAddon && !isPassword && (
+                {rightAddon && !isPassword && !isNumber && (
                     <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                         {rightAddon}
+                    </div>
+                )}
+
+                {isNumber && (
+                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex flex-col">
+                        <button
+                            type="button"
+                            tabIndex={-1}
+                            aria-label="Ko'paytirish"
+                            onClick={() => step(1)}
+                            onMouseDown={(e) => e.preventDefault()}
+                            className="flex h-3.5 w-6 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        >
+                            <ChevronUp className="h-3 w-3" strokeWidth={2.5} />
+                        </button>
+                        <button
+                            type="button"
+                            tabIndex={-1}
+                            aria-label="Kamaytirish"
+                            onClick={() => step(-1)}
+                            onMouseDown={(e) => e.preventDefault()}
+                            className="flex h-3.5 w-6 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        >
+                            <ChevronDown className="h-3 w-3" strokeWidth={2.5} />
+                        </button>
                     </div>
                 )}
             </div>

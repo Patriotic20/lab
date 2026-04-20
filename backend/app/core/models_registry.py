@@ -26,6 +26,8 @@ __all__ = [
     "HemisTransaction",
     "Resource",
     "PsychologyMethod",
+    "Tutor",
+    "TutorGroup",
 ]
 
 from app.modules.permission.model import Permission
@@ -51,3 +53,5 @@ from app.modules.yakuniy.model import Yakuniy
 from app.modules.hemis.model import HemisTransaction
 from app.modules.resource.model import Resource
 from app.modules.psychology.model import PsychologyMethod, PsychologyQuestion, PsychologyResult
+from app.modules.tutor.models.tutor import Tutor
+from app.modules.tutor.models.tutor_groups import TutorGroup

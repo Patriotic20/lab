@@ -1,6 +1,6 @@
 # /new-model — Scaffold a new SQLAlchemy model
 
-Scaffold a complete new model for the ndktu-student-platform backend.
+Scaffold a complete new model for the backend.
 
 **Usage:** `/new-model ModelName field1:type field2:type ...`
 
@@ -31,14 +31,14 @@ Given the arguments, perform ALL of the following steps in order:
 
 ### 2. Create folder
 Create the directory:
-`ndktu-student-platform/backend/app/models/<model_folder>/`
+`backend/app/models/<model_folder>/`
 
 ### 3. Create `__init__.py`
 Write an empty file at:
-`ndktu-student-platform/backend/app/models/<model_folder>/__init__.py`
+`backend/app/models/<model_folder>/__init__.py`
 
 ### 4. Create `model.py`
-Write `ndktu-student-platform/backend/app/models/<model_folder>/model.py` following this exact pattern:
+Write `backend/app/models/<model_folder>/model.py` following this exact pattern:
 
 ```python
 from typing import TYPE_CHECKING
@@ -69,7 +69,7 @@ Rules:
 - Add `index=True` to all ForeignKey columns
 
 ### 5. Create `view.py`
-Write `ndktu-student-platform/backend/app/models/<model_folder>/view.py` following this exact pattern:
+Write `backend/app/models/<model_folder>/view.py` following this exact pattern:
 
 ```python
 from sqladmin import ModelView
@@ -95,12 +95,12 @@ class <ViewName>(ModelView, model=<ModelName>):
 ```
 
 ### 6. Register in `models/__init__.py`
-Edit `ndktu-student-platform/backend/app/models/__init__.py`:
+Edit `backend/app/models/__init__.py`:
 - Add `"<ModelName>"` to the `__all__` list
 - Append `from .<model_folder>.model import <ModelName>` at the end of the imports
 
 ### 7. Register in `models/views.py`
-Edit `ndktu-student-platform/backend/app/models/views.py`:
+Edit `backend/app/models/views.py`:
 - Add `from app.models.<model_folder>.view import <ViewName>` with the other imports
 - Add `admin.add_view(<ViewName>)` inside `register_models()`
 

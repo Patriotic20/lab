@@ -108,7 +108,13 @@ def compute_diagnosis(
         for cat_name, orders in categories_map.items():
             if not isinstance(orders, list):
                 continue
-            cat_score = sum(scored.get(int(o), 0) for o in orders if isinstance(o, (int, float)))
+            if len(orders) == 0:
+                # Empty orders list = "all questions" shortcut. Lets a single-
+                # aspect test use `category` mode for labeled bands without
+                # listing every question number manually.
+                cat_score = sum(scored.values())
+            else:
+                cat_score = sum(scored.get(int(o), 0) for o in orders if isinstance(o, (int, float)))
             scores[cat_name] = cat_score
 
             items = cat_interpretations.get(cat_name) or []

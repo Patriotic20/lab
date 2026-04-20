@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from app.modules.quiz.models.quiz import Quiz
     from app.modules.result.model import Result
     from app.modules.teacher.model import Teacher
+    from app.modules.tutor.models.tutor import Tutor
     from app.modules.user_answers.model import UserAnswers
     from app.modules.group.models.group_teachers import GroupTeacher
     from app.modules.yakuniy.model import Yakuniy
@@ -53,6 +54,8 @@ class User(Base, IdIntPk, TimestampMixin):
     )
 
     teacher: Mapped["Teacher"] = relationship("Teacher", back_populates="user")
+
+    tutor: Mapped["Tutor"] = relationship("Tutor", back_populates="user", uselist=False)
 
     group_teachers: Mapped[list["GroupTeacher"]] = relationship(
         "GroupTeacher",

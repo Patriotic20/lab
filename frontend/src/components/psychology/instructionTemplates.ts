@@ -5,6 +5,107 @@ export interface InstructionTemplate {
     instruction: Record<string, unknown>;
 }
 
+// ── Form-builder shape ──────────────────────────────────────────────────────
+
+export interface InterpretationRow {
+    min: number;
+    max: number;
+    label: string;
+    description: string;
+}
+
+export interface CategoryRow {
+    name: string;
+    orders: number[];
+    interpretation: InterpretationRow[];
+}
+
+export interface MethodFormState {
+    method: 'sum' | 'category';
+    reverse: number[];
+    sumInterpretation: InterpretationRow[];
+    categories: CategoryRow[];
+}
+
+const DEFAULT_RANGE: InterpretationRow = { min: 0, max: 0, label: '', description: '' };
+
+export function emptyMethodFormState(): MethodFormState {
+    return {
+        method: 'sum',
+        reverse: [],
+        sumInterpretation: [{ ...DEFAULT_RANGE }],
+        categories: [],
+    };
+}
+
+function rowFromAny(r: Record<string, unknown>): InterpretationRow {
+    return {
+        min: Number(r.min ?? 0),
+        max: Number(r.max ?? 0),
+        label: String(r.label ?? ''),
+        description: String(r.description ?? ''),
+    };
+}
+
+export function instructionToFormState(instruction: Record<string, unknown> | null | undefined): MethodFormState {
+    if (!instruction) return emptyMethodFormState();
+    const scoring = (instruction.scoring as Record<string, unknown> | undefined) ?? {};
+    const method = (scoring.method as 'sum' | 'category') ?? 'sum';
+    const reverse = Array.isArray(scoring.reverse) ? (scoring.reverse as unknown[]).map(v => Number(v)).filter(n => Number.isFinite(n)) : [];
+
+    if (method === 'category') {
+        const categoriesMap = (scoring.categories as Record<string, unknown[]> | undefined) ?? {};
+        const catInterp = (instruction.category_interpretations as Record<string, Array<Record<string, unknown>>> | undefined) ?? {};
+        const names = Array.from(new Set([...Object.keys(categoriesMap), ...Object.keys(catInterp)]));
+        const categories: CategoryRow[] = names.map(name => ({
+            name,
+            orders: Array.isArray(categoriesMap[name]) ? categoriesMap[name].map(v => Number(v)).filter(n => Number.isFinite(n)) : [],
+            interpretation: (catInterp[name] ?? []).map(rowFromAny),
+        }));
+        return {
+            method: 'category',
+            reverse,
+            sumInterpretation: [],
+            categories: categories.length > 0 ? categories : [{ name: '', orders: [], interpretation: [{ ...DEFAULT_RANGE }] }],
+        };
+    }
+
+    const interpretation = (instruction.interpretation as Array<Record<string, unknown>> | undefined) ?? [];
+    return {
+        method: 'sum',
+        reverse,
+        sumInterpretation: interpretation.length > 0 ? interpretation.map(rowFromAny) : [{ ...DEFAULT_RANGE }],
+        categories: [],
+    };
+}
+
+export function formStateToInstruction(state: MethodFormState): Record<string, unknown> {
+    if (state.method === 'sum') {
+        return {
+            scoring: { method: 'sum', reverse: [...state.reverse] },
+            interpretation: state.sumInterpretation.map(r => ({ ...r })),
+        };
+    }
+    const categories: Record<string, number[]> = {};
+    const category_interpretations: Record<string, InterpretationRow[]> = {};
+    for (const cat of state.categories) {
+        const key = cat.name.trim();
+        if (!key) continue;
+        categories[key] = [...cat.orders];
+        category_interpretations[key] = cat.interpretation.map(r => ({ ...r }));
+    }
+    return {
+        scoring: { method: 'category', reverse: [...state.reverse], categories },
+        category_interpretations,
+    };
+}
+
+export function templateToFormState(template: InstructionTemplate): MethodFormState {
+    return instructionToFormState(template.instruction);
+}
+
+// ── Templates ──────────────────────────────────────────────────────────────
+
 export const INSTRUCTION_TEMPLATES: InstructionTemplate[] = [
     {
         id: 'simple-3',

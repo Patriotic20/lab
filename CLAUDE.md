@@ -4,15 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository layout
 
-This monorepo contains three sub-projects:
+This monorepo contains these top-level directories:
 
 | Directory | Purpose |
 |---|---|
-| `ndktu-student-platform/` | Main platform: FastAPI backend + React frontend |
-| `ndktu-student-face-detection/` | Standalone face-detection microservice (MediaPipe + face_recognition) |
+| `backend/` | FastAPI backend (main platform) |
+| `frontend/` | React frontend (main platform) |
+| `face-detection/` | Face-detection microservice built into the stack (MediaPipe + face_recognition) |
+| `ndktu-student-face-detection/` | Standalone face-detection microservice (separate deploy) |
+| `backups/` | Database backups and archived logs/images |
+| `docs/` | Project documentation |
+| `monitoring/` | Prometheus / Loki / Grafana / Promtail configs |
+| `scripts/` | Operational scripts (backup, deploy) |
 | Root `docker-compose.yml` | Orchestrates all services together |
-
-All work below assumes the main platform at `ndktu-student-platform/`.
 
 ---
 
@@ -38,7 +42,7 @@ make deploy      # Zero-downtime redeploy (backend then frontend)
 ### Backend (inside container or with uv)
 
 ```bash
-# Run from ndktu-student-platform/backend/
+# Run from backend/
 uv run python -m pytest app/test/              # All tests
 uv run python -m pytest app/test/test_faculty.py -x -q  # Single test file
 uv run ruff check app/                         # Lint
@@ -62,7 +66,7 @@ make migrate
 ### Frontend
 
 ```bash
-# Run from ndktu-student-platform/frontend/
+# Run from frontend/
 npm run dev      # Vite dev server
 npm run build    # TypeScript compile + Vite build
 npm run lint     # ESLint

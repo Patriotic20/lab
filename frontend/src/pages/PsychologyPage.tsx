@@ -6,15 +6,16 @@ import {
 } from '@/hooks/usePsychology';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Combobox } from '@/components/ui/Combobox';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
+import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import {
     Plus, Trash2, Edit2, Loader2, Brain, ChevronRight, Play,
     X, ListOrdered, AlignLeft, ToggleLeft, SlidersHorizontal, Image,
-    Sparkles, CheckCircle2, AlertCircle,
 } from 'lucide-react';
-import { INSTRUCTION_TEMPLATES, type InstructionTemplate } from '@/components/psychology/instructionTemplates';
+import { MethodBuilderModal } from '@/components/psychology/MethodBuilderModal';
 import type { MethodResponse, QuestionResponse, QuestionType } from '@/services/psychologyService';
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -34,12 +35,6 @@ const QUESTION_TYPE_ICONS: Record<QuestionType, React.ElementType> = {
     image_stimulus: Image,
     image_choice: Image,
 };
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function safeJsonParse(str: string): Record<string, unknown> | null {
-    try { return JSON.parse(str); } catch { return null; }
-}
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
@@ -157,22 +152,16 @@ function QuestionForm({
             {/* Type selector */}
             <div>
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Savol turi</label>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {(Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]).map(t => (
-                        <button
-                            key={t}
-                            type="button"
-                            onClick={() => set({ question_type: t })}
-                            className={`rounded-lg border px-2 py-1.5 text-left text-xs transition-colors ${
-                                form.question_type === t
-                                    ? 'border-primary bg-primary/10 text-primary font-medium'
-                                    : 'border-border text-muted-foreground hover:border-primary/40 hover:bg-accent'
-                            }`}
-                        >
-                            {QUESTION_TYPE_LABELS[t]}
-                        </button>
-                    ))}
-                </div>
+                <Combobox
+                    options={(Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]).map(t => ({
+                        value: t,
+                        label: QUESTION_TYPE_LABELS[t],
+                    }))}
+                    value={form.question_type}
+                    onChange={(val) => { if (val) set({ question_type: val as QuestionType }); }}
+                    placeholder="Savol turini tanlang..."
+                    searchPlaceholder="Qidirish..."
+                />
             </div>
 
             {/* Text / statement */}
@@ -185,13 +174,12 @@ function QuestionForm({
                 />
             )}
 
-            {/* image_stimulus: image url */}
+            {/* image_stimulus: upload image */}
             {form.question_type === 'image_stimulus' && (
-                <Input
-                    label="Rasm URL"
+                <ImageUploadField
+                    label="Rasm"
                     value={form.imageUrl}
-                    onChange={e => set({ imageUrl: e.target.value })}
-                    placeholder="https://..."
+                    onChange={(url) => set({ imageUrl: url ?? '' })}
                 />
             )}
 
@@ -216,7 +204,14 @@ function QuestionForm({
                         {form.options.map((opt, i) => (
                             <div key={i} className="flex gap-2 items-center">
                                 {form.question_type === 'image_choice' ? (
-                                    <Input label="" placeholder="Rasm URL (https://...)" value={String(opt.image_url ?? '')} onChange={e => updateOption(i, { image_url: e.target.value })} className="flex-1" />
+                                    <div className="flex-1">
+                                        <ImageUploadField
+                                            value={String(opt.image_url ?? '') || null}
+                                            onChange={(url) => updateOption(i, { image_url: url ?? '' })}
+                                            previewSize={56}
+                                            helperText=""
+                                        />
+                                    </div>
                                 ) : (
                                     <Input label="" placeholder={`Variant ${i + 1}`} value={String(opt.text ?? '')} onChange={e => updateOption(i, { text: e.target.value })} className="flex-1" />
                                 )}
@@ -234,150 +229,6 @@ function QuestionForm({
     );
 }
 
-// ── Method Modal ────────────────────────────────────────────────────────────
-
-function InstructionPreview({ instruction }: { instruction: Record<string, unknown> | null }) {
-    if (!instruction) return null;
-    const scoring = instruction.scoring as Record<string, unknown> | undefined;
-    const method = scoring?.method as string | undefined;
-    const interpretation = instruction.interpretation as Array<Record<string, unknown>> | undefined;
-    const catInterp = instruction.category_interpretations as Record<string, Array<Record<string, unknown>>> | undefined;
-    const reverse = (scoring?.reverse as number[] | undefined) ?? [];
-
-    const ok = !!method && (
-        (method === 'sum' && Array.isArray(interpretation) && interpretation.length > 0)
-        || (method === 'category' && catInterp && Object.keys(catInterp).length > 0)
-    );
-
-    return (
-        <div className={`rounded-lg border p-3 text-xs ${ok ? 'border-green-500/40 bg-green-50 dark:bg-green-950/20' : 'border-yellow-500/40 bg-yellow-50 dark:bg-yellow-950/20'}`}>
-            <div className="flex items-center gap-2">
-                {ok
-                    ? <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    : <AlertCircle className="h-4 w-4 text-yellow-600" />}
-                <span className={`font-semibold ${ok ? 'text-green-900 dark:text-green-200' : 'text-yellow-900 dark:text-yellow-200'}`}>
-                    {ok ? 'Diagnostika sozlandi' : 'Diagnostika to\'liq sozlanmagan'}
-                </span>
-            </div>
-            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground">
-                <span>Rejim: <b className="text-foreground">{method ?? '—'}</b></span>
-                {method === 'sum' && (
-                    <span>Oraliqlar: <b className="text-foreground">{interpretation?.length ?? 0}</b></span>
-                )}
-                {method === 'category' && (
-                    <span>Kategoriyalar: <b className="text-foreground">{Object.keys(catInterp ?? {}).length}</b></span>
-                )}
-                {reverse.length > 0 && (
-                    <span>Teskari savollar: <b className="text-foreground">{reverse.join(', ')}</b></span>
-                )}
-            </div>
-        </div>
-    );
-}
-
-function MethodModal({
-    open,
-    editing,
-    onClose,
-    onCreate,
-    onUpdate,
-    isPending,
-}: {
-    open: boolean;
-    editing: MethodResponse | null;
-    onClose: () => void;
-    onCreate: (data: { name: string; description: string; instruction: Record<string, unknown> }) => void;
-    onUpdate: (data: { name: string; description: string; instruction: Record<string, unknown> }) => void;
-    isPending: boolean;
-}) {
-    const [name, setName] = useState(editing?.name ?? '');
-    const [description, setDescription] = useState(editing?.description ?? '');
-    const [instructionStr, setInstructionStr] = useState(
-        editing ? JSON.stringify(editing.instruction, null, 2) : '{}'
-    );
-    const [jsonError, setJsonError] = useState('');
-    const [showTemplates, setShowTemplates] = useState(false);
-
-    const parsedInstruction = safeJsonParse(instructionStr);
-
-    const applyTemplate = (tpl: InstructionTemplate) => {
-        setInstructionStr(JSON.stringify(tpl.instruction, null, 2));
-        setJsonError('');
-        setShowTemplates(false);
-    };
-
-    const handleSubmit = () => {
-        const parsed = safeJsonParse(instructionStr);
-        if (!parsed) { setJsonError('Noto\'g\'ri JSON format'); return; }
-        setJsonError('');
-        const payload = { name: name.trim(), description: description.trim(), instruction: parsed };
-        editing ? onUpdate(payload) : onCreate(payload);
-    };
-
-    return (
-        <Modal
-            isOpen={open}
-            onClose={onClose}
-            title={editing ? 'Metodni tahrirlash' : 'Yangi metod'}
-        >
-            <div className="flex flex-col gap-4">
-                <Input label="Nomi" value={name} onChange={e => setName(e.target.value)} placeholder="Metod nomi..." />
-                <Input label="Tavsif" value={description} onChange={e => setDescription(e.target.value)} placeholder="Qisqacha tavsif..." />
-
-                <div>
-                    <div className="mb-1.5 flex items-center justify-between">
-                        <label className="text-xs font-medium text-muted-foreground">Ko'rsatma (JSON)</label>
-                        <button
-                            type="button"
-                            onClick={() => setShowTemplates(s => !s)}
-                            className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                        >
-                            <Sparkles className="h-3 w-3" />
-                            {showTemplates ? 'Yopish' : 'Shablonlar'}
-                        </button>
-                    </div>
-
-                    {showTemplates && (
-                        <div className="mb-2 flex flex-col gap-1.5 rounded-lg border border-border bg-muted/30 p-2">
-                            {INSTRUCTION_TEMPLATES.map(tpl => (
-                                <button
-                                    key={tpl.id}
-                                    type="button"
-                                    onClick={() => applyTemplate(tpl)}
-                                    className="flex flex-col items-start rounded-md px-2.5 py-2 text-left transition-colors hover:bg-primary/10"
-                                >
-                                    <span className="text-xs font-semibold text-foreground">{tpl.name}</span>
-                                    <span className="text-[11px] text-muted-foreground">{tpl.hint}</span>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
-                    <textarea
-                        value={instructionStr}
-                        onChange={e => { setInstructionStr(e.target.value); setJsonError(''); }}
-                        rows={8}
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                        placeholder='{"scoring": {}, "interpretation": []}'
-                    />
-                    {jsonError && <p className="mt-1 text-xs text-destructive">{jsonError}</p>}
-
-                    <div className="mt-2">
-                        <InstructionPreview instruction={parsedInstruction} />
-                    </div>
-                </div>
-
-                <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={onClose}>Bekor</Button>
-                    <Button onClick={handleSubmit} disabled={isPending || !name.trim()}>
-                        {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {editing ? 'Saqlash' : 'Yaratish'}
-                    </Button>
-                </div>
-            </div>
-        </Modal>
-    );
-}
 
 // ── Questions SlideOver ────────────────────────────────────────────────────
 
@@ -648,7 +499,7 @@ export default function PsychologyPage() {
 
             {/* Method modal */}
             {methodModal.open && (
-                <MethodModal
+                <MethodBuilderModal
                     open={methodModal.open}
                     editing={methodModal.editing}
                     onClose={() => setMethodModal({ open: false, editing: null })}

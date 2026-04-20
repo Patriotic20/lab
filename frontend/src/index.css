@@ -231,3 +231,17 @@
     @apply inline-flex items-center justify-center rounded-full font-semibold;
   }
 }
+
+/* ── Hide ugly native number-input spinners globally.
+   Our shared <Input type="number"> renders custom ChevronUp/ChevronDown
+   steppers instead. Raw <input type="number"> also gets a clean field. */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
