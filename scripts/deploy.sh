@@ -17,6 +17,26 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 COMPOSE="docker compose -f $PROJECT_DIR/docker-compose.yml -f $PROJECT_DIR/docker-compose.prod.yml"
 BACKEND_CONTAINER="nusmt_backend"
 
+# ─── On any failure: dump logs from all app containers so error is visible ──
+on_error() {
+    local exit_code=$?
+    echo ""
+    echo "╔══════════════════════════════════════════════════╗"
+    echo "║   ❌ DEPLOY FAILED (exit $exit_code) — container logs    ║"
+    echo "╚══════════════════════════════════════════════════╝"
+    for c in nusmt_backend nusmt_face_detection nusmt_frontend nusmt_nginx database; do
+        if docker ps -a --format '{{.Names}}' | grep -q "^${c}$"; then
+            echo ""
+            echo "─── $c (last 50 lines) ─────────────────────────────"
+            docker logs --tail 50 "$c" 2>&1 || true
+            echo "─── $c container state ─────────────────────────────"
+            docker inspect --format='State: {{.State.Status}} | OOMKilled: {{.State.OOMKilled}} | ExitCode: {{.State.ExitCode}} | Restarts: {{.RestartCount}}' "$c" 2>&1 || true
+        fi
+    done
+    exit $exit_code
+}
+trap on_error ERR
+
 # ─── Wait for a container to become healthy ─────────────────────────────────
 wait_healthy() {
     local container="$1"

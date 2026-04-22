@@ -17,12 +17,14 @@ WORKDIR /face
 
 RUN pip install --no-cache-dir uv
 
-# Copy everything first (uv needs pyproject.toml + uv.lock)
-COPY . .
-
-# Install dependencies into .venv (no dev extras)
-RUN uv sync --no-dev
+# Dependency layer — cached unless pyproject.toml / uv.lock change
+COPY pyproject.toml uv.lock ./
+RUN uv sync --no-dev --no-install-project
 RUN uv pip install git+https://github.com/ageitgey/face_recognition_models
+
+# Application code — changes on every commit, rebuilds quickly
+COPY . .
+RUN uv sync --no-dev
 
 # Fix face_recognition_models __init__.py as requested by user
 RUN printf 'import os\n\ndef _model_path(filename):\n    return os.path.join(os.path.dirname(__file__), "models", filename)\n\ndef pose_predictor_model_location():\n    return _model_path("shape_predictor_68_face_landmarks.dat")\n\ndef pose_predictor_five_point_model_location():\n    return _model_path("shape_predictor_5_face_landmarks.dat")\n\ndef face_recognition_model_location():\n    return _model_path("dlib_face_recognition_resnet_model_v1.dat")\n\ndef cnn_face_detector_model_location():\n    return _model_path("mmod_human_face_detector.dat")\n' > .venv/lib/python3.12/site-packages/face_recognition_models/__init__.py

@@ -16,10 +16,12 @@ WORKDIR /face
 
 RUN pip install --no-cache-dir uv
 
-# COPY EVERYTHING FIRST
-COPY . .
+# Dependency layer — cached unless pyproject.toml / uv.lock change
+COPY pyproject.toml uv.lock ./
+RUN uv sync --no-dev --no-install-project
 
-# Now it can build correctly
+# Application code — changes on every commit, rebuilds quickly
+COPY . .
 RUN uv sync --no-dev
 
 RUN chmod +x /face/entrypoint.sh
