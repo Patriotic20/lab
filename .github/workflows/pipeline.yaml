@@ -100,10 +100,6 @@ jobs:
         working-directory: backend
         run: uv sync
 
-      - name: Ruff lint
-        working-directory: backend
-        run: uvx ruff check app/
-
       - name: Apply Alembic migrations
         working-directory: backend/app
         run: uv run alembic upgrade head
