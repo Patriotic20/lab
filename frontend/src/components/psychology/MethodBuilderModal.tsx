@@ -206,10 +206,15 @@ export function MethodBuilderModal({
             else errs.ranges = validateRanges(state.sumInterpretation);
         } else {
             if (state.categories.length === 0) errs.form = 'Kamida bitta kategoriya qo\'shing';
+            const multipleCategories = state.categories.length > 1;
             state.categories.forEach((cat, ci) => {
                 const catErr: { name?: string; orders?: string; ranges: Record<number, string[]> } = { ranges: {} };
                 if (!cat.name.trim()) catErr.name = 'Kategoriya nomi bo\'sh';
-                // Note: empty orders[] is allowed — it means "all questions".
+                // Single category: empty orders[] means "all questions" — allowed.
+                // Multiple categories: each must declare which questions belong to it.
+                if (multipleCategories && cat.orders.length === 0) {
+                    catErr.orders = "Bir nechta kategoriya bo'lganda savol raqamlari shart";
+                }
                 if (cat.interpretation.length === 0) catErr.ranges = { [-1]: ['Kamida bitta oraliq qo\'shing'] };
                 else catErr.ranges = validateRanges(cat.interpretation);
                 errs.categories[ci] = catErr;
@@ -409,8 +414,13 @@ export function MethodBuilderModal({
                 {/* category */}
                 {state.method === 'category' && (
                     <div className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between">
-                            <label className="text-xs font-medium text-muted-foreground">Kategoriyalar</label>
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <label className="text-xs font-medium text-muted-foreground">Kategoriyalar</label>
+                                <p className="mt-0.5 text-[11px] text-muted-foreground/80">
+                                    Bitta kategoriya — barcha savollar avtomatik. Bir nechta — har biri uchun savol raqamlarini kiriting.
+                                </p>
+                            </div>
                             <Button type="button" variant="outline" size="sm" onClick={addCategory}>
                                 <Plus className="mr-1 h-3.5 w-3.5" />
                                 Kategoriya qo'shish
@@ -418,6 +428,7 @@ export function MethodBuilderModal({
                         </div>
                         {state.categories.map((cat, ci) => {
                             const catErr = errors.categories[ci] ?? { ranges: {} };
+                            const isSingle = state.categories.length === 1;
                             return (
                                 <div key={ci} className="rounded-lg border border-border bg-muted/10 p-3">
                                     <div className="flex items-start justify-between gap-2">
@@ -440,21 +451,34 @@ export function MethodBuilderModal({
                                         </button>
                                     </div>
 
-                                    <div className="mt-2">
-                                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                                            Savol raqamlari (ixtiyoriy)
-                                        </label>
-                                        <NumberChipInput
-                                            values={cat.orders}
-                                            onChange={next => updateCategory(ci, { orders: next })}
-                                            placeholder="1, 3, 5..."
-                                        />
-                                        <p className="mt-1 text-[11px] text-muted-foreground">
-                                            {cat.orders.length === 0
-                                                ? "Bo'sh qoldirsangiz — bu kategoriya barcha savollarni qamrab oladi."
-                                                : `Tanlangan: ${cat.orders.length} ta savol`}
-                                        </p>
-                                    </div>
+                                    {isSingle ? (
+                                        <div className="mt-2 rounded-md border border-dashed border-border bg-muted/20 px-3 py-2">
+                                            <p className="text-[11px] text-muted-foreground">
+                                                <b className="text-foreground">Yagona kategoriya</b> — barcha savollar avtomatik shu kategoriyaga tushadi.
+                                                Savol raqamlarini qo'lda kiritish shart emas.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="mt-2">
+                                            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                                                Savol raqamlari <span className="text-destructive">*</span>
+                                            </label>
+                                            <NumberChipInput
+                                                values={cat.orders}
+                                                onChange={next => updateCategory(ci, { orders: next })}
+                                                placeholder="1, 3, 5..."
+                                            />
+                                            {showErr && catErr.orders ? (
+                                                <p className="mt-1 text-[11px] text-destructive">{catErr.orders}</p>
+                                            ) : (
+                                                <p className="mt-1 text-[11px] text-muted-foreground">
+                                                    {cat.orders.length === 0
+                                                        ? "Raqam yozib Enter — har bir kategoriyaga tegishli savollar."
+                                                        : `Tanlangan: ${cat.orders.length} ta savol`}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <div className="mt-3 flex flex-col gap-2">
                                         <div className="flex items-center justify-between">

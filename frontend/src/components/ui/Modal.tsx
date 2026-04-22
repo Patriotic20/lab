@@ -14,14 +14,16 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div
                 className={cn(
-                    "relative w-full max-w-lg rounded-lg border bg-background p-6 shadow-lg duration-200 animate-in fade-in zoom-in-95",
+                    "relative w-full max-w-lg rounded-lg border bg-background shadow-lg duration-200 animate-in fade-in zoom-in-95",
+                    "flex flex-col max-h-[calc(100vh-2rem)]",
                     className
                 )}
             >
-                <div className="flex flex-col space-y-1.5 text-center sm:text-left mb-4">
+                {/* Header — fixed, never scrolls */}
+                <div className="flex flex-col space-y-1.5 text-center sm:text-left px-6 pt-6 pb-4 border-b border-border/40 shrink-0">
                     <h2 className="text-lg font-semibold leading-none tracking-tight">{title}</h2>
                     <button
                         onClick={onClose}
@@ -31,7 +33,10 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
                         <span className="sr-only">Close</span>
                     </button>
                 </div>
-                {children}
+                {/* Body — scrolls when content is taller than viewport */}
+                <div className="flex-1 overflow-y-auto px-6 py-4">
+                    {children}
+                </div>
             </div>
         </div>
     );

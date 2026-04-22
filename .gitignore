@@ -66,3 +66,9 @@ backup_*.sql.gz
 repomix-output.xml
 .claude/plans/
 .claude/memory/
+
+# ── Screenshots & browser-automation output ───────────────────
+# Throwaway artifacts from Playwright / MCP sessions and ad-hoc screenshots.
+# Real frontend assets live in frontend/public/ — those are not affected.
+screenshots/
+.playwright-mcp/

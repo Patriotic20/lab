@@ -88,10 +88,13 @@ export function formStateToInstruction(state: MethodFormState): Record<string, u
     }
     const categories: Record<string, number[]> = {};
     const category_interpretations: Record<string, InterpretationRow[]> = {};
+    // Single-category methods always send empty orders[] = "all questions" semantics,
+    // even if the user has stale numbers in state (e.g. after deleting a 2nd category).
+    const isSingle = state.categories.length === 1;
     for (const cat of state.categories) {
         const key = cat.name.trim();
         if (!key) continue;
-        categories[key] = [...cat.orders];
+        categories[key] = isSingle ? [] : [...cat.orders];
         category_interpretations[key] = cat.interpretation.map(r => ({ ...r }));
     }
     return {
