@@ -4,6 +4,7 @@ import logging
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select, desc
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,6 +41,12 @@ class PsychologyRepository:
         try:
             await session.commit()
             await session.refresh(method)
+        except IntegrityError:
+            await session.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Bunday nomdagi metod allaqachon mavjud: '{data.name}'",
+            )
         except Exception as e:
             await session.rollback()
             logger.error(f"Error creating psychology method: {e}")
@@ -104,6 +111,12 @@ class PsychologyRepository:
         try:
             await session.commit()
             await session.refresh(method)
+        except IntegrityError:
+            await session.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Bunday nomdagi metod allaqachon mavjud: '{data.name}'",
+            )
         except Exception as e:
             await session.rollback()
             logger.error(f"Error updating psychology method: {e}")

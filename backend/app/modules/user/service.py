@@ -85,10 +85,20 @@ class UserService:
         return user
 
     def token_decode(self, token: str) -> dict:
-        payload = jwt.decode(
-            token, settings.jwt.access_token_secret, algorithms=[settings.jwt.algorithm]
-        )
-        return payload
+        try:
+            return jwt.decode(
+                token, settings.jwt.access_token_secret, algorithms=[settings.jwt.algorithm]
+            )
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token expired",
+            )
+        except jwt.InvalidTokenError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+            )
 
     def _create_token(self, data: dict, secret_key: str, expires_delta: timedelta):
         to_encode = data.copy()
