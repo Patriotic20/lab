@@ -6,9 +6,9 @@ import redis.asyncio as redis
 from fastapi_limiter import FastAPILimiter
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
-from main import app
-from app.core.base import Base
 import app.core.models_registry  # noqa: F401
+from app.core.base import Base
+from main import app as fastapi_app
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -90,8 +90,8 @@ async def async_client(async_db):
     def override_get_db():
         yield async_db
 
-    app.dependency_overrides[db_helper.session_getter] = override_get_db
-    return AsyncClient(transport=ASGITransport(app=app), base_url="http://localhost")
+    fastapi_app.dependency_overrides[db_helper.session_getter] = override_get_db
+    return AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://localhost")
 
 
 @pytest_asyncio.fixture
