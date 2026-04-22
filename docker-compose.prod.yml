@@ -35,7 +35,7 @@ services:
         limits:
           cpus: "1.0"
     environment:
-      - APP_CONFIG__SERVER__WORKERS=2
+      - APP_CONFIG__SERVER__WORKERS=1
       - APP_CONFIG__SERVER__RELOAD=False
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
