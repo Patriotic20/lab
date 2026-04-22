@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   # ──────────────────────────────────────────
   # JOB 1: Backend Tests
@@ -43,49 +47,48 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Create root .env
-        run: |
-          cat > .env <<EOF
-          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-          LOGFIRE_PROJECT_NAME=${{ secrets.LOGFIRE_PROJECT_NAME }}
-          LOGFIRE_TOKEN=${{ secrets.LOGFIRE_TOKEN }}
-          EOF
-
-      - name: Create backend/.env
+      - name: Create backend/.env (CI only — dummy secrets)
         working-directory: backend
         run: |
-          cat > .env <<EOF
+          cat > .env <<'EOF'
           APP_CONFIG__DATABASE__URL=postgresql+asyncpg://ci_user:ci_password@localhost:5436/test_db
           APP_CONFIG__DATABASE__TEST_URL=postgresql+asyncpg://ci_user:ci_password@localhost:5436/test_db
           APP_CONFIG__DATABASE__ECHO=False
           APP_CONFIG__DATABASE__ECHO_POOL=False
           APP_CONFIG__DATABASE__POOL_SIZE=10
           APP_CONFIG__DATABASE__MAX_OVERFLOW=5
-          APP_CONFIG__SERVER__APP_PATH=main:app
+          APP_CONFIG__SERVER__APP_PATH=app.main:app
           APP_CONFIG__SERVER__HOST=0.0.0.0
           APP_CONFIG__SERVER__PORT=8000
-          APP_CONFIG__JWT__ACCESS_TOKEN_SECRET=${{ secrets.APP_CONFIG__JWT__ACCESS_TOKEN_SECRET }}
-          APP_CONFIG__JWT__REFRESH_TOKEN_SECRET=${{ secrets.APP_CONFIG__JWT__REFRESH_TOKEN_SECRET }}
+          APP_CONFIG__SERVER__IS_PROD=False
+          APP_CONFIG__JWT__ACCESS_TOKEN_SECRET=ci-dummy-access-secret
+          APP_CONFIG__JWT__REFRESH_TOKEN_SECRET=ci-dummy-refresh-secret
           APP_CONFIG__JWT__ACCESS_TOKEN_EXPIRES_MINUTES=30
           APP_CONFIG__JWT__REFRESH_TOKEN_EXPIRES_DAYS=7
           APP_CONFIG__JWT__ALGORITHM=HS256
-          APP_CONFIG__ADMIN__USERNAME=${{ secrets.APP_CONFIG__ADMIN__USERNAME }}
-          APP_CONFIG__ADMIN__PASSWORD=${{ secrets.APP_CONFIG__ADMIN__PASSWORD }}
-          APP_CONFIG__ADMIN__SECRET_KEY=${{ secrets.APP_CONFIG__ADMIN__SECRET_KEY }}
-          APP_CONFIG__FILE_URL__HTTP=${{ secrets.APP_CONFIG__FILE_URL__HTTP }}
+          APP_CONFIG__ADMIN__USERNAME=admin
+          APP_CONFIG__ADMIN__PASSWORD=ci-dummy-admin-password
+          APP_CONFIG__ADMIN__SECRET_KEY=ci-dummy-admin-secret-key
+          APP_CONFIG__FILE_URL__HTTP=http://localhost:8000/uploads/questions
           APP_CONFIG__FILE_URL__UPLOAD_DIR=uploads/questions
-          APP_CONFIG__HEMIS__LOGIN_URL=${{ secrets.APP_CONFIG__HEMIS__LOGIN_URL }}
-          APP_CONFIG__HEMIS__ME_URL=${{ secrets.APP_CONFIG__HEMIS__ME_URL }}
+          APP_CONFIG__HEMIS__LOGIN_URL=https://student.ndki.uz/rest/v1/auth/login
+          APP_CONFIG__HEMIS__ME_URL=https://student.ndki.uz/rest/v1/account/me
           APP_CONFIG__REDIS__HOST=localhost
           APP_CONFIG__REDIS__PORT=6379
           APP_CONFIG__REDIS__PREFIX=fastapi-cache
+          APP_CONFIG__FACE_SERVICE__URL=http://localhost:8001
+          APP_CONFIG__FACE_SERVICE__INTERNAL_TOKEN=ci-dummy-internal-token
           POSTGRES_USER=ci_user
           POSTGRES_PASSWORD=ci_password
           POSTGRES_DB=test_db
@@ -93,21 +96,21 @@ jobs:
           POSTGRES_PORT=5436
           EOF
 
-      - name: Install uv and sync dependencies
+      - name: Sync dependencies
         working-directory: backend
-        run: |
-          pip install --upgrade pip uv
-          uv sync
+        run: uv sync
+
+      - name: Ruff lint
+        working-directory: backend
+        run: uv run ruff check app/
+
+      - name: Apply Alembic migrations
+        working-directory: backend/app
+        run: uv run alembic upgrade head
 
       - name: Run pytest
         working-directory: backend
-        env:
-          APP_CONFIG__DATABASE__TEST_URL: postgresql+asyncpg://ci_user:ci_password@localhost:5436/test_db
-          APP_CONFIG__REDIS__HOST: localhost
-          APP_CONFIG__REDIS__PORT: 6379
-        run: |
-          source .venv/bin/activate
-          pytest -v
+        run: uv run pytest -v
 
   # ──────────────────────────────────────────
   # JOB 2: Frontend Build Check
@@ -126,6 +129,13 @@ jobs:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
+
+      - name: Write frontend/.env
+        working-directory: frontend
+        run: |
+          cat > .env <<'EOF'
+          VITE_API_URL=https://test.api.nsumt.uz
+          EOF
 
       - name: Install dependencies
         working-directory: frontend
@@ -151,56 +161,60 @@ jobs:
       - name: Write root .env
         run: |
           cat > .env <<EOF
+          # ─── Sensitive (from GitHub Secrets) ───
           POSTGRES_USER=${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-          LOGFIRE_PROJECT_NAME=${{ secrets.LOGFIRE_PROJECT_NAME }}
-          LOGFIRE_TOKEN=${{ secrets.LOGFIRE_TOKEN }}
           PGADMIN_DEFAULT_EMAIL=${{ secrets.PGADMIN_DEFAULT_EMAIL }}
           PGADMIN_DEFAULT_PASSWORD=${{ secrets.PGADMIN_DEFAULT_PASSWORD }}
-          LOGFIRE_TOKEN=${{ secrets.LOGFIRE_TOKEN }}
+          INTERNAL_SERVICE_TOKEN=${{ secrets.INTERNAL_SERVICE_TOKEN }}
           EOF
 
       - name: Write backend/.env
         working-directory: backend
         run: |
           cat > .env <<EOF
-          APP_CONFIG__DATABASE__URL=${{ secrets.APP_CONFIG__DATABASE__URL }}
-          APP_CONFIG__DATABASE__TEST_URL=${{ secrets.APP_CONFIG__DATABASE__TEST_URL }}
-          APP_CONFIG__DATABASE__ECHO=${{ secrets.APP_CONFIG__DATABASE__ECHO }}
-          APP_CONFIG__DATABASE__ECHO_POOL=${{ secrets.APP_CONFIG__DATABASE__ECHO_POOL }}
-          APP_CONFIG__DATABASE__POOL_SIZE=${{ secrets.APP_CONFIG__DATABASE__POOL_SIZE }}
-          APP_CONFIG__DATABASE__MAX_OVERFLOW=${{ secrets.APP_CONFIG__DATABASE__MAX_OVERFLOW }}
-          APP_CONFIG__SERVER__APP_PATH=${{ secrets.APP_CONFIG__SERVER__APP_PATH }}
-          APP_CONFIG__SERVER__HOST=${{ secrets.APP_CONFIG__SERVER__HOST }}
-          APP_CONFIG__SERVER__PORT=${{ secrets.APP_CONFIG__SERVER__PORT }}
-          APP_CONFIG__JWT__ACCESS_TOKEN_SECRET=${{ secrets.APP_CONFIG__JWT__ACCESS_TOKEN_SECRET }}
-          APP_CONFIG__JWT__REFRESH_TOKEN_SECRET=${{ secrets.APP_CONFIG__JWT__REFRESH_TOKEN_SECRET }}
-          APP_CONFIG__JWT__ACCESS_TOKEN_EXPIRES_MINUTES=${{ secrets.APP_CONFIG__JWT__ACCESS_TOKEN_EXPIRES_MINUTES }}
-          APP_CONFIG__JWT__REFRESH_TOKEN_EXPIRES_DAYS=${{ secrets.APP_CONFIG__JWT__REFRESH_TOKEN_EXPIRES_DAYS }}
-          APP_CONFIG__JWT__ALGORITHM=${{ secrets.APP_CONFIG__JWT__ALGORITHM }}
-          APP_CONFIG__ADMIN__USERNAME=${{ secrets.APP_CONFIG__ADMIN__USERNAME }}
-          APP_CONFIG__ADMIN__PASSWORD=${{ secrets.APP_CONFIG__ADMIN__PASSWORD }}
-          APP_CONFIG__ADMIN__SECRET_KEY=${{ secrets.APP_CONFIG__ADMIN__SECRET_KEY }}
-          APP_CONFIG__FILE_URL__HTTP=${{ secrets.APP_CONFIG__FILE_URL__HTTP }}
-          APP_CONFIG__FILE_URL__UPLOAD_DIR=${{ secrets.APP_CONFIG__FILE_URL__UPLOAD_DIR }}
-          APP_CONFIG__HEMIS__LOGIN_URL=${{ secrets.APP_CONFIG__HEMIS__LOGIN_URL }}
-          APP_CONFIG__HEMIS__ME_URL=${{ secrets.APP_CONFIG__HEMIS__ME_URL }}
+          # ─── Non-sensitive (hard-coded) ───
+          APP_CONFIG__DATABASE__URL=postgresql+asyncpg://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@database:5432/${{ secrets.POSTGRES_DB }}
+          APP_CONFIG__DATABASE__ECHO=False
+          APP_CONFIG__DATABASE__ECHO_POOL=False
+          APP_CONFIG__DATABASE__POOL_SIZE=50
+          APP_CONFIG__DATABASE__MAX_OVERFLOW=10
+          APP_CONFIG__SERVER__APP_PATH=app.main:app
+          APP_CONFIG__SERVER__HOST=0.0.0.0
+          APP_CONFIG__SERVER__PORT=8000
+          APP_CONFIG__SERVER__IS_PROD=True
+          APP_CONFIG__JWT__ACCESS_TOKEN_EXPIRES_MINUTES=30
+          APP_CONFIG__JWT__REFRESH_TOKEN_EXPIRES_DAYS=7
+          APP_CONFIG__JWT__ALGORITHM=HS256
+          APP_CONFIG__FILE_URL__HTTP=https://test.api.nsumt.uz/uploads/questions
+          APP_CONFIG__FILE_URL__UPLOAD_DIR=uploads/questions
           APP_CONFIG__REDIS__HOST=redis
           APP_CONFIG__REDIS__PORT=6379
-          APP_CONFIG__REDIS__PREFIX=${{ secrets.APP_CONFIG__REDIS__PREFIX }}
+          APP_CONFIG__REDIS__PREFIX=fastapi-cache
+          APP_CONFIG__FACE_SERVICE__URL=http://face-detection:8000
+          POSTGRES_HOST=database
+          POSTGRES_PORT=5432
+          # ─── Sensitive (from GitHub Secrets) ───
           POSTGRES_USER=${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-          POSTGRES_HOST=database
-          POSTGRES_PORT=5432
+          APP_CONFIG__JWT__ACCESS_TOKEN_SECRET=${{ secrets.APP_CONFIG__JWT__ACCESS_TOKEN_SECRET }}
+          APP_CONFIG__JWT__REFRESH_TOKEN_SECRET=${{ secrets.APP_CONFIG__JWT__REFRESH_TOKEN_SECRET }}
+          APP_CONFIG__ADMIN__USERNAME=${{ secrets.APP_CONFIG__ADMIN__USERNAME }}
+          APP_CONFIG__ADMIN__PASSWORD=${{ secrets.APP_CONFIG__ADMIN__PASSWORD }}
+          APP_CONFIG__ADMIN__SECRET_KEY=${{ secrets.APP_CONFIG__ADMIN__SECRET_KEY }}
+          APP_CONFIG__HEMIS__LOGIN_URL=${{ secrets.APP_CONFIG__HEMIS__LOGIN_URL }}
+          APP_CONFIG__HEMIS__ME_URL=${{ secrets.APP_CONFIG__HEMIS__ME_URL }}
+          APP_CONFIG__FACE_SERVICE__INTERNAL_TOKEN=${{ secrets.INTERNAL_SERVICE_TOKEN }}
           EOF
 
-      # ВАЖНО: Мы больше не делаем docker compose down!
-      # Используем нашу новую команду из Makefile
+      - name: Write frontend/.env
+        working-directory: frontend
+        run: |
+          cat > .env <<'EOF'
+          VITE_API_URL=https://test.api.nsumt.uz
+          EOF
+
       - name: Zero-Downtime Deploy
         run: make deploy
-
-      # Очистка теперь встроена в make deploy, но можно оставить для надежности
-      - name: Clean up unused Docker resources
-        run: docker image prune -f
