@@ -91,7 +91,7 @@ async def async_client(async_db):
         yield async_db
 
     fastapi_app.dependency_overrides[db_helper.session_getter] = override_get_db
-    return AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://localhost")
+    return AsyncClient(transport=ASGITransport(app=fastapi_app), base_url="http://localhost/api")
 
 
 @pytest_asyncio.fixture
