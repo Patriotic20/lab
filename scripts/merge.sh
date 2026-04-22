@@ -73,6 +73,7 @@ docker exec "$DB_CONTAINER" pg_dump \
     -U "$DB_USER" \
     -d "$TEMP_DB" \
     --data-only \
+    --rows-per-insert=1000 \
     --on-conflict-do-nothing \
     --disable-triggers \
     --exclude-table=alembic_version \

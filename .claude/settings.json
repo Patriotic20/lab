@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(chmod +x /home/bekzod/Projects/Production/ndktu-student-face-platform/scripts/merge.sh)",
-      "Bash(bash -n /home/bekzod/Projects/Production/ndktu-student-face-platform/scripts/merge.sh)"
+      "Bash(bash -n /home/bekzod/Projects/Production/ndktu-student-face-platform/scripts/merge.sh)",
+      "Bash(zcat /home/bekzod/Projects/Production/ndktu-student-face-platform/backups/backup_2026-04-22_23-03-11.sql.gz)",
+      "Bash(awk '/CREATE TABLE public.questions/,/^\\);/')",
+      "Bash(awk '/^COPY public.questions/,/^\\\\\\\\\\\\./')"
     ]
   }
 }
