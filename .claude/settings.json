@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod +x /home/bekzod/Projects/Production/ndktu-student-face-platform/scripts/merge.sh)",
+      "Bash(bash -n /home/bekzod/Projects/Production/ndktu-student-face-platform/scripts/merge.sh)"
+    ]
+  }
+}

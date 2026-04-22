@@ -1,4 +1,4 @@
-.PHONY: help up down restart logs frontend-logs backend-logs face-logs nginx-logs prod-up prod-down prod-restart prod-logs backup backup-database backup-logs backup-images restore deploy
+.PHONY: help up down restart logs frontend-logs backend-logs face-logs nginx-logs prod-up prod-down prod-restart prod-logs backup backup-database backup-logs backup-images restore merge deploy
 
 .DEFAULT_GOAL := help
 
@@ -32,7 +32,8 @@ help:
 	@echo "make backup-database  - Backup only the PostgreSQL database"
 	@echo "make backup-logs      - Backup only backend logs"
 	@echo "make backup-images    - Backup only uploaded images"
-	@echo "make restore FILE=path/to/backup.sql.gz - Restore from backup"
+	@echo "make restore FILE=path/to/backup.sql.gz - Restore (REPLACES all data) from backup"
+	@echo "make merge   FILE=path/to/backup.sql.gz - Merge backup into current DB (non-destructive)"
 	@echo ""
 
 # Start development services (localhost, no nginx)
@@ -96,10 +97,15 @@ backup-logs:
 backup-images:
 	./scripts/backup_images.sh
 
-# Restore database from backup file
+# Restore database from backup file (DESTRUCTIVE — replaces all data)
 restore:
 	@if [ -z "$(FILE)" ]; then echo "Usage: make restore FILE=path/to/backup.sql.gz"; exit 1; fi
 	./scripts/restore.sh $$(realpath $(FILE))
+
+# Merge a backup into the current DB (non-destructive — existing rows kept, missing rows added)
+merge:
+	@if [ -z "$(FILE)" ]; then echo "Usage: make merge FILE=path/to/backup.sql.gz"; exit 1; fi
+	./scripts/merge.sh $$(realpath $(FILE))
 
 # Zero-Downtime Deployment (prod)
 deploy:
