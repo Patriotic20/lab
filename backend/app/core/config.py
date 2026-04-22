@@ -15,6 +15,7 @@ class ServerConfig(BaseModel):
     host: str
     port: int
     reload: bool = True
+    workers: int = 1
     # When True, Swagger / ReDoc / OpenAPI endpoints are disabled at the app level.
     # Keep False in dev; set APP_CONFIG__SERVER__IS_PROD=True in production.
     is_prod: bool = False
@@ -39,7 +40,7 @@ class JwtConfig(BaseModel):
 
 class DatabaseConfig(BaseModel):
     url: PostgresDsn
-    test_url: PostgresDsn
+    test_url: PostgresDsn | None = None
     echo: bool = False
     echo_pool: bool = False
     pool_size: int = 50

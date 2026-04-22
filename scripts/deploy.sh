@@ -58,7 +58,7 @@ echo ""
 
 # ─── Step 1: Build new images (old containers still running) ─────────────────
 echo "🔨 [1/5] Building new images (traffic uninterrupted)..."
-$COMPOSE build face-detection backend frontend
+$COMPOSE build --parallel face-detection backend frontend
 echo "   ✅ Images built"
 echo ""
 

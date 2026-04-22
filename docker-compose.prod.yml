@@ -15,11 +15,34 @@ services:
     ports: !reset []
     expose:
       - "8000"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 5s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
 
   backend:
     ports: !reset []
     expose:
       - "8000"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+    environment:
+      - APP_CONFIG__SERVER__WORKERS=3
+      - APP_CONFIG__SERVER__RELOAD=False
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
 
   frontend:
     ports: !reset []

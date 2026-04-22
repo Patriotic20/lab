@@ -78,11 +78,14 @@ async def health_check():
 
 
 def main():
+    # uvicorn rejects reload=True combined with workers>1
+    use_reload = settings.server.reload and settings.server.workers == 1
     uvicorn.run(
         app=settings.server.app_path,
         host=settings.server.host,
         port=settings.server.port,
-        reload=settings.server.reload,
+        reload=use_reload,
+        workers=settings.server.workers if not use_reload else None,
         proxy_headers=True,
         forwarded_allow_ips="*",
     )
