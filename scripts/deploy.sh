@@ -90,6 +90,14 @@ $COMPOSE up -d --no-build --no-deps frontend
 echo "   ✅ Frontend restarted"
 echo ""
 
+# ─── Step 6: Ensure nginx reverse-proxy is up and reload config ──────────────
+echo "🔄 [6/6] Reloading nginx reverse-proxy..."
+$COMPOSE up -d --no-build --no-deps nginx
+# Reload in case config changed but container was already running
+docker exec nusmt_nginx nginx -s reload 2>/dev/null || true
+echo "   ✅ Nginx reloaded"
+echo ""
+
 # ─── Cleanup ─────────────────────────────────────────────────────────────────
 echo "🧹 Pruning dangling images..."
 docker image prune -f > /dev/null

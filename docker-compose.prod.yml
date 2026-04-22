@@ -1,67 +1,31 @@
 # ─────────────────────────────────────────────────────────────────
 #  PRODUCTION OVERRIDE  (docker compose -f docker-compose.yml -f docker-compose.prod.yml up)
-#  • Traefik handles HTTPS + Let's Encrypt auto-SSL
-#  • HTTP → HTTPS redirect automatic
-#  • No direct port exposure on backend / frontend / face-detection
-#  • Traefik dashboard disabled in prod
+#  • Docker nginx binds to 127.0.0.1:8080 — host-level nginx forwards :80/:443 → :8080
+#  • No direct port exposure on backend / frontend / face-detection / pgadmin
+#  • Host-level nginx terminates HTTPS (manage certs with certbot on the host)
 #  • Use:  make prod-up
 # ─────────────────────────────────────────────────────────────────
 
 services:
-  traefik:
-    command:
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=app_network"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
-      - "--log.level=INFO"
+  nginx:
+    ports: !reset []
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - letsencrypt:/letsencrypt
+      - "127.0.0.1:8080:80"
 
   face-detection:
     ports: !reset []
     expose:
       - "8000"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.face.rule=Host(`test.face.nsumt.uz`)"
-      - "traefik.http.routers.face.entrypoints=websecure"
-      - "traefik.http.routers.face.tls.certresolver=letsencrypt"
-      - "traefik.http.services.face.loadbalancer.server.port=8000"
 
   backend:
     ports: !reset []
     expose:
       - "8000"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`test.api.nsumt.uz`) && (PathPrefix(`/docs`) || PathPrefix(`/redoc`) || PathPrefix(`/openapi.json`) || PathPrefix(`/user`) || PathPrefix(`/role`) || PathPrefix(`/permission`) || PathPrefix(`/faculty`) || PathPrefix(`/kafedra`) || PathPrefix(`/group`) || PathPrefix(`/teacher`) || PathPrefix(`/question`) || PathPrefix(`/quiz`) || PathPrefix(`/quiz_process`) || PathPrefix(`/result`) || PathPrefix(`/statistics`) || PathPrefix(`/students`) || PathPrefix(`/subject`) || PathPrefix(`/hemis`) || PathPrefix(`/user_answers`) || PathPrefix(`/yakuniy`) || PathPrefix(`/resource`) || PathPrefix(`/psychology`) || PathPrefix(`/health`) || PathPrefix(`/uploads`) || PathPrefix(`/evidence`) || PathPrefix(`/admin`))"
-      - "traefik.http.routers.backend.entrypoints=websecure"
-      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.backend.priority=10"
-      - "traefik.http.services.backend.loadbalancer.server.port=8000"
 
   frontend:
     ports: !reset []
     expose:
       - "80"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`test.api.nsumt.uz`)"
-      - "traefik.http.routers.frontend.entrypoints=websecure"
-      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.frontend.priority=1"
-      - "traefik.http.services.frontend.loadbalancer.server.port=80"
 
   database:
     ports: !reset []
