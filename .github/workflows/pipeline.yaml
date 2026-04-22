@@ -102,7 +102,7 @@ jobs:
 
       - name: Ruff lint
         working-directory: backend
-        run: uv run ruff check app/
+        run: uvx ruff check app/
 
       - name: Apply Alembic migrations
         working-directory: backend/app
