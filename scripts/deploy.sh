@@ -48,6 +48,18 @@ echo ""
 echo "🚀 [3/3] Starting all services..."
 $COMPOSE up -d --no-build --remove-orphans
 
+# nginx is not rebuilt on deploy, so `up -d` leaves it running with stale
+# upstream DNS (and the old nginx-proxy.conf mount isn't re-read). Reload it
+# so it picks up new backend/frontend IPs and any config changes.
+echo ""
+echo "🔄 Reloading nginx (upstream DNS + config)..."
+if docker ps --format '{{.Names}}' | grep -q '^nusmt_nginx$'; then
+    docker exec nusmt_nginx nginx -t
+    docker exec nusmt_nginx nginx -s reload
+else
+    echo "   nusmt_nginx not running — skipping reload"
+fi
+
 echo ""
 echo "🧹 Pruning dangling images..."
 docker image prune -f > /dev/null
