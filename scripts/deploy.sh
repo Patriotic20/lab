@@ -10,6 +10,10 @@
 
 set -euo pipefail
 
+# Make BuildKit + compose CLI build explicit so cache_from / inline cache work
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 COMPOSE="docker compose -f $PROJECT_DIR/docker-compose.yml -f $PROJECT_DIR/docker-compose.prod.yml"
@@ -33,7 +37,29 @@ trap on_error ERR
 cd "$PROJECT_DIR"
 
 echo "🔨 [1/3] Building images..."
-$COMPOSE build --parallel face-detection backend frontend
+
+# face-detection is the expensive image (compiles dlib, downloads model weights).
+# Skip rebuild when nothing in face-detection/ changed since the previous deploy.
+# Hash all tracked files in face-detection/ via git's blob index and tag the
+# resulting image with that hash. If the tag exists locally, reuse it.
+FACE_HASH=$(git -C "$PROJECT_DIR" ls-tree -r HEAD -- face-detection/ | sha256sum | cut -c1-12)
+FACE_HASH_TAG="nusmt-face-detection:${FACE_HASH}"
+
+if docker image inspect "$FACE_HASH_TAG" >/dev/null 2>&1; then
+    echo "  ✓ face-detection unchanged (${FACE_HASH}) — reusing cached image"
+    docker tag "$FACE_HASH_TAG" nusmt-face-detection:latest
+else
+    echo "  🔨 face-detection changed (${FACE_HASH}) — building..."
+    $COMPOSE build face-detection
+    docker tag nusmt-face-detection:latest "$FACE_HASH_TAG"
+fi
+
+# Build backend + frontend serially (parallel thrashes the self-hosted runner's
+# disk and triggers the "extracting same layer forever" loop).
+echo "  🔨 backend..."
+$COMPOSE build backend
+echo "  🔨 frontend..."
+$COMPOSE build frontend
 
 echo ""
 echo "🗄️  [2/3] Applying database migrations..."

@@ -152,11 +152,13 @@ jobs:
     needs: [backend-test, frontend-build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: [self-hosted, lms]
-    timeout-minutes: 20
+    timeout-minutes: 35
 
     steps:
       - name: Checkout latest code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Show deploy info
         run: |
@@ -236,7 +238,15 @@ jobs:
         if: always()
         run: |
           docker image prune -f
-          docker builder prune -f --keep-storage 5GB
+          # Keep build cache around so the next deploy can reuse layers.
+          # Drop only entries unused for 7+ days, capped at 20GB.
+          docker builder prune -f --filter 'until=168h' --keep-storage 20GB
+          # Drop dangling face-detection hash tags older than 7 days so old
+          # versions don't accumulate forever.
+          docker images --filter 'reference=nusmt-face-detection:*' \
+            --filter 'dangling=false' --format '{{.Repository}}:{{.Tag}} {{.CreatedSince}}' \
+            | awk '$1 != "nusmt-face-detection:latest" && $0 ~ /(weeks|months|years) ago/ {print $1}' \
+            | xargs -r docker rmi -f || true
 
       - name: Deploy notification
         if: success()

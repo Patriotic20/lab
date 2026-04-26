@@ -5,7 +5,10 @@
       "Bash(bash -n /home/bekzod/Projects/Production/ndktu-student-face-platform/scripts/merge.sh)",
       "Bash(zcat /home/bekzod/Projects/Production/ndktu-student-face-platform/backups/backup_2026-04-22_23-03-11.sql.gz)",
       "Bash(awk '/CREATE TABLE public.questions/,/^\\);/')",
-      "Bash(awk '/^COPY public.questions/,/^\\\\\\\\\\\\./')"
+      "Bash(awk '/^COPY public.questions/,/^\\\\\\\\\\\\./')",
+      "Bash(bash -n scripts/deploy.sh)",
+      "Bash(python3 -c \"import yaml; yaml.safe_load\\(open\\('.github/workflows/pipeline.yaml'\\)\\)\")",
+      "Bash(python3 -c \"import yaml; yaml.safe_load\\(open\\('docker-compose.yml'\\)\\)\")"
     ]
   }
 }

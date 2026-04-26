@@ -23,9 +23,14 @@ services:
       - app_network
 
   face-detection:
+    image: nusmt-face-detection:latest
     build:
       context: ./face-detection
       dockerfile: Dockerfile
+      cache_from:
+        - nusmt-face-detection:latest
+      args:
+        BUILDKIT_INLINE_CACHE: "1"
     container_name: nusmt_face_detection
     restart: always
     env_file: ./.env
@@ -42,9 +47,14 @@ services:
       retries: 3
 
   backend:
+    image: nusmt-backend:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
+      cache_from:
+        - nusmt-backend:latest
+      args:
+        BUILDKIT_INLINE_CACHE: "1"
     container_name: nusmt_backend
     restart: always
     env_file: ./.env
@@ -79,8 +89,13 @@ services:
       - APP_CONFIG__FACE_SERVICE__INTERNAL_TOKEN=${INTERNAL_SERVICE_TOKEN}
 
   frontend:
+    image: nusmt-frontend:latest
     build:
       context: ./frontend
+      cache_from:
+        - nusmt-frontend:latest
+      args:
+        BUILDKIT_INLINE_CACHE: "1"
     container_name: nusmt_frontend
     restart: always
     ports:
