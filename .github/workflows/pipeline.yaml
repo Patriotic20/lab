@@ -1,20 +1,13 @@
-name: Test Runner
+name: Quick Test
 
 on:
-  workflow_dispatch:   # запуск вручную из GitHub UI
+  workflow_dispatch:
 
 jobs:
-  test:
-    runs-on: [self-hosted, lms]
+  hello:
+    runs-on: self-hosted
     steps:
-      - name: Hello
-        run: |
-          echo "✅ Раннер работает!"
-          echo "Hostname: $(hostname)"
-          echo "User: $(whoami)"
-          echo "Date: $(date)"
-          docker --version
-          docker compose version
+      - run: echo "It works!"
 
 # name: CI/CD Pipeline
 
