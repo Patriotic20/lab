@@ -8,7 +8,8 @@
       "Bash(awk '/^COPY public.questions/,/^\\\\\\\\\\\\./')",
       "Bash(bash -n scripts/deploy.sh)",
       "Bash(python3 -c \"import yaml; yaml.safe_load\\(open\\('.github/workflows/pipeline.yaml'\\)\\)\")",
-      "Bash(python3 -c \"import yaml; yaml.safe_load\\(open\\('docker-compose.yml'\\)\\)\")"
+      "Bash(python3 -c \"import yaml; yaml.safe_load\\(open\\('docker-compose.yml'\\)\\)\")",
+      "Bash(git fetch *)"
     ]
   }
 }
