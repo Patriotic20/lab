@@ -22,7 +22,15 @@
       "Bash(curl -s https://organization.api.nsumt.uz/api/health)",
       "Bash(curl -sI https://organization.api.nsumt.uz/)",
       "Bash(curl -s https://organization.api.nsumt.uz/login)",
-      "Bash(ssh -o ConnectTimeout=5 -o BatchMode=yes lms 'echo \"ssh ok\"; docker exec nusmt_nginx cat /etc/nginx/conf.d/default.conf 2>&1 | head -25; echo \"---SERVER-NAMES---\"; docker exec nusmt_nginx nginx -T 2>/dev/null | grep -E \"server_name|listen \"')"
+      "Bash(ssh -o ConnectTimeout=5 -o BatchMode=yes lms 'echo \"ssh ok\"; docker exec nusmt_nginx cat /etc/nginx/conf.d/default.conf 2>&1 | head -25; echo \"---SERVER-NAMES---\"; docker exec nusmt_nginx nginx -T 2>/dev/null | grep -E \"server_name|listen \"')",
+      "Bash(awk '/^  nginx:/,/^  [a-z]/')",
+      "Read(//tmp/**)",
+      "Bash(rm -rf nginx-test)",
+      "Bash(mkdir -p nginx-test/letsencrypt/live/organization.api.nsumt.uz nginx-test/certbot)",
+      "Bash(openssl req *)"
+    ],
+    "additionalDirectories": [
+      "/tmp/nginx-test"
     ]
   }
 }

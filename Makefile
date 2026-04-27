@@ -19,7 +19,7 @@ help:
 	@echo "make face-logs        - View face detection logs"
 	@echo "make nginx-logs       - View nginx reverse-proxy logs"
 	@echo ""
-	@echo "PRODUCTION (Docker nginx on 127.0.0.1:8080 behind host nginx):"
+	@echo "PRODUCTION (Docker nginx terminates HTTPS on :80 + :443):"
 	@echo "────────────────────────────────────"
 	@echo "make prod-up          - Start all services (prod)"
 	@echo "make prod-down        - Stop all services"
