@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 from core.db_helper import db_helper
 from dependence.role_checker import PermissionRequired
@@ -14,6 +17,9 @@ from .schemas import (
     ResourceListRequest,
     ResourceListResponse,
 )
+
+if TYPE_CHECKING:
+    from app.modules.user.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -32,18 +38,22 @@ router = APIRouter(
 async def create_resource(
     data: ResourceCreateRequest,
     session: AsyncSession = Depends(db_helper.session_getter),
-    _: PermissionRequired = Depends(PermissionRequired("create:resource")),
+    current_user: User = Depends(PermissionRequired("create:resource")),
 ):
-    return await get_resource_repository.create_resource(session=session, data=data)
+    return await get_resource_repository.create_resource(
+        session=session, data=data, current_user=current_user
+    )
 
 
 @router.get("/", response_model=ResourceListResponse)
 async def list_resources(
     data: ResourceListRequest = Depends(),
     session: AsyncSession = Depends(db_helper.session_getter),
-    _: PermissionRequired = Depends(PermissionRequired("read:resource")),
+    current_user: User = Depends(PermissionRequired("read:resource")),
 ):
-    return await get_resource_repository.list_resources(session=session, request=data)
+    return await get_resource_repository.list_resources(
+        session=session, request=data, current_user=current_user
+    )
 
 
 @router.get("/{resource_id}", response_model=ResourceResponse)
@@ -64,10 +74,10 @@ async def update_resource(
     resource_id: int,
     data: ResourceUpdateRequest,
     session: AsyncSession = Depends(db_helper.session_getter),
-    _: PermissionRequired = Depends(PermissionRequired("update:resource")),
+    current_user: User = Depends(PermissionRequired("update:resource")),
 ):
     return await get_resource_repository.update_resource(
-        session=session, resource_id=resource_id, data=data
+        session=session, resource_id=resource_id, data=data, current_user=current_user
     )
 
 
@@ -79,6 +89,8 @@ async def update_resource(
 async def delete_resource(
     resource_id: int,
     session: AsyncSession = Depends(db_helper.session_getter),
-    _: PermissionRequired = Depends(PermissionRequired("delete:resource")),
+    current_user: User = Depends(PermissionRequired("delete:resource")),
 ):
-    await get_resource_repository.delete_resource(session=session, resource_id=resource_id)
+    await get_resource_repository.delete_resource(
+        session=session, resource_id=resource_id, current_user=current_user
+    )

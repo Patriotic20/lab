@@ -1,16 +1,20 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useResources, useCreateResource, useUpdateResource, useDeleteResource } from '@/hooks/useResources';
 import { useTeachers } from '@/hooks/useTeachers';
+import { useTeacherAssignedGroups } from '@/hooks/useTeachers';
+import { useTeacherAssignedSubjects } from '@/hooks/useSubjects';
+import { useGroups } from '@/hooks/useGroups';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
+import { Combobox } from '@/components/ui/Combobox';
 import {
     Plus, Trash2, Edit2, Link2, BookOpen, ExternalLink, Loader2, X
 } from 'lucide-react';
-import type { ResourceResponse, ResourceLink, ResourceCreateRequest } from '@/services/resourceService';
+import type { ResourceResponse, ResourceLink, ResourceCreateRequest, ResourceUpdateRequest } from '@/services/resourceService';
 
 // ── Helper to validate URL ──────────────────────────────────────────────────
 const isValidUrl = (url: string) => {
@@ -63,21 +67,34 @@ export default function ResourcesPage() {
     const isTeacher = user?.roles?.some(r => r.name.toLowerCase() === 'teacher');
 
     const [page, setPage] = useState(1);
+    const [filterGroupId, setFilterGroupId] = useState<string>('');
     const pageSize = 10;
 
-    const { data, isLoading, isError, error } = useResources(page, pageSize);
+    const filterGroupNum = filterGroupId ? parseInt(filterGroupId, 10) : undefined;
+    const { data, isLoading, isError, error } = useResources(page, pageSize, undefined, filterGroupNum);
+
     const createMutation = useCreateResource();
     const updateMutation = useUpdateResource();
     const deleteMutation = useDeleteResource();
 
-    // Teachers list for subject_teacher selection (admin only)
+    // Admin: load all teachers (for subject_teacher selector) and all groups (for group selector + filter).
     const { data: teachersData } = useTeachers(1, 500, undefined, isAdmin);
+    const { data: allGroupsData } = useGroups(1, 1000, '', undefined, undefined);
+
+    // Teacher: load their own assigned subjects/groups so we can restrict the dropdowns.
+    const { data: assignedSubjectsData } = useTeacherAssignedSubjects(
+        isTeacher && user?.id ? user.id : undefined
+    );
+    const { data: assignedGroupsData } = useTeacherAssignedGroups(
+        isTeacher && user?.id ? user.id : undefined
+    );
 
     // ── Modal state ──────────────────────────────────────────────────────────
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingResource, setEditingResource] = useState<ResourceResponse | null>(null);
 
     const [formSubjectTeacherId, setFormSubjectTeacherId] = useState('');
+    const [formGroupId, setFormGroupId] = useState('');
     const [formMainText, setFormMainText] = useState('');
     const [formLinks, setFormLinks] = useState<ResourceLink[]>([{ title: '', url: '' }]);
     const [formError, setFormError] = useState('');
@@ -85,10 +102,48 @@ export default function ResourcesPage() {
     // Delete confirm
     const [deleteTarget, setDeleteTarget] = useState<ResourceResponse | null>(null);
 
+    // ── Combobox option lists ────────────────────────────────────────────────
+    const subjectTeacherOptions = useMemo(() => {
+        if (isTeacher && !isAdmin) {
+            return (assignedSubjectsData?.subject_teachers ?? []).map(st => ({
+                value: st.id.toString(),
+                label: `${assignedSubjectsData?.full_name ?? ''} / ${st.subject.name}`.trim(),
+            }));
+        }
+        return (teachersData?.teachers ?? []).flatMap(t =>
+            (t.subject_teachers ?? []).map((st: any) => ({
+                value: st.id.toString(),
+                label: `${t.full_name} / ${st.subject?.name ?? '?'}`,
+            }))
+        );
+    }, [isTeacher, isAdmin, teachersData, assignedSubjectsData]);
+
+    const groupOptions = useMemo(() => {
+        if (isTeacher && !isAdmin) {
+            return (assignedGroupsData?.group_teachers ?? []).map(gt => ({
+                value: gt.group_id.toString(),
+                label: gt.group.name,
+            }));
+        }
+        return (allGroupsData?.groups ?? []).map(g => ({
+            value: g.id.toString(),
+            label: g.name,
+        }));
+    }, [isTeacher, isAdmin, assignedGroupsData, allGroupsData]);
+
+    // Group lookup for displaying group name on cards even when full group object isn't returned.
+    const groupNameById = useMemo(() => {
+        const m = new Map<number, string>();
+        (allGroupsData?.groups ?? []).forEach(g => m.set(g.id, g.name));
+        (assignedGroupsData?.group_teachers ?? []).forEach(gt => m.set(gt.group_id, gt.group.name));
+        return m;
+    }, [allGroupsData, assignedGroupsData]);
+
     // ── Helpers ──────────────────────────────────────────────────────────────
     const openCreate = () => {
         setEditingResource(null);
         setFormSubjectTeacherId('');
+        setFormGroupId('');
         setFormMainText('');
         setFormLinks([{ title: '', url: '' }]);
         setFormError('');
@@ -98,6 +153,7 @@ export default function ResourcesPage() {
     const openEdit = (res: ResourceResponse) => {
         setEditingResource(res);
         setFormSubjectTeacherId(res.subject_teacher_id.toString());
+        setFormGroupId(res.group_id != null ? res.group_id.toString() : '');
         setFormMainText(res.main_text);
         setFormLinks(res.links.length > 0 ? [...res.links] : [{ title: '', url: '' }]);
         setFormError('');
@@ -120,7 +176,8 @@ export default function ResourcesPage() {
 
     const validate = () => {
         if (!formMainText.trim()) return 'Asosiy matn bo\'sh bo\'lishi mumkin emas';
-        if (!editingResource && !formSubjectTeacherId) return 'Fan/O\'qituvchi tanlanmagan';
+        if (!formSubjectTeacherId) return 'Fan/O\'qituvchi tanlanmagan';
+        if (!formGroupId) return 'Guruh tanlanmagan';
         for (const l of formLinks) {
             if (l.title && l.url && !isValidUrl(l.url)) return `Noto'g'ri URL: ${l.url}`;
         }
@@ -132,15 +189,23 @@ export default function ResourcesPage() {
         if (err) { setFormError(err); return; }
 
         const cleanLinks = formLinks.filter(l => l.title.trim() && l.url.trim());
+        const groupIdNum = formGroupId ? parseInt(formGroupId, 10) : null;
 
         if (editingResource) {
+            const payload: ResourceUpdateRequest = {
+                main_text: formMainText,
+                links: cleanLinks,
+                group_id: groupIdNum,
+                subject_teacher_id: parseInt(formSubjectTeacherId, 10),
+            };
             updateMutation.mutate(
-                { id: editingResource.id, data: { main_text: formMainText, links: cleanLinks } },
+                { id: editingResource.id, data: payload },
                 { onSuccess: closeModal, onError: () => setFormError('Xatolik yuz berdi') }
             );
         } else {
             const payload: ResourceCreateRequest = {
-                subject_teacher_id: parseInt(formSubjectTeacherId),
+                subject_teacher_id: parseInt(formSubjectTeacherId, 10),
+                group_id: groupIdNum,
                 main_text: formMainText,
                 links: cleanLinks,
             };
@@ -163,7 +228,7 @@ export default function ResourcesPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <h1 className="text-xl font-semibold tracking-tight">Resurslar</h1>
                     <p className="mt-0.5 text-sm text-muted-foreground">
@@ -177,6 +242,21 @@ export default function ResourcesPage() {
                     </Button>
                 )}
             </div>
+
+            {/* Filter by group (admin + teacher) */}
+            {(isAdmin || isTeacher) && groupOptions.length > 0 && (
+                <div className="flex items-center gap-2 max-w-sm">
+                    <span className="text-sm text-muted-foreground shrink-0">Guruh:</span>
+                    <div className="flex-1">
+                        <Combobox
+                            options={[{ value: '', label: 'Barchasi' }, ...groupOptions]}
+                            value={filterGroupId}
+                            onChange={(v) => { setFilterGroupId(v); setPage(1); }}
+                            placeholder="Barchasi"
+                        />
+                    </div>
+                </div>
+            )}
 
             {/* Resource cards */}
             {isLoading ? (
@@ -205,68 +285,82 @@ export default function ResourcesPage() {
                 </Card>
             ) : (
                 <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
-                    {data.resources.map(res => (
-                        <Card key={res.id} className="flex flex-col">
-                            <CardHeader className="pb-2">
-                                <div className="flex items-start justify-between gap-2">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <BookOpen className="h-5 w-5 shrink-0 text-primary" />
-                                        <span className="text-xs text-muted-foreground">
-                                            Fan/O'qituvchi #{res.subject_teacher_id}
-                                        </span>
+                    {data.resources.map(res => {
+                        const groupLabel = res.group?.name
+                            ?? (res.group_id != null ? groupNameById.get(res.group_id) : undefined);
+                        return (
+                            <Card key={res.id} className="flex flex-col">
+                                <CardHeader className="pb-2">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                                            <BookOpen className="h-5 w-5 shrink-0 text-primary" />
+                                            <span className="text-xs text-muted-foreground">
+                                                Fan/O'qituvchi #{res.subject_teacher_id}
+                                            </span>
+                                            {groupLabel && (
+                                                <span className="text-xs rounded-full bg-primary/10 text-primary px-2 py-0.5">
+                                                    Guruh: {groupLabel}
+                                                </span>
+                                            )}
+                                            {res.group_id == null && (isAdmin || isTeacher) && (
+                                                <span className="text-xs rounded-full bg-amber-500/10 text-amber-600 px-2 py-0.5">
+                                                    Guruh tanlanmagan
+                                                </span>
+                                            )}
+                                        </div>
+                                        {(isAdmin || isTeacher) && (
+                                            <div className="flex gap-1 shrink-0">
+                                                <button
+                                                    onClick={() => openEdit(res)}
+                                                    className="rounded p-1 hover:bg-accent text-muted-foreground hover:text-foreground"
+                                                    title="Tahrirlash"
+                                                >
+                                                    <Edit2 className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => setDeleteTarget(res)}
+                                                    className="rounded p-1 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                                                    title="O'chirish"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
-                                    {(isAdmin || isTeacher) && (
-                                        <div className="flex gap-1 shrink-0">
-                                            <button
-                                                onClick={() => openEdit(res)}
-                                                className="rounded p-1 hover:bg-accent text-muted-foreground hover:text-foreground"
-                                                title="Tahrirlash"
-                                            >
-                                                <Edit2 className="h-4 w-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => setDeleteTarget(res)}
-                                                className="rounded p-1 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                                                title="O'chirish"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
+                                </CardHeader>
+                                <CardContent className="flex-1 space-y-3">
+                                    {/* Main text */}
+                                    <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                                        {res.main_text}
+                                    </p>
+
+                                    {/* Links */}
+                                    {res.links.length > 0 && (
+                                        <div className="space-y-1.5 pt-1">
+                                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                                                <Link2 className="h-3.5 w-3.5" />
+                                                Havolalar
+                                            </p>
+                                            {res.links.map((link, idx) => (
+                                                <a
+                                                    key={idx}
+                                                    href={link.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-accent transition-colors group"
+                                                >
+                                                    <ExternalLink className="h-3.5 w-3.5 text-primary shrink-0" />
+                                                    <span className="truncate group-hover:text-primary transition-colors">
+                                                        {link.title || link.url}
+                                                    </span>
+                                                </a>
+                                            ))}
                                         </div>
                                     )}
-                                </div>
-                            </CardHeader>
-                            <CardContent className="flex-1 space-y-3">
-                                {/* Main text */}
-                                <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                                    {res.main_text}
-                                </p>
-
-                                {/* Links */}
-                                {res.links.length > 0 && (
-                                    <div className="space-y-1.5 pt-1">
-                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-                                            <Link2 className="h-3.5 w-3.5" />
-                                            Havolalar
-                                        </p>
-                                        {res.links.map((link, idx) => (
-                                            <a
-                                                key={idx}
-                                                href={link.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-accent transition-colors group"
-                                            >
-                                                <ExternalLink className="h-3.5 w-3.5 text-primary shrink-0" />
-                                                <span className="truncate group-hover:text-primary transition-colors">
-                                                    {link.title || link.url}
-                                                </span>
-                                            </a>
-                                        ))}
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    ))}
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
                 </div>
             )}
 
@@ -281,28 +375,31 @@ export default function ResourcesPage() {
                 title={editingResource ? 'Resursni tahrirlash' : 'Yangi resurs qo\'shish'}
             >
                 <div className="space-y-4">
-                    {/* subject_teacher selector — admin only when creating */}
-                    {!editingResource && isAdmin && (
-                        <div>
-                            <label className="text-sm font-medium block mb-1">
-                                Fan / O'qituvchi (subject_teacher_id)
-                            </label>
-                            <select
-                                value={formSubjectTeacherId}
-                                onChange={e => setFormSubjectTeacherId(e.target.value)}
-                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                            >
-                                <option value="">Tanlang...</option>
-                                {(teachersData?.teachers || []).flatMap(t =>
-                                    t.subject_teachers?.map((st: any) => (
-                                        <option key={st.id} value={st.id}>
-                                            #{st.id} — {t.full_name} / {st.subject?.name ?? '?'}
-                                        </option>
-                                    )) ?? []
-                                )}
-                            </select>
-                        </div>
-                    )}
+                    {/* Subject / Teacher selector */}
+                    <div>
+                        <label className="text-sm font-medium block mb-1">
+                            Fan / O'qituvchi
+                        </label>
+                        <Combobox
+                            options={subjectTeacherOptions}
+                            value={formSubjectTeacherId}
+                            onChange={setFormSubjectTeacherId}
+                            placeholder="Tanlang..."
+                        />
+                    </div>
+
+                    {/* Group selector */}
+                    <div>
+                        <label className="text-sm font-medium block mb-1">
+                            Guruh
+                        </label>
+                        <Combobox
+                            options={groupOptions}
+                            value={formGroupId}
+                            onChange={setFormGroupId}
+                            placeholder="Tanlang..."
+                        />
+                    </div>
 
                     {/* Main text */}
                     <div>

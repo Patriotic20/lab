@@ -5,10 +5,15 @@ import {
     type ResourceUpdateRequest,
 } from '@/services/resourceService';
 
-export const useResources = (page = 1, limit = 20, subject_teacher_id?: number) =>
+export const useResources = (
+    page = 1,
+    limit = 20,
+    subject_teacher_id?: number,
+    group_id?: number,
+) =>
     useQuery({
-        queryKey: ['resources', page, limit, subject_teacher_id],
-        queryFn: () => resourceService.list({ page, limit, subject_teacher_id }),
+        queryKey: ['resources', page, limit, subject_teacher_id, group_id],
+        queryFn: () => resourceService.list({ page, limit, subject_teacher_id, group_id }),
     });
 
 export const useResource = (id: number) =>

@@ -45,11 +45,6 @@ services:
       retries: 12
       start_period: 60s
 
-  frontend:
-    ports: !reset []
-    expose:
-      - "80"
-
   database:
     ports: !reset []
 

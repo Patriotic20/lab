@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, ConfigDict, HttpUrl, field_validator
+from pydantic import BaseModel, ConfigDict
 
 
 class ResourceLink(BaseModel):
@@ -18,8 +18,15 @@ class ResourceSubjectTeacherInfo(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ResourceGroupInfo(BaseModel):
+    id: int
+    name: str
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ResourceCreateRequest(BaseModel):
     subject_teacher_id: int
+    group_id: Optional[int] = None
     main_text: str
     links: List[ResourceLink] = []
 
@@ -27,22 +34,27 @@ class ResourceCreateRequest(BaseModel):
 class ResourceUpdateRequest(BaseModel):
     main_text: Optional[str] = None
     links: Optional[List[ResourceLink]] = None
+    group_id: Optional[int] = None
+    subject_teacher_id: Optional[int] = None
 
 
 class ResourceResponse(BaseModel):
     id: int
     subject_teacher_id: int
+    group_id: Optional[int] = None
     main_text: str
     links: List[ResourceLink]
     created_at: datetime
     updated_at: datetime
     subject_teacher: Optional[ResourceSubjectTeacherInfo] = None
+    group: Optional[ResourceGroupInfo] = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class ResourceListRequest(BaseModel):
     subject_teacher_id: Optional[int] = None
+    group_id: Optional[int] = None
 
     page: int = 1
     limit: int = 20

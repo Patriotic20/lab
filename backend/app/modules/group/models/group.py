@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from app.modules.result.model import Result
     from app.modules.group.models.group_teachers import GroupTeacher
     from app.modules.tutor.models.tutor_groups import TutorGroup
+    from app.modules.resource.model import Resource
 
 
 class Group(Base, IdIntPk, TimestampMixin):
@@ -51,6 +52,11 @@ class Group(Base, IdIntPk, TimestampMixin):
         "TutorGroup",
         back_populates="group",
         cascade="all, delete-orphan"
+    )
+
+    resources: Mapped[list["Resource"]] = relationship(
+        "Resource",
+        back_populates="group"
     )
 
 

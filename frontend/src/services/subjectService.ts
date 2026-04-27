@@ -15,6 +15,7 @@ export interface SubjectListResponse {
 }
 
 export interface TeacherSubjectTeacherInfo {
+    id: number;
     subject_id: number;
     subject: Subject;
 }

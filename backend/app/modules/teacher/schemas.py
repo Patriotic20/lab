@@ -25,6 +25,7 @@ class TeacherSubjectInfo(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class TeacherSubjectTeacherInfo(BaseModel):
+    id: int
     subject_id: int
     subject: TeacherSubjectInfo
     model_config = ConfigDict(from_attributes=True)

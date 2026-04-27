@@ -27,7 +27,9 @@
       "Read(//tmp/**)",
       "Bash(rm -rf nginx-test)",
       "Bash(mkdir -p nginx-test/letsencrypt/live/organization.api.nsumt.uz nginx-test/certbot)",
-      "Bash(openssl req *)"
+      "Bash(openssl req *)",
+      "Bash(python3 -c \"import json,sys; d = json.load\\(sys.stdin\\); print\\(json.dumps\\(d['components']['schemas']['ResourceCreateRequest'], indent=2\\)\\); print\\('---'\\); print\\(json.dumps\\(d['components']['schemas']['ResourceListRequest'], indent=2\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d = json.load\\(sys.stdin\\); ep = d['paths']['/resource/']['get']; [print\\(p['name'], p.get\\('schema',{}\\).get\\('type', p.get\\('schema'\\)\\)\\) for p in ep['parameters']]\")"
     ],
     "additionalDirectories": [
       "/tmp/nginx-test"
