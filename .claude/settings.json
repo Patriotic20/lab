@@ -13,7 +13,16 @@
       "Bash(docker run *)",
       "WebFetch(domain:github.com)",
       "Bash(grep -iE '\\\\.\\(png|jpg|jpeg|gif|webp\\)$')",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(curl -sI http://localhost:8000/api/psychology/methods)",
+      "Bash(curl -s http://localhost:8000/api/psychology/methods)",
+      "Bash(curl -sI http://localhost:8000/api/psychology/method/)",
+      "Bash(curl -s http://localhost:8000/api/psychology/method/)",
+      "Bash(curl -sI -L https://organization.api.nsumt.uz/login)",
+      "Bash(curl -s https://organization.api.nsumt.uz/api/health)",
+      "Bash(curl -sI https://organization.api.nsumt.uz/)",
+      "Bash(curl -s https://organization.api.nsumt.uz/login)",
+      "Bash(ssh -o ConnectTimeout=5 -o BatchMode=yes lms 'echo \"ssh ok\"; docker exec nusmt_nginx cat /etc/nginx/conf.d/default.conf 2>&1 | head -25; echo \"---SERVER-NAMES---\"; docker exec nusmt_nginx nginx -T 2>/dev/null | grep -E \"server_name|listen \"')"
     ]
   }
 }
