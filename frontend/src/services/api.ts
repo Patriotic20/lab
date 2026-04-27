@@ -3,6 +3,7 @@ import { API_BASE_URL } from '@/config/env';
 
 const api = axios.create({
     baseURL: API_BASE_URL, // Backend API base URL (e.g., http://localhost:8000/api)
+    timeout: 10000, // 10s — prevents indefinite hang when backend is unreachable (otherwise ProtectedRoute spinner sticks forever and the user never reaches /login)
     headers: {
         'Content-Type': 'application/json',
     },

@@ -133,7 +133,7 @@ jobs:
         working-directory: frontend
         run: |
           cat > .env <<'EOF'
-          VITE_API_URL=https://organization.api.nsumt.uz
+          VITE_API_URL=https://organization.api.nsumt.uz/api
           EOF
 
       - name: Install dependencies
@@ -221,7 +221,7 @@ jobs:
         working-directory: frontend
         run: |
           cat > .env <<'EOF'
-          VITE_API_URL=https://organization.api.nsumt.uz
+          VITE_API_URL=https://organization.api.nsumt.uz/api
           EOF
 
       - name: Zero-Downtime Deploy
