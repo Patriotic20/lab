@@ -1,12 +1,28 @@
 # ─────────────────────────────────────────────────────────────────
 #  DEVELOPMENT  (docker compose up  /  make up)
-#  • Direct ports exposed: backend :8000, frontend :3000, face :8001
-#  • No nginx in dev — the reverse-proxy + SSL termination is added
-#    by docker-compose.prod.yml (it's prod-only because the cert paths
-#    only exist on the prod host)
+#  • nginx reverse-proxy on :80  (routes by Host header via nginx.conf)
+#  • Direct ports still exposed so localhost:8000 / :3000 / :8001 work
+#    without DNS setup (add organization.*.nsumt.uz to /etc/hosts for
+#    full host-routing tests)
 # ─────────────────────────────────────────────────────────────────
 
 services:
+  nginx:
+    image: nginx:alpine
+    container_name: nusmt_nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend
+      - backend
+      - face-detection
+      - pgadmin
+    networks:
+      - app_network
+
   face-detection:
     image: nusmt-face-detection:latest
     build:

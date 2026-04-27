@@ -1,32 +1,16 @@
 # ─────────────────────────────────────────────────────────────────
 #  PRODUCTION OVERRIDE  (docker compose -f docker-compose.yml -f docker-compose.prod.yml up)
-#  • Docker nginx terminates HTTPS itself on host :80 and :443
-#  • TLS certs are managed on the host with certbot; the live cert dir
-#    is mounted read-only into the container
-#  • Host-level nginx (if any) MUST be stopped so docker can bind :80/:443
+#  • Docker nginx binds to 127.0.0.1:8080 — host-level nginx forwards
+#    :80/:443 → :8080 and terminates HTTPS (manage certs with certbot
+#    on the host, see docs/host-nginx-setup.md)
 #  • No direct port exposure on backend / frontend / face-detection / pgadmin
 #  • Use:  make prod-up
 # ─────────────────────────────────────────────────────────────────
 
 services:
   nginx:
-    image: nginx:alpine
-    container_name: nusmt_nginx
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - /var/www/certbot:/var/www/certbot:ro
-    depends_on:
-      - frontend
-      - backend
-      - face-detection
-      - pgadmin
-    networks:
-      - app_network
+    ports: !override
+      - "127.0.0.1:8080:80"
 
   face-detection:
     ports: !reset []
