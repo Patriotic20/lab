@@ -27,6 +27,17 @@ services:
       retries: 10
       start_period: 45s
 
+  frontend:
+    ports: !reset []
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
   backend:
     ports: !reset []
     expose:

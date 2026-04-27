@@ -1,10 +1,9 @@
 # ─────────────────────────────────────────────────────────────────
 #  DEVELOPMENT  (docker compose up  /  make up)
-#  • nginx reverse-proxy on :80 — serves SPA static files AND proxies
-#    /api, /uploads, /evidence, /health, /metrics to backend
+#  • nginx reverse-proxy on :80 — proxies / → frontend:3000 and
+#    /api, /uploads, /evidence, /health, /metrics → backend:8000
 #    (routes by Host header via nginx.conf)
-#  • frontend service is a one-shot init: it builds the SPA and copies
-#    the dist into the `frontend_dist` volume, then exits
+#  • frontend service is a long-running nginx serving the SPA on :3000
 #  • Add organization.*.nsumt.uz to /etc/hosts for full host-routing tests
 # ─────────────────────────────────────────────────────────────────
 
@@ -17,10 +16,9 @@ services:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - frontend_dist:/usr/share/nginx/html:ro
     depends_on:
       frontend:
-        condition: service_completed_successfully
+        condition: service_started
       backend:
         condition: service_started
       face-detection:
@@ -96,8 +94,8 @@ services:
       - APP_CONFIG__FACE_SERVICE__URL=http://face-detection:8000
       - APP_CONFIG__FACE_SERVICE__INTERNAL_TOKEN=${INTERNAL_SERVICE_TOKEN}
 
-  # One-shot service: copies built SPA assets into the `frontend_dist`
-  # volume, then exits. The proxy nginx mounts that volume read-only.
+  # Long-running nginx that serves the built SPA on :3000.
+  # The proxy nginx forwards / → frontend:3000.
   frontend:
     image: nusmt-frontend:latest
     build:
@@ -107,11 +105,16 @@ services:
       args:
         BUILDKIT_INLINE_CACHE: "1"
     container_name: nusmt_frontend
-    restart: "no"
-    volumes:
-      - frontend_dist:/usr/share/nginx/html
+    restart: always
+    ports:
+      - "3000:3000"
     networks:
       - app_network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   database:
     image: postgres:17
@@ -235,4 +238,3 @@ volumes:
   backend_uploads:
   grafana_data:
   loki_data:
-  frontend_dist:
