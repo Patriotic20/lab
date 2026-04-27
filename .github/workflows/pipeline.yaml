@@ -133,7 +133,7 @@ jobs:
         working-directory: frontend
         run: |
           cat > .env <<'EOF'
-          VITE_API_URL=https://test.api.nsumt.uz
+          VITE_API_URL=https://organization.api.nsumt.uz
           EOF
 
       - name: Install dependencies
@@ -195,7 +195,7 @@ jobs:
           APP_CONFIG__JWT__ACCESS_TOKEN_EXPIRES_MINUTES=30
           APP_CONFIG__JWT__REFRESH_TOKEN_EXPIRES_DAYS=7
           APP_CONFIG__JWT__ALGORITHM=HS256
-          APP_CONFIG__FILE_URL__HTTP=https://test.api.nsumt.uz/uploads/questions
+          APP_CONFIG__FILE_URL__HTTP=https://organization.api.nsumt.uz/uploads/questions
           APP_CONFIG__FILE_URL__UPLOAD_DIR=uploads/questions
           APP_CONFIG__REDIS__HOST=redis
           APP_CONFIG__REDIS__PORT=6379
@@ -221,7 +221,7 @@ jobs:
         working-directory: frontend
         run: |
           cat > .env <<'EOF'
-          VITE_API_URL=https://test.api.nsumt.uz
+          VITE_API_URL=https://organization.api.nsumt.uz
           EOF
 
       - name: Zero-Downtime Deploy

@@ -42,7 +42,7 @@ app.add_middleware(
         "http://127.0.0.1:3000",    # Development (127.0.0.1)
         "http://localhost:5173",    # Development (old Vite port)
         "http://127.0.0.1:5173",    # Development (old Vite 127.0.0.1)
-        "https://test.api.nsumt.uz" # Testing/Production
+        "https://organization.api.nsumt.uz" # Production
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],

@@ -70,5 +70,21 @@ repomix-output.xml
 # ── Screenshots & browser-automation output ───────────────────
 # Throwaway artifacts from Playwright / MCP sessions and ad-hoc screenshots.
 # Real frontend assets live in frontend/public/ — those are not affected.
-screenshots/
+screenshots/*
+!screenshots/.gitkeep
 .playwright-mcp/
+
+# Loose images dropped into the project root (drag-drop in IDE, etc.) —
+# almost always accidental. Anchored with leading "/" so frontend/public/*.png
+# and frontend/src/assets/*.png stay tracked.
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.webp
+
+# Common IDE/OS screenshot filename patterns (anywhere in tree)
+Screenshot*.png
+screenshot*.png
+Снимок*.png
+image*.png

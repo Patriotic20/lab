@@ -10,7 +10,10 @@
       "Bash(python3 -c \"import yaml; yaml.safe_load\\(open\\('.github/workflows/pipeline.yaml'\\)\\)\")",
       "Bash(python3 -c \"import yaml; yaml.safe_load\\(open\\('docker-compose.yml'\\)\\)\")",
       "Bash(git fetch *)",
-      "Bash(docker run *)"
+      "Bash(docker run *)",
+      "WebFetch(domain:github.com)",
+      "Bash(grep -iE '\\\\.\\(png|jpg|jpeg|gif|webp\\)$')",
+      "Bash(git rm *)"
     ]
   }
 }
