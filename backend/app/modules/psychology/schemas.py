@@ -17,6 +17,7 @@ class QuestionResponse(BaseModel):
     content: dict[str, Any]
     options: Optional[list[dict[str, Any]]] = None
     order: int
+    category: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -29,6 +30,7 @@ class QuestionCreateRequest(BaseModel):
     content: dict[str, Any]
     options: Optional[list[dict[str, Any]]] = None
     order: int = 0
+    category: Optional[str] = None
 
     @field_validator("content", mode="before")
     @classmethod
@@ -54,6 +56,7 @@ class QuestionUpdateRequest(BaseModel):
     content: Optional[dict[str, Any]] = None
     options: Optional[list[dict[str, Any]]] = None
     order: Optional[int] = None
+    category: Optional[str] = None
 
 
 # ─── Method ──────────────────────────────────────────────────────────────────

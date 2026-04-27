@@ -145,6 +145,7 @@ class PsychologyRepository:
             content=data.content,
             options=data.options,
             order=data.order,
+            category=(data.category or None) if data.category != "" else None,
         )
         session.add(question)
         try:
@@ -185,6 +186,8 @@ class PsychologyRepository:
             question.options = data.options
         if data.order is not None:
             question.order = data.order
+        if data.category is not None:
+            question.category = data.category or None
 
         try:
             await session.commit()

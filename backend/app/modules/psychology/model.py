@@ -55,6 +55,7 @@ class PsychologyQuestion(Base, IdIntPk, TimestampMixin):
     content: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     options: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
     order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    category: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     method: Mapped[PsychologyMethod] = relationship(
         "PsychologyMethod",

@@ -9,6 +9,7 @@ export interface QuestionResponse {
     content: Record<string, unknown>;
     options: Array<Record<string, unknown>> | null;
     order: number;
+    category: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -48,6 +49,7 @@ export interface QuestionCreateRequest {
     content: Record<string, unknown>;
     options?: Array<Record<string, unknown>> | null;
     order?: number;
+    category?: string | null;
 }
 
 export interface QuestionUpdateRequest {
@@ -55,6 +57,7 @@ export interface QuestionUpdateRequest {
     content?: Record<string, unknown>;
     options?: Array<Record<string, unknown>> | null;
     order?: number;
+    category?: string | null;
 }
 
 export interface AnswerItem {

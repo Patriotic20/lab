@@ -16,7 +16,6 @@ export interface InterpretationRow {
 
 export interface CategoryRow {
     name: string;
-    orders: number[];
     interpretation: InterpretationRow[];
 }
 
@@ -59,14 +58,13 @@ export function instructionToFormState(instruction: Record<string, unknown> | nu
         const names = Array.from(new Set([...Object.keys(categoriesMap), ...Object.keys(catInterp)]));
         const categories: CategoryRow[] = names.map(name => ({
             name,
-            orders: Array.isArray(categoriesMap[name]) ? categoriesMap[name].map(v => Number(v)).filter(n => Number.isFinite(n)) : [],
             interpretation: (catInterp[name] ?? []).map(rowFromAny),
         }));
         return {
             method: 'category',
             reverse,
             sumInterpretation: [],
-            categories: categories.length > 0 ? categories : [{ name: '', orders: [], interpretation: [{ ...DEFAULT_RANGE }] }],
+            categories: categories.length > 0 ? categories : [{ name: '', interpretation: [{ ...DEFAULT_RANGE }] }],
         };
     }
 
@@ -88,13 +86,12 @@ export function formStateToInstruction(state: MethodFormState): Record<string, u
     }
     const categories: Record<string, number[]> = {};
     const category_interpretations: Record<string, InterpretationRow[]> = {};
-    // Single-category methods always send empty orders[] = "all questions" semantics,
-    // even if the user has stale numbers in state (e.g. after deleting a 2nd category).
-    const isSingle = state.categories.length === 1;
     for (const cat of state.categories) {
         const key = cat.name.trim();
         if (!key) continue;
-        categories[key] = isSingle ? [] : [...cat.orders];
+        // Empty array preserves the legacy "all questions" semantics for single-category
+        // methods and acts as a harmless placeholder when scoring uses question.category.
+        categories[key] = [];
         category_interpretations[key] = cat.interpretation.map(r => ({ ...r }));
     }
     return {
@@ -152,14 +149,14 @@ export const INSTRUCTION_TEMPLATES: InstructionTemplate[] = [
     {
         id: 'eysenck',
         name: 'Eysenck shaxsiyat (Ekstraversiya + Neyrotizm)',
-        hint: 'Kategoriya rejimida 2 xususiyat, savollar guruhi sozlash kerak',
+        hint: "Kategoriya rejimida 2 xususiyat. Savollarni qo'shgandan keyin har birining kategoriyasini tanlang.",
         instruction: {
             scoring: {
                 method: 'category',
                 reverse: [],
                 categories: {
-                    ekstraversiya: [1, 3, 5, 7, 9],
-                    neyrotizm: [2, 4, 6, 8, 10],
+                    ekstraversiya: [],
+                    neyrotizm: [],
                 },
             },
             category_interpretations: {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useMethod, useSubmitTest } from '@/hooks/usePsychology';
 import { Button } from '@/components/ui/Button';
@@ -282,6 +282,26 @@ export default function PsychologyTestPage() {
     const [answers, setAnswers] = useState<Record<number, AnswerValue>>({});
     const [result, setResult] = useState<TestResultResponse | null>(null);
 
+    // Per-page-load seed so the shuffled order is stable across re-renders but
+    // changes each time the test is opened. Lazy initializer keeps Math.random
+    // out of the render path.
+    const [shuffleSeed] = useState(() => Math.random());
+
+    const questions = useMemo(() => {
+        if (!method) return [];
+        const list = [...method.questions];
+        let seed = Math.floor(shuffleSeed * 0x7fffffff) || 1;
+        const rand = () => {
+            seed = (seed * 1664525 + 1013904223) | 0;
+            return ((seed >>> 0) % 1_000_000) / 1_000_000;
+        };
+        for (let i = list.length - 1; i > 0; i--) {
+            const j = Math.floor(rand() * (i + 1));
+            [list[i], list[j]] = [list[j], list[i]];
+        }
+        return list;
+    }, [method, shuffleSeed]);
+
     if (isLoading || !method) {
         return (
             <div className="flex h-screen items-center justify-center">
@@ -290,7 +310,6 @@ export default function PsychologyTestPage() {
         );
     }
 
-    const questions = method.questions;
     const total = questions.length;
 
     if (total === 0) {

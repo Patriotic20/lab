@@ -102,19 +102,37 @@ def compute_diagnosis(
         if not categories_map or not cat_interpretations:
             return None
 
+        # New path: if any question has `category` set, group by question.category.
+        # Fallback: legacy `instruction.scoring.categories[name]: [order_numbers]` lists.
+        use_question_category = any(
+            (q.category or "").strip() for q in method.questions
+        )
+        orders_by_category: dict[str, list[int]] = {}
+        if use_question_category:
+            for q in method.questions:
+                cat = (q.category or "").strip()
+                if not cat:
+                    continue
+                orders_by_category.setdefault(cat, []).append(q.order)
+
         scores: dict[str, int] = {}
         categories_out: list[dict[str, Any]] = []
 
         for cat_name, orders in categories_map.items():
-            if not isinstance(orders, list):
-                continue
-            if len(orders) == 0:
-                # Empty orders list = "all questions" shortcut. Lets a single-
-                # aspect test use `category` mode for labeled bands without
-                # listing every question number manually.
-                cat_score = sum(scored.values())
+            if use_question_category:
+                # Sum questions whose `category` matches this canonical name.
+                matched = orders_by_category.get(cat_name, [])
+                cat_score = sum(scored.get(o, 0) for o in matched)
             else:
-                cat_score = sum(scored.get(int(o), 0) for o in orders if isinstance(o, (int, float)))
+                if not isinstance(orders, list):
+                    continue
+                if len(orders) == 0:
+                    # Empty orders list = "all questions" shortcut. Lets a single-
+                    # aspect test use `category` mode for labeled bands without
+                    # listing every question number manually.
+                    cat_score = sum(scored.values())
+                else:
+                    cat_score = sum(scored.get(int(o), 0) for o in orders if isinstance(o, (int, float)))
             scores[cat_name] = cat_score
 
             items = cat_interpretations.get(cat_name) or []

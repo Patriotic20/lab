@@ -14,8 +14,10 @@ import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import {
     Plus, Trash2, Edit2, Loader2, Brain, ChevronRight, Play,
     X, ListOrdered, AlignLeft, ToggleLeft, SlidersHorizontal, Image,
+    Upload,
 } from 'lucide-react';
 import { MethodBuilderModal } from '@/components/psychology/MethodBuilderModal';
+import { ExcelImportModal } from '@/components/psychology/ExcelImportModal';
 import type { MethodResponse, QuestionResponse, QuestionType } from '@/services/psychologyService';
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -73,6 +75,7 @@ interface QuestionFormState {
     // options (text/image_stimulus/image_choice)
     options: OptionRow[];
     order: string;
+    category: string;
 }
 
 const emptyQuestionForm = (): QuestionFormState => ({
@@ -85,6 +88,7 @@ const emptyQuestionForm = (): QuestionFormState => ({
     imageUrl: '',
     options: [{ text: '', value: 1 }, { text: '', value: 0 }],
     order: '0',
+    category: '',
 });
 
 function questionToForm(q: QuestionResponse): QuestionFormState {
@@ -100,6 +104,7 @@ function questionToForm(q: QuestionResponse): QuestionFormState {
         imageUrl: (c.image_url as string) ?? '',
         options: opts.length > 0 ? opts : [{ text: '', value: 1 }],
         order: String(q.order),
+        category: q.category ?? '',
     };
 }
 
@@ -128,15 +133,30 @@ function buildQuestionPayload(form: QuestionFormState) {
         content = { text: form.textContent };
         options = form.options.filter(o => String(o.image_url ?? '').trim());
     }
-    return { content, options: options?.length ? options : null, order: Number(form.order) };
+    return {
+        content,
+        options: options?.length ? options : null,
+        order: Number(form.order),
+        category: form.category.trim() || null,
+    };
+}
+
+function getMethodCategories(method: MethodResponse): string[] {
+    const scoring = (method.instruction as { scoring?: { method?: string; categories?: Record<string, unknown> } } | null)?.scoring;
+    if (!scoring || scoring.method !== 'category') return [];
+    const cats = scoring.categories;
+    if (!cats || typeof cats !== 'object') return [];
+    return Object.keys(cats);
 }
 
 function QuestionForm({
     form,
     onChange,
+    methodCategories,
 }: {
     form: QuestionFormState;
     onChange: (f: QuestionFormState) => void;
+    methodCategories: string[];
 }) {
     const set = (patch: Partial<QuestionFormState>) => onChange({ ...form, ...patch });
 
@@ -225,10 +245,86 @@ function QuestionForm({
 
             {/* Order */}
             <Input label="Tartib raqami" type="number" value={form.order} onChange={e => set({ order: e.target.value })} />
+
+            {/* Category — only when method has 2+ categories.
+                If category is already set (the create button was scoped to a section),
+                show a read-only chip; otherwise let the user pick one. */}
+            {methodCategories.length >= 2 && (
+                <div>
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Kategoriya</label>
+                    {form.category ? (
+                        <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                            {form.category}
+                        </span>
+                    ) : (
+                        <select
+                            value={form.category}
+                            onChange={e => set({ category: e.target.value })}
+                            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                            <option value="">— Tanlanmagan —</option>
+                            {methodCategories.map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                        </select>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
 
+
+// ── Question row ───────────────────────────────────────────────────────────
+
+function QuestionRow({
+    question,
+    index,
+    showCategoryBadge,
+    onEdit,
+    onDelete,
+    deleteArmed,
+    deletePending,
+}: {
+    question: QuestionResponse;
+    index: number;
+    showCategoryBadge: boolean;
+    onEdit: () => void;
+    onDelete: () => void;
+    deleteArmed: boolean;
+    deletePending: boolean;
+}) {
+    const c = question.content as Record<string, unknown>;
+    const label = (c.text as string) || (c.image_url as string) || '—';
+    return (
+        <div className="flex items-start gap-3 rounded-xl border border-border bg-background p-3">
+            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">{index + 1}</span>
+            <div className="flex-1 min-w-0">
+                <p className="truncate text-sm text-foreground">{label}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <QuestionTypeBadge type={question.question_type as QuestionType} />
+                    {question.options && <span className="text-xs text-muted-foreground">{question.options.length} variant</span>}
+                    {showCategoryBadge && question.category && (
+                        <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                            {question.category}
+                        </span>
+                    )}
+                </div>
+            </div>
+            <div className="flex shrink-0 gap-1">
+                <button onClick={onEdit} className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"><Edit2 className="h-3.5 w-3.5" /></button>
+                <button
+                    onClick={onDelete}
+                    className={`rounded-lg p-1.5 transition-colors ${deleteArmed ? 'bg-destructive text-white' : 'text-muted-foreground hover:bg-destructive/10 hover:text-destructive'}`}
+                >
+                    {deletePending
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Trash2 className="h-3.5 w-3.5" />}
+                </button>
+            </div>
+        </div>
+    );
+}
 
 // ── Questions SlideOver ────────────────────────────────────────────────────
 
@@ -246,19 +342,47 @@ function QuestionsPanel({
     const [qModal, setQModal] = useState<{ open: boolean; editing: QuestionResponse | null }>({ open: false, editing: null });
     const [qForm, setQForm] = useState<QuestionFormState>(emptyQuestionForm());
     const [deleteId, setDeleteId] = useState<number | null>(null);
+    const [importTarget, setImportTarget] = useState<{ category: string | null } | null>(null);
+    // Sticky type — remembered across "Savol qo'shish" clicks so the user only
+    // picks the question type once per batch. Reset is manual (re-select in form).
+    const [lastQuestionType, setLastQuestionType] = useState<QuestionType>('text');
 
-    const openCreate = () => { setQForm(emptyQuestionForm()); setQModal({ open: true, editing: null }); };
+    const openCreate = (category: string = '') => {
+        setQForm({ ...emptyQuestionForm(), question_type: lastQuestionType, category });
+        setQModal({ open: true, editing: null });
+    };
     const openEdit = (q: QuestionResponse) => { setQForm(questionToForm(q)); setQModal({ open: true, editing: q }); };
 
+    const methodCategories = getMethodCategories(method);
+    const grouped = methodCategories.length >= 2;
+
+    const sections: { key: string; label: string; items: QuestionResponse[] }[] = grouped
+        ? [
+            ...methodCategories.map(cat => ({
+                key: cat,
+                label: cat,
+                items: method.questions.filter(q => (q.category ?? '').trim() === cat),
+            })),
+            {
+                key: '__none__',
+                label: 'Kategoriyasiz',
+                items: method.questions.filter(q => !(q.category ?? '').trim()),
+            },
+        ].filter(sec => sec.key !== '__none__' || sec.items.length > 0)
+        : [];
+
     const handleSaveQuestion = () => {
-        const { content, options, order } = buildQuestionPayload(qForm);
+        const { content, options, order, category } = buildQuestionPayload(qForm);
         if (qModal.editing) {
-            updateQ.mutate({ id: qModal.editing.id, data: { question_type: qForm.question_type, content, options, order } }, {
+            updateQ.mutate({ id: qModal.editing.id, data: { question_type: qForm.question_type, content, options, order, category } }, {
                 onSuccess: () => setQModal({ open: false, editing: null }),
             });
         } else {
-            createQ.mutate({ method_id: method.id, question_type: qForm.question_type, content, options, order }, {
-                onSuccess: () => setQModal({ open: false, editing: null }),
+            createQ.mutate({ method_id: method.id, question_type: qForm.question_type, content, options, order, category }, {
+                onSuccess: () => {
+                    setLastQuestionType(qForm.question_type);
+                    setQModal({ open: false, editing: null });
+                },
             });
         }
     };
@@ -281,50 +405,88 @@ function QuestionsPanel({
                         <p className="text-xs text-muted-foreground">{method.questions.length} ta savol</p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button size="sm" onClick={openCreate}>
-                            <Plus className="mr-1.5 h-3.5 w-3.5" /> Savol qo'shish
-                        </Button>
+                        {!grouped && (
+                            <>
+                                <Button size="sm" variant="outline" onClick={() => setImportTarget({ category: null })}>
+                                    <Upload className="mr-1.5 h-3.5 w-3.5" /> Excel
+                                </Button>
+                                <Button size="sm" onClick={() => openCreate()}>
+                                    <Plus className="mr-1.5 h-3.5 w-3.5" /> Savol qo'shish
+                                </Button>
+                            </>
+                        )}
                         <button onClick={onClose} className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent"><X className="h-4 w-4" /></button>
                     </div>
                 </div>
 
                 {/* Questions list */}
                 <div className="flex-1 overflow-y-auto p-4">
-                    {method.questions.length === 0 ? (
+                    {method.questions.length === 0 && !grouped ? (
                         <div className="flex flex-col items-center gap-2 py-12 text-center text-muted-foreground">
                             <ListOrdered className="h-8 w-8 opacity-30" />
                             <p className="text-sm">Savollar mavjud emas</p>
-                            <button onClick={openCreate} className="text-xs text-primary hover:underline">Birinchi savolni qo'shing</button>
+                            <button onClick={() => openCreate()} className="text-xs text-primary hover:underline">Birinchi savolni qo'shing</button>
                         </div>
-                    ) : (
-                        <div className="flex flex-col gap-2">
-                            {method.questions.map((q, idx) => {
-                                const c = q.content as Record<string, unknown>;
-                                const label = (c.text as string) || (c.image_url as string) || '—';
+                    ) : grouped ? (
+                        <div className="flex flex-col gap-5">
+                            {sections.map(section => {
+                                const isUncat = section.key === '__none__';
                                 return (
-                                    <div key={q.id} className="flex items-start gap-3 rounded-xl border border-border bg-background p-3">
-                                        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">{idx + 1}</span>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="truncate text-sm text-foreground">{label}</p>
-                                            <div className="mt-1 flex items-center gap-2">
-                                                <QuestionTypeBadge type={q.question_type as QuestionType} />
-                                                {q.options && <span className="text-xs text-muted-foreground">{q.options.length} variant</span>}
+                                    <div key={section.key} className="flex flex-col gap-2">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="text-sm font-semibold text-foreground">{section.label}</h3>
+                                                <span className="text-xs text-muted-foreground">{section.items.length} ta</span>
                                             </div>
+                                            {!isUncat && (
+                                                <div className="flex items-center gap-1.5">
+                                                    <Button size="sm" variant="outline" onClick={() => setImportTarget({ category: section.key })} title="Excel orqali import">
+                                                        <Upload className="mr-1.5 h-3.5 w-3.5" /> Excel
+                                                    </Button>
+                                                    <Button size="sm" variant="outline" onClick={() => openCreate(section.key)}>
+                                                        <Plus className="mr-1.5 h-3.5 w-3.5" /> Savol qo'shish
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="flex shrink-0 gap-1">
-                                            <button onClick={() => openEdit(q)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"><Edit2 className="h-3.5 w-3.5" /></button>
-                                            <button
-                                                onClick={() => deleteId === q.id ? handleDelete(q.id) : setDeleteId(q.id)}
-                                                className={`rounded-lg p-1.5 transition-colors ${deleteId === q.id ? 'bg-destructive text-white' : 'text-muted-foreground hover:bg-destructive/10 hover:text-destructive'}`}
-                                            >
-                                                {deleteQ.isPending && deleteId === q.id
-                                                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                                    : <Trash2 className="h-3.5 w-3.5" />}
-                                            </button>
-                                        </div>
+                                        {section.items.length === 0 ? (
+                                            <p className="rounded-lg border border-dashed border-border bg-muted/20 px-3 py-3 text-center text-xs text-muted-foreground">
+                                                Bu kategoriyada savollar yo'q
+                                            </p>
+                                        ) : (
+                                            <div className="flex flex-col gap-2">
+                                                {section.items.map((q, idx) => (
+                                                    <QuestionRow
+                                                        key={q.id}
+                                                        question={q}
+                                                        index={idx}
+                                                        showCategoryBadge={false}
+                                                        onEdit={() => openEdit(q)}
+                                                        onDelete={() => deleteId === q.id ? handleDelete(q.id) : setDeleteId(q.id)}
+                                                        deleteArmed={deleteId === q.id}
+                                                        deletePending={deleteQ.isPending && deleteId === q.id}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-2">
+                            {method.questions.map((q, idx) => (
+                                <QuestionRow
+                                    key={q.id}
+                                    question={q}
+                                    index={idx}
+                                    showCategoryBadge={true}
+                                    onEdit={() => openEdit(q)}
+                                    onDelete={() => deleteId === q.id ? handleDelete(q.id) : setDeleteId(q.id)}
+                                    deleteArmed={deleteId === q.id}
+                                    deletePending={deleteQ.isPending && deleteId === q.id}
+                                />
+                            ))}
                         </div>
                     )}
                 </div>
@@ -337,7 +499,7 @@ function QuestionsPanel({
                 title={qModal.editing ? 'Savolni tahrirlash' : 'Yangi savol'}
             >
                 <div className="flex flex-col gap-4">
-                    <QuestionForm form={qForm} onChange={setQForm} />
+                    <QuestionForm form={qForm} onChange={setQForm} methodCategories={methodCategories} />
                     <div className="flex justify-end gap-2">
                         <Button variant="outline" onClick={() => setQModal({ open: false, editing: null })}>Bekor</Button>
                         <Button onClick={handleSaveQuestion} disabled={createQ.isPending || updateQ.isPending}>
@@ -347,6 +509,19 @@ function QuestionsPanel({
                     </div>
                 </div>
             </Modal>
+
+            {/* Excel import modal */}
+            <ExcelImportModal
+                open={importTarget !== null}
+                onClose={() => setImportTarget(null)}
+                methodId={method.id}
+                category={importTarget?.category ?? null}
+                nextOrder={
+                    method.questions.length === 0
+                        ? 1
+                        : Math.max(...method.questions.map(q => q.order)) + 1
+                }
+            />
         </>
     );
 }

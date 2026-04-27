@@ -16,7 +16,7 @@ import {
     type MethodFormState,
 } from './instructionTemplates';
 
-import type { MethodResponse } from '@/services/psychologyService';
+import type { MethodResponse, QuestionResponse } from '@/services/psychologyService';
 
 // ── Small reusable building blocks ──────────────────────────────────────────
 
@@ -134,6 +134,52 @@ function RangeRow({
     );
 }
 
+function CategoryQuestionsPreview({
+    categoryName,
+    questions,
+}: {
+    categoryName: string;
+    questions: QuestionResponse[];
+}) {
+    const trimmed = categoryName.trim();
+    const matched = trimmed
+        ? questions.filter(q => (q.category ?? '').trim() === trimmed)
+        : [];
+
+    return (
+        <div className="mt-2">
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                Biriktirilgan savollar
+            </label>
+            {!trimmed ? (
+                <p className="text-[11px] text-muted-foreground">
+                    Avval kategoriya nomini kiriting.
+                </p>
+            ) : matched.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground">
+                    Bu kategoriyaga hali savol biriktirilmagan. Savollar ro'yxatida tahrirlab biriktiring.
+                </p>
+            ) : (
+                <ul className="flex flex-col gap-1 rounded-lg border border-border bg-background/60 p-2">
+                    {matched.map(q => {
+                        const c = q.content as Record<string, unknown>;
+                        const text = (c.text as string) || (c.image_url as string) || '—';
+                        return (
+                            <li key={q.id} className="flex items-baseline gap-2 text-[11px] text-foreground">
+                                <span className="shrink-0 font-mono text-muted-foreground">#{q.order}</span>
+                                <span className="truncate">{text}</span>
+                            </li>
+                        );
+                    })}
+                    <li className="pt-1 text-[10px] text-muted-foreground">
+                        Jami: {matched.length} ta
+                    </li>
+                </ul>
+            )}
+        </div>
+    );
+}
+
 // ── Main modal ─────────────────────────────────────────────────────────────
 
 export interface MethodBuilderPayload {
@@ -183,7 +229,7 @@ export function MethodBuilderModal({
 
     // ── Validation ──────────────────────────────────────────────────────────
     const errors = useMemo(() => {
-        const errs: { form?: string; name?: string; ranges: Record<number, string[]>; categories: Record<number, { name?: string; orders?: string; ranges: Record<number, string[]> }> } = {
+        const errs: { form?: string; name?: string; ranges: Record<number, string[]>; categories: Record<number, { name?: string; ranges: Record<number, string[]> }> } = {
             ranges: {},
             categories: {},
         };
@@ -206,15 +252,9 @@ export function MethodBuilderModal({
             else errs.ranges = validateRanges(state.sumInterpretation);
         } else {
             if (state.categories.length === 0) errs.form = 'Kamida bitta kategoriya qo\'shing';
-            const multipleCategories = state.categories.length > 1;
             state.categories.forEach((cat, ci) => {
-                const catErr: { name?: string; orders?: string; ranges: Record<number, string[]> } = { ranges: {} };
+                const catErr: { name?: string; ranges: Record<number, string[]> } = { ranges: {} };
                 if (!cat.name.trim()) catErr.name = 'Kategoriya nomi bo\'sh';
-                // Single category: empty orders[] means "all questions" — allowed.
-                // Multiple categories: each must declare which questions belong to it.
-                if (multipleCategories && cat.orders.length === 0) {
-                    catErr.orders = "Bir nechta kategoriya bo'lganda savol raqamlari shart";
-                }
                 if (cat.interpretation.length === 0) catErr.ranges = { [-1]: ['Kamida bitta oraliq qo\'shing'] };
                 else catErr.ranges = validateRanges(cat.interpretation);
                 errs.categories[ci] = catErr;
@@ -227,7 +267,7 @@ export function MethodBuilderModal({
         if (errors.name || errors.form) return true;
         if (Object.values(errors.ranges).some(arr => arr.length > 0)) return true;
         for (const cat of Object.values(errors.categories)) {
-            if (cat.name || cat.orders) return true;
+            if (cat.name) return true;
             if (Object.values(cat.ranges).some(arr => arr.length > 0)) return true;
         }
         return false;
@@ -252,7 +292,7 @@ export function MethodBuilderModal({
         updateState({
             categories: [
                 ...state.categories,
-                { name: '', orders: [], interpretation: [{ min: 0, max: 0, label: '', description: '' }] },
+                { name: '', interpretation: [{ min: 0, max: 0, label: '', description: '' }] },
             ],
         });
 
@@ -459,25 +499,10 @@ export function MethodBuilderModal({
                                             </p>
                                         </div>
                                     ) : (
-                                        <div className="mt-2">
-                                            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                                                Savol raqamlari <span className="text-destructive">*</span>
-                                            </label>
-                                            <NumberChipInput
-                                                values={cat.orders}
-                                                onChange={next => updateCategory(ci, { orders: next })}
-                                                placeholder="1, 3, 5..."
-                                            />
-                                            {showErr && catErr.orders ? (
-                                                <p className="mt-1 text-[11px] text-destructive">{catErr.orders}</p>
-                                            ) : (
-                                                <p className="mt-1 text-[11px] text-muted-foreground">
-                                                    {cat.orders.length === 0
-                                                        ? "Raqam yozib Enter — har bir kategoriyaga tegishli savollar."
-                                                        : `Tanlangan: ${cat.orders.length} ta savol`}
-                                                </p>
-                                            )}
-                                        </div>
+                                        <CategoryQuestionsPreview
+                                            categoryName={cat.name}
+                                            questions={editing?.questions ?? []}
+                                        />
                                     )}
 
                                     <div className="mt-3 flex flex-col gap-2">
