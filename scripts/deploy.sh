@@ -16,14 +16,14 @@ export COMPOSE_DOCKER_CLI_BUILD=1
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-COMPOSE="docker compose -f $PROJECT_DIR/docker-compose.yml -f $PROJECT_DIR/docker-compose.prod.yml"
+COMPOSE="docker compose -f $PROJECT_DIR/docker-compose.yml"
 
 # ─── On failure: dump logs so the real error is visible ─────────────────────
 on_error() {
     local exit_code=$?
     echo ""
     echo "❌ DEPLOY FAILED (exit $exit_code) — container logs follow:"
-    for c in nusmt_backend nusmt_face_detection nusmt_frontend nusmt_nginx database; do
+    for c in nusmt_backend nusmt_face_detection nusmt_frontend database; do
         if docker ps -a --format '{{.Names}}' | grep -q "^${c}$"; then
             echo ""
             echo "─── $c (last 40 lines) ───"
@@ -73,18 +73,6 @@ $COMPOSE run --rm --no-deps backend sh -c "cd /face/app && uv run alembic upgrad
 echo ""
 echo "🚀 [3/3] Starting all services..."
 $COMPOSE up -d --no-build --remove-orphans
-
-# nginx is not rebuilt on deploy, so `up -d` leaves it running with stale
-# upstream DNS (and the old nginx-proxy.conf mount isn't re-read). Reload it
-# so it picks up new backend/frontend IPs and any config changes.
-echo ""
-echo "🔄 Reloading nginx (upstream DNS + config)..."
-if docker ps --format '{{.Names}}' | grep -q '^nusmt_nginx$'; then
-    docker exec nusmt_nginx nginx -t
-    docker exec nusmt_nginx nginx -s reload
-else
-    echo "   nusmt_nginx not running — skipping reload"
-fi
 
 echo ""
 echo "🧹 Pruning dangling images..."

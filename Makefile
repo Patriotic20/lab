@@ -1,30 +1,22 @@
-.PHONY: help up down restart logs frontend-logs backend-logs face-logs nginx-logs prod-up prod-down prod-restart prod-logs backup backup-database backup-logs backup-images restore merge deploy
+.PHONY: help up down restart logs frontend-logs backend-logs face-logs backup backup-database backup-logs backup-images restore merge deploy
 
 .DEFAULT_GOAL := help
 
 # Show this help message with usage examples
 help:
 	@echo "╔════════════════════════════════════════════════════════════════╗"
-	@echo "║         Available commands (Development & Production)          ║"
+	@echo "║                       Available commands                       ║"
 	@echo "╚════════════════════════════════════════════════════════════════╝"
 	@echo ""
-	@echo "DEVELOPMENT (localhost, nginx reverse-proxy on :80):"
+	@echo "SERVICES:"
 	@echo "──────────────────────────────────"
-	@echo "make up               - Start all services (dev)"
+	@echo "make up               - Start all services"
 	@echo "make down             - Stop all services"
 	@echo "make restart          - Restart all services"
 	@echo "make logs             - View logs for all services"
 	@echo "make frontend-logs    - View frontend logs"
 	@echo "make backend-logs     - View backend logs"
 	@echo "make face-logs        - View face detection logs"
-	@echo "make nginx-logs       - View nginx reverse-proxy logs"
-	@echo ""
-	@echo "PRODUCTION (Docker nginx on 127.0.0.1:8080 behind host nginx):"
-	@echo "────────────────────────────────────"
-	@echo "make prod-up          - Start all services (prod)"
-	@echo "make prod-down        - Stop all services"
-	@echo "make prod-restart     - Restart all services"
-	@echo "make prod-logs        - View logs for all services"
 	@echo ""
 	@echo "BACKUP & RESTORE:"
 	@echo "────────────────"
@@ -62,25 +54,6 @@ backend-logs:
 # View face detection logs
 face-logs:
 	docker compose logs -f face-detection
-
-# View nginx reverse-proxy logs
-nginx-logs:
-	docker compose logs -f nginx
-
-# Start production services
-prod-up:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-
-# Stop production services
-prod-down:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml down
-
-# Restart production services
-prod-restart: prod-down prod-up
-
-# View production logs
-prod-logs:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f
 
 # Backup everything (database, logs, and images)
 backup: backup-database backup-logs backup-images
