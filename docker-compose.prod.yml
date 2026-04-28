@@ -12,9 +12,12 @@ services:
     container_name: nginx_proxy
     restart: always
     ports:
-      - "127.0.0.1:8080:80"
+      - "80:80"
+      - "443:443"
     volumes:
       - ./nginx-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - certbot_webroot:/var/www/certbot:ro
     depends_on:
       - frontend
       - backend
@@ -71,3 +74,6 @@ services:
     ports: !reset []
     expose:
       - "5050"
+
+volumes:
+  certbot_webroot:
