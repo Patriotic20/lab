@@ -84,7 +84,7 @@ services:
     container_name: nusmt_frontend
     restart: always
     ports:
-      - "3000:80"
+      - "3000:3000"
     networks:
       - app_network
 
@@ -121,23 +121,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: pgadmin
-    restart: always
-    env_file: ./.env
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@admin.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
-      PGADMIN_LISTEN_PORT: 5050
-      PGADMIN_CONFIG_SCRIPT_NAME: "'/pgadmin'"
-    ports:
-      - "5050:5050"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    networks:
-      - app_network
 
   prometheus:
     image: prom/prometheus:latest
@@ -205,7 +188,6 @@ networks:
 volumes:
   postgres_data_quiz:
   redis_data:
-  pgadmin_data:
   backend_logs:
   backend_uploads:
   grafana_data:
