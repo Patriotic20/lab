@@ -42,11 +42,14 @@ class LevelFilter(logging.Filter):
         return record.levelname == self.level_name
 
 
-class HealthCheckFilter(logging.Filter):
-    """Filter out /health endpoint logs to reduce noise."""
+class NoiseFilter(logging.Filter):
+    """Filter out noisy endpoint logs (/health, /metrics) to keep logs readable."""
+
+    NOISY_PATHS = ("/health", "/metrics")
 
     def filter(self, record):
-        return "/health" not in record.getMessage()
+        message = record.getMessage()
+        return not any(path in message for path in self.NOISY_PATHS)
 
 
 # --- Root logger ---
@@ -66,6 +69,7 @@ for lib in ["watchfiles", "uvicorn.error", "uvicorn.access", "httpcore", "httpx"
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(console_formatter)
+console_handler.addFilter(NoiseFilter())
 logger.addHandler(console_handler)
 
 
@@ -85,9 +89,6 @@ for level in LEVELS:
     handler.addFilter(LevelFilter(level))  # only this level
 
     handler.setFormatter(detailed_formatter)
-
-    # Filter out /health noise from info logs
-    if level == "info":
-        handler.addFilter(HealthCheckFilter())
+    handler.addFilter(NoiseFilter())
 
     logger.addHandler(handler)

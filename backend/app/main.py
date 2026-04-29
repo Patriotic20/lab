@@ -89,6 +89,7 @@ def main():
         workers=settings.server.workers if not use_reload else None,
         proxy_headers=True,
         forwarded_allow_ips="*",
+        access_log=False,
     )
 
 

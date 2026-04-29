@@ -10,8 +10,13 @@ from core.config import settings
 
 logger = logging.getLogger(__name__)
 
+SKIP_LOG_PATHS = {"/health", "/metrics"}
+
 class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        if request.url.path in SKIP_LOG_PATHS:
+            return await call_next(request)
+
         start_time = time.time()
         
         # Extract User Info
