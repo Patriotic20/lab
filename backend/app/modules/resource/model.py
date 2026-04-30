@@ -40,6 +40,8 @@ class Resource(Base, IdIntPk, TimestampMixin):
 
     links: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
 
+    files: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+
     subject_teacher: Mapped["SubjectTeacher"] = relationship(
         "SubjectTeacher", back_populates="resources"
     )

@@ -1,10 +1,12 @@
 import logging
+import uuid
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import func, select, desc, or_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.modules.resource.model import Resource
 from app.modules.subject.models.subject_teacher import SubjectTeacher
 from app.modules.group.models.group_teachers import GroupTeacher
@@ -20,6 +22,11 @@ from .schemas import (
 )
 
 logger = logging.getLogger(__name__)
+
+_ALLOWED_EXTS = {"jpg", "jpeg", "png", "gif", "webp", "pdf", "docx", "xlsx", "pptx"}
+_IMAGE_EXTS = {"jpg", "jpeg", "png", "gif", "webp"}
+_IMAGE_MAX = 5 * 1024 * 1024
+_DOC_MAX = 20 * 1024 * 1024
 
 
 class ResourceRepository:
@@ -50,6 +57,28 @@ class ResourceRepository:
         )
         result = await session.execute(stmt)
         return result.scalar_one_or_none() is not None
+
+    async def upload_file(self, file: UploadFile) -> dict:
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="Fayl nomi bo'sh")
+        ext = file.filename.rsplit(".", 1)[-1].lower()
+        if ext not in _ALLOWED_EXTS:
+            raise HTTPException(status_code=400, detail=f"Ruxsat etilmagan tur: .{ext}")
+        content = await file.read()
+        max_size = _IMAGE_MAX if ext in _IMAGE_EXTS else _DOC_MAX
+        if len(content) > max_size:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Fayl {max_size // (1024 * 1024)}MB dan oshmasligi kerak",
+            )
+        filename = f"{uuid.uuid4()}.{ext}"
+        with open(f"{settings.file_url.upload_dir}/{filename}", "wb") as buf:
+            buf.write(content)
+        return {
+            "url": f"{settings.file_url.http}/{filename}",
+            "name": file.filename,
+            "type": "image" if ext in _IMAGE_EXTS else ext,
+        }
 
     async def create_resource(
         self,
@@ -91,6 +120,7 @@ class ResourceRepository:
             lesson_id=data.lesson_id,
             main_text=data.main_text,
             links=[link.model_dump() for link in data.links],
+            files=[f.model_dump() for f in data.files],
         )
         session.add(new_resource)
 
@@ -261,6 +291,8 @@ class ResourceRepository:
             resource.main_text = data.main_text
         if data.links is not None:
             resource.links = [link.model_dump() for link in data.links]
+        if data.files is not None:
+            resource.files = [f.model_dump() for f in data.files]
         if data.group_id is not None:
             resource.group_id = data.group_id
         if data.subject_teacher_id is not None:

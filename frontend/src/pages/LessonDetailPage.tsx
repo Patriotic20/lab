@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { LessonResourceModal } from '@/components/LessonResourceModal';
-import { ArrowLeft, Loader2, Save, Plus, Pencil, Trash2, ExternalLink, Link2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, Plus, Pencil, Trash2, ExternalLink, FileText, Image as ImageIcon, Link2 } from 'lucide-react';
 import type { LessonAttendance, LessonResultUpsertItem } from '@/services/lessonService';
 import type { ResourceResponse } from '@/services/resourceService';
 
@@ -191,6 +191,26 @@ export default function LessonDetailPage() {
                                                     <Link2 className="h-3 w-3" />
                                                     <span className="truncate">{l.title || l.url}</span>
                                                     <ExternalLink className="h-3 w-3 opacity-60" />
+                                                </a>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {(res.files ?? []).length > 0 && (
+                                        <div className="flex flex-col gap-1 mt-1">
+                                            {(res.files ?? []).map((f, i) => (
+                                                <a
+                                                    key={i}
+                                                    href={f.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-xs text-primary hover:underline flex items-center gap-1.5"
+                                                >
+                                                    {f.type === 'image'
+                                                        ? <ImageIcon className="h-3 w-3 shrink-0" />
+                                                        : <FileText className="h-3 w-3 shrink-0" />
+                                                    }
+                                                    <span className="truncate">{f.name}</span>
+                                                    <ExternalLink className="h-3 w-3 opacity-60 shrink-0" />
                                                 </a>
                                             ))}
                                         </div>

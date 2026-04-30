@@ -142,7 +142,6 @@ const UsersPage = () => {
                                 <TableRow>
                                     <TableHead className="w-[80px]">ID</TableHead>
                                     <TableHead>Foydalanuvchi nomi</TableHead>
-                                    <TableHead>Parol</TableHead>
                                     <TableHead>Rol</TableHead>
                                     <TableHead>Yaratilgan sana</TableHead>
                                     <TableHead className="text-right">Amallar</TableHead>
@@ -153,9 +152,6 @@ const UsersPage = () => {
                                     <TableRow key={user.id}>
                                         <TableCell>{user.id}</TableCell>
                                         <TableCell className="font-medium">{user.username}</TableCell>
-                                        <TableCell className="font-mono text-sm">
-                                            {user.password_text ?? '—'}
-                                        </TableCell>
                                         <TableCell>
                                             <ExpandableTags
                                                 items={(user.roles || []).map(r => ({ id: r.id, name: getRoleName(r.id) }))}

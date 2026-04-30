@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Literal, Optional, List
 from pydantic import BaseModel, ConfigDict
 
 
@@ -7,6 +7,17 @@ class ResourceLink(BaseModel):
     """A single link entry inside a Resource."""
     title: str
     url: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+FileType = Literal["image", "pdf", "docx", "xlsx", "pptx"]
+
+
+class ResourceFile(BaseModel):
+    name: str
+    url: str
+    type: FileType
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -30,11 +41,13 @@ class ResourceCreateRequest(BaseModel):
     lesson_id: Optional[int] = None
     main_text: str
     links: List[ResourceLink] = []
+    files: List[ResourceFile] = []
 
 
 class ResourceUpdateRequest(BaseModel):
     main_text: Optional[str] = None
     links: Optional[List[ResourceLink]] = None
+    files: Optional[List[ResourceFile]] = None
     group_id: Optional[int] = None
     subject_teacher_id: Optional[int] = None
     lesson_id: Optional[int] = None
@@ -47,6 +60,7 @@ class ResourceResponse(BaseModel):
     lesson_id: Optional[int] = None
     main_text: str
     links: List[ResourceLink]
+    files: List[ResourceFile] = []
     created_at: datetime
     updated_at: datetime
     subject_teacher: Optional[ResourceSubjectTeacherInfo] = None

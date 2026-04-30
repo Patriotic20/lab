@@ -5,6 +5,12 @@ export interface ResourceLink {
     url: string;
 }
 
+export interface ResourceFile {
+    name: string;
+    url: string;
+    type: string;
+}
+
 export interface ResourceSubjectTeacherInfo {
     id: number;
     subject_id: number;
@@ -23,6 +29,7 @@ export interface ResourceResponse {
     lesson_id?: number | null;
     main_text: string;
     links: ResourceLink[];
+    files: ResourceFile[];
     created_at: string;
     updated_at: string;
     subject_teacher?: ResourceSubjectTeacherInfo;
@@ -42,11 +49,13 @@ export interface ResourceCreateRequest {
     lesson_id?: number | null;
     main_text: string;
     links: ResourceLink[];
+    files: ResourceFile[];
 }
 
 export interface ResourceUpdateRequest {
     main_text?: string;
     links?: ResourceLink[];
+    files?: ResourceFile[];
     group_id?: number | null;
     subject_teacher_id?: number;
     lesson_id?: number | null;
@@ -75,5 +84,12 @@ export const resourceService = {
 
     delete: async (id: number) => {
         await api.delete(`/resource/${id}`);
+    },
+
+    uploadFile: async (file: File): Promise<ResourceFile> => {
+        const form = new FormData();
+        form.append('file', file);
+        const response = await api.post<ResourceFile>('/resource/upload', form);
+        return response.data;
     },
 };

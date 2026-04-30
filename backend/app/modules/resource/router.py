@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from core.db_helper import db_helper
 from dependence.role_checker import PermissionRequired
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_limiter.depends import RateLimiter
 
@@ -54,6 +54,18 @@ async def list_resources(
     return await get_resource_repository.list_resources(
         session=session, request=data, current_user=current_user
     )
+
+
+@router.post(
+    "/upload",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(RateLimiter(times=10, seconds=60))],
+)
+async def upload_resource_file(
+    file: UploadFile = File(...),
+    _: "User" = Depends(PermissionRequired("create:resource")),
+):
+    return await get_resource_repository.upload_file(file=file)
 
 
 @router.get("/{resource_id}", response_model=ResourceResponse)
