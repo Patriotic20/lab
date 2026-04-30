@@ -20,6 +20,7 @@ from .yakuniy.router import router as yakuniy_router
 from .resource.router import router as resource_router
 from .psychology.router import router as psychology_router
 from .tutor.router import router as tutor_router
+from .lesson.router import router as lesson_router
 
 router = APIRouter()
 
@@ -43,3 +44,4 @@ router.include_router(yakuniy_router)
 router.include_router(resource_router)
 router.include_router(psychology_router)
 router.include_router(tutor_router)
+router.include_router(lesson_router)

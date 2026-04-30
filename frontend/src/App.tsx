@@ -31,6 +31,8 @@ import PsychologyPage from '@/pages/PsychologyPage';
 import PsychologyTestPage from '@/pages/PsychologyTestPage';
 import PsychologyResultsPage from '@/pages/PsychologyResultsPage';
 import StudentPsychologyPage from '@/pages/StudentPsychologyPage';
+import LessonsPage from '@/pages/LessonsPage';
+import LessonDetailPage from '@/pages/LessonDetailPage';
 
 
 const ProtectedRoute = () => {
@@ -106,6 +108,8 @@ function App() {
 
                 {/* Admin + Teacher routes */}
                 <Route path="/resources" element={<RoleRoute allowedRoles={['admin', 'teacher', 'student']}><ResourcesPage /></RoleRoute>} />
+                <Route path="/lessons" element={<RoleRoute allowedRoles={['admin', 'teacher', 'student']}><LessonsPage /></RoleRoute>} />
+                <Route path="/lessons/:id" element={<RoleRoute allowedRoles={['admin', 'teacher', 'student']}><LessonDetailPage /></RoleRoute>} />
                 <Route path="/psychology" element={<RoleRoute allowedRoles={['admin', 'teacher']}><PsychologyPage /></RoleRoute>} />
                 <Route path="/psychology/test/:methodId" element={<RoleRoute allowedRoles={['admin', 'teacher', 'student']}><PsychologyTestPage /></RoleRoute>} />
                 <Route path="/psychology/results" element={<RoleRoute allowedRoles={['admin']}><PsychologyResultsPage /></RoleRoute>} />

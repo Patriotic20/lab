@@ -28,6 +28,8 @@ __all__ = [
     "PsychologyMethod",
     "Tutor",
     "TutorGroup",
+    "Lesson",
+    "LessonResult",
 ]
 
 from app.modules.permission.model import Permission
@@ -55,3 +57,4 @@ from app.modules.resource.model import Resource
 from app.modules.psychology.model import PsychologyMethod, PsychologyQuestion, PsychologyResult
 from app.modules.tutor.models.tutor import Tutor
 from app.modules.tutor.models.tutor_groups import TutorGroup
+from app.modules.lesson.model import Lesson, LessonResult
