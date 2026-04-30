@@ -123,7 +123,7 @@ async def upsert_lesson_results(
     lesson_id: int,
     data: LessonResultsBulkUpsertRequest,
     session: AsyncSession = Depends(db_helper.session_getter),
-    current_user: "User" = Depends(PermissionRequired("update:lesson")),
+    current_user: "User" = Depends(PermissionRequired("update:lesson_result")),
 ):
     return await get_lesson_repository.upsert_lesson_results(
         session=session,

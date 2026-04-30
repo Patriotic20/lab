@@ -15,7 +15,6 @@ import {
     Trophy,
     ClipboardList,
     LogIn,
-    Library,
     Brain,
     UserCog,
 } from 'lucide-react';
@@ -74,7 +73,6 @@ const adminSections: NavSection[] = [
             { name: 'Test ishlash', href: '/quiz-test', icon: PlayCircle },
             { name: 'Natijalar', href: '/results', icon: FileText },
             { name: 'Yakuniy', href: '/yakuniy', icon: ClipboardList },
-            { name: 'Resurslar', href: '/resources', icon: Library },
             { name: 'Darslar', href: '/lessons', icon: BookOpen },
             { name: 'Psixologiya', href: '/psychology', icon: Brain },
             { name: 'Psixologiya natijalar', href: '/psychology/results', icon: ClipboardList },
@@ -101,7 +99,6 @@ const teacherSections: NavSection[] = [
         items: [
             { name: 'Savollar', href: '/questions', icon: FileQuestion },
             { name: 'Natijalar', href: '/results', icon: FileText },
-            { name: 'Resurslar', href: '/resources', icon: Library },
             { name: 'Darslar', href: '/lessons', icon: BookOpen },
             { name: 'Psixologiya', href: '/psychology', icon: Brain },
         ],
@@ -114,9 +111,18 @@ const studentSections: NavSection[] = [
         items: [
             { name: 'Test ishlash', href: '/quiz-test', icon: PlayCircle },
             { name: 'Natijalar', href: '/results', icon: FileText },
-            { name: 'Resurslar', href: '/resources', icon: Library },
             { name: 'Darslar', href: '/lessons', icon: BookOpen },
             { name: 'Psixologiya', href: '/psychology/student', icon: Brain },
+        ],
+    },
+];
+
+const psixologikSections: NavSection[] = [
+    {
+        label: 'Psixologiya',
+        items: [
+            { name: 'Psixologiya', href: '/psychology', icon: Brain },
+            { name: 'Psixologiya natijalar', href: '/psychology/results', icon: ClipboardList },
         ],
     },
 ];
@@ -128,7 +134,14 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: SidebarProps) => {
 
     const isStudent = user?.roles?.some(r => r.name.toLowerCase() === 'student');
     const isTeacher = user?.roles?.some(r => r.name.toLowerCase() === 'teacher');
-    const sections = isStudent ? studentSections : isTeacher ? teacherSections : adminSections;
+    const isPsixologik = user?.roles?.some(r => r.name.toLowerCase() === 'psixologik');
+    const sections = isPsixologik
+        ? psixologikSections
+        : isStudent
+            ? studentSections
+            : isTeacher
+                ? teacherSections
+                : adminSections;
 
     return (
         <>

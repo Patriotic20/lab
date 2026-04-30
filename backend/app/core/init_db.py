@@ -97,7 +97,7 @@ async def init_db(app: FastAPI, session: AsyncSession):
             logger.info("All discovered permissions already exist.")
 
         # 3. Create Roles
-        ROLES = ["Admin", "Teacher", "Student", "User"]
+        ROLES = ["Admin", "Teacher", "Student", "User", "Psixologik"]
         existing_roles_stmt = select(Role)
         existing_roles_result = await session.execute(existing_roles_stmt)
         existing_roles = {r.name: r for r in existing_roles_result.scalars().all()}
@@ -116,11 +116,15 @@ async def init_db(app: FastAPI, session: AsyncSession):
         # Admin gets ALL permissions
         admin_perms = discovered_permissions
 
-        # Teacher gets questions, quizzes, statistics, results, subjects, resources
+        # Teacher gets questions, quizzes, statistics, results, subjects, resources, lesson results.
+        # NOTE: lesson CRUD (create/update/delete:lesson) is admin-only — teacher only gets read:lesson
+        # and update:lesson_result so they can record results on existing lessons.
+        lesson_admin_only = {"create:lesson", "update:lesson", "delete:lesson"}
         teacher_perms = {
             p for p in discovered_permissions
             if any(keyword in p for keyword in ("question", "quiz", "statistics", "result", "teacher", "subject", "resource", "psychology", "lesson"))
             and not p.startswith("delete:result")
+            and p not in lesson_admin_only
         }
 
         if "read:role" in discovered_permissions:
@@ -146,11 +150,19 @@ async def init_db(app: FastAPI, session: AsyncSession):
 
         user_perms = {"user:me"} if "user:me" in discovered_permissions else set()
 
+        # Psixologik: full access only to psychology endpoints + user:me for own profile.
+        psixologik_perms = {
+            p for p in discovered_permissions if "psychology" in p
+        }
+        if "user:me" in discovered_permissions:
+            psixologik_perms.add("user:me")
+
         ROLE_PERMISSIONS_MAP = {
             "Admin": admin_perms,
             "Teacher": teacher_perms,
             "Student": student_perms,
             "User": user_perms,
+            "Psixologik": psixologik_perms,
         }
 
         for role_name, target_perm_names in ROLE_PERMISSIONS_MAP.items():

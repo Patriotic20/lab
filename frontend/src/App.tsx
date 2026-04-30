@@ -65,6 +65,11 @@ const DashboardRedirect = () => {
   const { user } = useAuth();
   const isStudent = user?.roles?.some(role => role.name.toLowerCase() === 'student');
   const isTeacher = user?.roles?.some(role => role.name.toLowerCase() === 'teacher');
+  const isPsixologik = user?.roles?.some(role => role.name.toLowerCase() === 'psixologik');
+
+  if (isPsixologik) {
+    return <Navigate to="/psychology" replace />;
+  }
 
   if (isStudent) {
     return <Navigate to="/quiz-test" replace />;
@@ -110,9 +115,9 @@ function App() {
                 <Route path="/resources" element={<RoleRoute allowedRoles={['admin', 'teacher', 'student']}><ResourcesPage /></RoleRoute>} />
                 <Route path="/lessons" element={<RoleRoute allowedRoles={['admin', 'teacher', 'student']}><LessonsPage /></RoleRoute>} />
                 <Route path="/lessons/:id" element={<RoleRoute allowedRoles={['admin', 'teacher', 'student']}><LessonDetailPage /></RoleRoute>} />
-                <Route path="/psychology" element={<RoleRoute allowedRoles={['admin', 'teacher']}><PsychologyPage /></RoleRoute>} />
-                <Route path="/psychology/test/:methodId" element={<RoleRoute allowedRoles={['admin', 'teacher', 'student']}><PsychologyTestPage /></RoleRoute>} />
-                <Route path="/psychology/results" element={<RoleRoute allowedRoles={['admin']}><PsychologyResultsPage /></RoleRoute>} />
+                <Route path="/psychology" element={<RoleRoute allowedRoles={['admin', 'teacher', 'psixologik']}><PsychologyPage /></RoleRoute>} />
+                <Route path="/psychology/test/:methodId" element={<RoleRoute allowedRoles={['admin', 'teacher', 'student', 'psixologik']}><PsychologyTestPage /></RoleRoute>} />
+                <Route path="/psychology/results" element={<RoleRoute allowedRoles={['admin', 'psixologik']}><PsychologyResultsPage /></RoleRoute>} />
                 <Route path="/psychology/student" element={<RoleRoute allowedRoles={['student']}><StudentPsychologyPage /></RoleRoute>} />
 
                 {/* Admin + Teacher routes */}

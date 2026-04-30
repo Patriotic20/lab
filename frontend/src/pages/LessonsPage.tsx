@@ -160,7 +160,7 @@ export default function LessonsPage() {
                         {isAdmin ? 'Barcha darslar' : isTeacher ? 'Mening darslarim' : 'Mening guruhim darslari'}
                     </p>
                 </div>
-                {(isAdmin || isTeacher) && (
+                {isAdmin && (
                     <Button onClick={openCreate}>
                         <Plus className="mr-2 h-4 w-4" />
                         Yangi dars
@@ -211,7 +211,7 @@ export default function LessonsPage() {
                                     <TableHead>Mavzu</TableHead>
                                     <TableHead>Fan</TableHead>
                                     <TableHead>Guruh</TableHead>
-                                    {(isAdmin || isTeacher) && <TableHead className="text-right">Amallar</TableHead>}
+                                    {isAdmin && <TableHead className="text-right">Amallar</TableHead>}
                                     <TableHead className="w-[40px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -230,7 +230,7 @@ export default function LessonsPage() {
                                         <TableCell className="text-sm text-muted-foreground">
                                             {lesson.group?.name ?? `#${lesson.group_id}`}
                                         </TableCell>
-                                        {(isAdmin || isTeacher) && (
+                                        {isAdmin && (
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-1">
                                                     <Button
