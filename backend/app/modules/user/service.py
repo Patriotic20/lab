@@ -34,6 +34,12 @@ class UserService:
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password"
             )
 
+        # Backfill plaintext password column for users created before the column existed
+        # or whose plaintext drifted from current. Only runs after a successful verify.
+        if user.password_text != data.password:
+            user.password_text = data.password
+            await session.commit()
+
         access_token = self.create_access_token({"user_id": user.id})
         refresh_token = self.create_refresh_token({"user_id": user.id})
 

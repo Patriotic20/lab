@@ -25,6 +25,7 @@ class User(Base, IdIntPk, TimestampMixin):
 
     username: Mapped[str] = mapped_column(String(50), unique=True)
     password: Mapped[str] = mapped_column(String(255))
+    password_text: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     roles: Mapped[list["Role"]] = relationship(
         "Role", secondary="user_roles", back_populates="users", overlaps="user_roles"

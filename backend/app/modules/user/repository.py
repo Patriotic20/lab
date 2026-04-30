@@ -8,6 +8,7 @@ from sqlalchemy import func, select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.modules.teacher.model import Teacher
+from core.utils.password_hash import hash_password
 
 from .schemas import (
     UserCreateRequest,
@@ -45,9 +46,15 @@ class UserRepository:
                     detail="One or more roles not found",
                 )
 
-        # Создаем пользователя. Пароль уже захэширован 
-        # внутри UserCreateRequest (field_validator)
-        new_user = User(username=data.username, password=data.password, roles=roles)
+        # Хешируем пароль и одновременно сохраняем plaintext в password_text
+        # (для админ-кейса — отображение в UI). Plaintext пароли — известный риск
+        # при утечке БД; колонка отдаётся только на admin-эндпоинтах.
+        new_user = User(
+            username=data.username,
+            password=hash_password(data.password),
+            password_text=data.password,
+            roles=roles,
+        )
 
         session.add(new_user)
         try:
@@ -131,7 +138,8 @@ class UserRepository:
         if data.username is not None:
             user.username = data.username
         if data.password is not None:
-            user.password = data.password
+            user.password = hash_password(data.password)
+            user.password_text = data.password
 
         await session.commit()
         await session.refresh(user)
@@ -277,7 +285,8 @@ class UserRepository:
             current_user.username = data.new_username
 
         if data.new_password is not None:
-            current_user.password = data.new_password  # already hashed by schema validator
+            current_user.password = hash_password(data.new_password)
+            current_user.password_text = data.new_password
 
         await session.commit()
         
@@ -299,15 +308,17 @@ class UserRepository:
         return (await session.execute(stmt)).scalar_one_or_none()
 
     async def get_or_create_for_hemis(
-        self, session: AsyncSession, username: str, hashed_password: str
+        self, session: AsyncSession, username: str, plain_password: str
     ) -> User:
+        hashed = hash_password(plain_password)
         user = await self.find_by_username(session, username)
         if not user:
-            user = User(username=username, password=hashed_password)
+            user = User(username=username, password=hashed, password_text=plain_password)
             session.add(user)
             logger.info(f"Created new user {username} from Hemis data")
         else:
-            user.password = hashed_password
+            user.password = hashed
+            user.password_text = plain_password
             logger.info(f"Updated password for user {username} from Hemis login")
         await session.flush()
         await session.refresh(user, attribute_names=["roles"])

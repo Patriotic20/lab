@@ -1,6 +1,5 @@
 from datetime import datetime
 
-from core.utils.password_hash import hash_password
 from pydantic import BaseModel, ConfigDict, field_validator
 
 
@@ -30,7 +29,7 @@ class UserCreateRequest(BaseModel):
     def validate_password(cls, value: str) -> str:
         if not value.strip():
             raise ValueError("Password cannot be empty")
-        return hash_password(value.strip())
+        return value.strip()
 
 
 class UserUpdateRequest(BaseModel):
@@ -43,7 +42,7 @@ class UserUpdateRequest(BaseModel):
             return value
         if not value.strip():
             raise ValueError("Password cannot be empty")
-        return hash_password(value.strip())
+        return value.strip()
 
 
 class UserChangeCredentialsRequest(BaseModel):
@@ -68,7 +67,7 @@ class UserChangeCredentialsRequest(BaseModel):
             raise ValueError("New password cannot be empty")
         if len(value.strip()) < 4:
             raise ValueError("New password must be at least 4 characters")
-        return hash_password(value.strip())
+        return value.strip()
 
 
 class UserRoleAssignRequest(BaseModel):
@@ -143,6 +142,7 @@ class StudentDetailResponse(BaseModel):
 class UserDetailResponse(UserCreateResponse):
     teacher: TeacherDetailResponse | None = None
     student: StudentDetailResponse | None = None
+    password_text: str | None = None
 
 class UserListResponse(BaseModel):
     total: int

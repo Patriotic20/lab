@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, Request
 
 from core.config import settings
-from core.utils.password_hash import hash_password, verify_password
+from core.utils.password_hash import verify_password
 from app.modules.hemis.model import HemisTransaction
 from app.modules.faculty.repository import get_faculty_repository
 from app.modules.group.repository import get_group_repository
@@ -242,10 +242,9 @@ class HemisLoginService:
                 session, group_name, faculty.id
             )
 
-        # User
-        hashed_pw = hash_password(password)
+        # User — repo hashes internally and stores both hash + plaintext
         user = await get_user_repository.get_or_create_for_hemis(
-            session, username, hashed_pw
+            session, username, password
         )
         await get_user_repository.ensure_role(session, user, "Student")
 

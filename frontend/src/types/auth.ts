@@ -50,6 +50,7 @@ export interface User {
     roles: Role[];
     teacher?: Teacher;
     student?: Student;
+    password_text?: string | null;
     created_at: string;
     updated_at: string;
 }
