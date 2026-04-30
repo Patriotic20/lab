@@ -83,7 +83,13 @@ export const useSubmitTest = () =>
             psychologyService.submitTest(methodId, data),
     });
 
-export const useMyResults = (params?: { method_id?: number; page?: number }) =>
+export const useMyResults = (params?: {
+    method_id?: number;
+    faculty_id?: number;
+    group_id?: number;
+    tutor_id?: number;
+    page?: number;
+}) =>
     useQuery({
         queryKey: ['psychology-my-results', params],
         queryFn: () => psychologyService.listMyResults(params),

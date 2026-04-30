@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { useMyResults, useMethods } from '@/hooks/usePsychology';
+import { useFaculties } from '@/hooks/useReferenceData';
+import { useGroups } from '@/hooks/useGroups';
+import { useTutors } from '@/hooks/useTutors';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Pagination } from '@/components/ui/Pagination';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { Loader2, Brain, ClipboardList, Eye, Calendar, User as UserIcon } from 'lucide-react';
+import { Combobox } from '@/components/ui/Combobox';
+import { Loader2, Brain, ClipboardList, Eye, Calendar, User as UserIcon, FilterX } from 'lucide-react';
 import type { TestResultResponse } from '@/services/psychologyService';
 import { DiagnosisCard } from '@/components/psychology/DiagnosisCard';
 import { AnswerRow } from '@/components/psychology/AnswerRow';
@@ -74,10 +78,38 @@ function ResultDetailModal({ result, onClose }: { result: TestResultResponse | n
 export default function PsychologyResultsPage() {
     const [page, setPage] = useState(1);
     const [methodFilter, setMethodFilter] = useState<number | undefined>(undefined);
+    const [facultyFilter, setFacultyFilter] = useState<string>('');
+    const [groupFilter, setGroupFilter] = useState<string>('');
+    const [tutorFilter, setTutorFilter] = useState<string>('');
     const [selected, setSelected] = useState<TestResultResponse | null>(null);
 
     const { data: methodsData } = useMethods(1, 100);
-    const { data, isLoading, isError } = useMyResults({ method_id: methodFilter, page });
+    const { data: facultiesData } = useFaculties(1, 100);
+    const { data: groupsData } = useGroups(
+        1,
+        100,
+        '',
+        undefined,
+        facultyFilter ? Number(facultyFilter) : undefined,
+    );
+    const { data: tutorsData } = useTutors(1, 100, '');
+
+    const facultyOptions = facultiesData?.faculties.map(f => ({ value: String(f.id), label: f.name })) ?? [];
+    const groupOptions = groupsData?.groups.map(g => ({ value: String(g.id), label: g.name })) ?? [];
+    const tutorOptions = tutorsData?.tutors.map(t => ({
+        value: String(t.id),
+        label: `${t.last_name} ${t.first_name}`.trim(),
+    })) ?? [];
+
+    const hasActiveFilter = !!(methodFilter || facultyFilter || groupFilter || tutorFilter);
+
+    const { data, isLoading, isError } = useMyResults({
+        method_id: methodFilter,
+        faculty_id: facultyFilter ? Number(facultyFilter) : undefined,
+        group_id: groupFilter ? Number(groupFilter) : undefined,
+        tutor_id: tutorFilter ? Number(tutorFilter) : undefined,
+        page,
+    });
 
     return (
         <div className="p-6">
@@ -96,18 +128,67 @@ export default function PsychologyResultsPage() {
 
             {/* Filter */}
             <Card className="mb-4">
-                <CardContent className="flex items-center gap-3 py-3">
-                    <label className="text-xs font-medium text-muted-foreground">Metod bo'yicha filter:</label>
-                    <select
-                        value={methodFilter ?? ''}
-                        onChange={e => { setMethodFilter(e.target.value ? Number(e.target.value) : undefined); setPage(1); }}
-                        className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                    >
-                        <option value="">Barchasi</option>
-                        {methodsData?.methods.map(m => (
-                            <option key={m.id} value={m.id}>{m.name}</option>
-                        ))}
-                    </select>
+                <CardContent className="flex flex-wrap items-center gap-3 py-3">
+                    <div className="flex items-center gap-2">
+                        <label className="text-xs font-medium text-muted-foreground">Metod:</label>
+                        <select
+                            value={methodFilter ?? ''}
+                            onChange={e => { setMethodFilter(e.target.value ? Number(e.target.value) : undefined); setPage(1); }}
+                            className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                            <option value="">Barchasi</option>
+                            {methodsData?.methods.map(m => (
+                                <option key={m.id} value={m.id}>{m.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="w-[200px]">
+                        <Combobox
+                            options={facultyOptions}
+                            value={facultyFilter}
+                            onChange={value => {
+                                setFacultyFilter(value);
+                                setGroupFilter('');
+                                setPage(1);
+                            }}
+                            placeholder="Barcha fakultetlar"
+                        />
+                    </div>
+
+                    <div className="w-[200px]">
+                        <Combobox
+                            options={groupOptions}
+                            value={groupFilter}
+                            onChange={value => { setGroupFilter(value); setPage(1); }}
+                            placeholder="Barcha guruhlar"
+                        />
+                    </div>
+
+                    <div className="w-[200px]">
+                        <Combobox
+                            options={tutorOptions}
+                            value={tutorFilter}
+                            onChange={value => { setTutorFilter(value); setPage(1); }}
+                            placeholder="Barcha tyutorlar"
+                        />
+                    </div>
+
+                    {hasActiveFilter && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                                setMethodFilter(undefined);
+                                setFacultyFilter('');
+                                setGroupFilter('');
+                                setTutorFilter('');
+                                setPage(1);
+                            }}
+                        >
+                            <FilterX className="h-4 w-4" />
+                        </Button>
+                    )}
                 </CardContent>
             </Card>
 

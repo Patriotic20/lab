@@ -9,6 +9,10 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.psychology.model import PsychologyMethod, PsychologyQuestion, PsychologyResult
+from app.modules.user.models.user import User
+from app.modules.student.model import Student
+from app.modules.group.models.group import Group
+from app.modules.tutor.models.tutor_groups import TutorGroup
 from .scoring import compute_diagnosis
 from .schemas import (
     MethodCreateRequest,
@@ -272,6 +276,36 @@ class PsychologyRepository:
         elif user_id:
             stmt = stmt.where(PsychologyResult.user_id == user_id)
             count_stmt = count_stmt.where(PsychologyResult.user_id == user_id)
+
+        needs_org_join = bool(
+            request.faculty_id or request.group_id or request.tutor_id
+        )
+        if needs_org_join:
+            stmt = (
+                stmt.join(User, User.id == PsychologyResult.user_id)
+                .join(Student, Student.user_id == User.id)
+                .join(Group, Group.id == Student.group_id)
+            )
+            count_stmt = (
+                count_stmt.join(User, User.id == PsychologyResult.user_id)
+                .join(Student, Student.user_id == User.id)
+                .join(Group, Group.id == Student.group_id)
+            )
+
+            if request.faculty_id:
+                stmt = stmt.where(Group.faculty_id == request.faculty_id)
+                count_stmt = count_stmt.where(Group.faculty_id == request.faculty_id)
+            if request.group_id:
+                stmt = stmt.where(Group.id == request.group_id)
+                count_stmt = count_stmt.where(Group.id == request.group_id)
+            if request.tutor_id:
+                tutor_group_subq = select(TutorGroup.group_id).where(
+                    TutorGroup.tutor_id == request.tutor_id
+                )
+                stmt = stmt.where(Student.group_id.in_(tutor_group_subq))
+                count_stmt = count_stmt.where(
+                    Student.group_id.in_(tutor_group_subq)
+                )
 
         stmt = stmt.offset(request.offset).limit(request.limit)
 

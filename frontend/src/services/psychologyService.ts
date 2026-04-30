@@ -157,7 +157,14 @@ export const psychologyService = {
         return response.data;
     },
 
-    listMyResults: async (params?: { method_id?: number; page?: number; limit?: number }) => {
+    listMyResults: async (params?: {
+        method_id?: number;
+        faculty_id?: number;
+        group_id?: number;
+        tutor_id?: number;
+        page?: number;
+        limit?: number;
+    }) => {
         const response = await api.get<TestResultListResponse>('/psychology/test/results/', { params });
         return response.data;
     },
