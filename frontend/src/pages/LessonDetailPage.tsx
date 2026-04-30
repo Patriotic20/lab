@@ -3,12 +3,16 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useLesson, useLessonResults, useUpsertLessonResults } from '@/hooks/useLessons';
 import { useGroupStudents } from '@/hooks/useGroups';
+import { useResources, useDeleteResource } from '@/hooks/useResources';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
-import { ArrowLeft, Loader2, Save } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { LessonResourceModal } from '@/components/LessonResourceModal';
+import { ArrowLeft, Loader2, Save, Plus, Pencil, Trash2, ExternalLink, Link2 } from 'lucide-react';
 import type { LessonAttendance, LessonResultUpsertItem } from '@/services/lessonService';
+import type { ResourceResponse } from '@/services/resourceService';
 
 type Row = {
     user_id: number;
@@ -39,8 +43,15 @@ export default function LessonDetailPage() {
     const { data: resultsData } = useLessonResults(lessonId);
 
     const upsertMutation = useUpsertLessonResults();
+    const deleteResourceMutation = useDeleteResource();
+
+    const { data: resourcesData } = useResources(1, 100, undefined, undefined, lessonId);
+    const lessonResources = resourcesData?.resources ?? [];
 
     const [rows, setRows] = useState<Row[]>([]);
+    const [resourceModalOpen, setResourceModalOpen] = useState(false);
+    const [editingResource, setEditingResource] = useState<ResourceResponse | null>(null);
+    const [resourceToDelete, setResourceToDelete] = useState<ResourceResponse | null>(null);
 
     const studentList = useMemo(() => studentsData?.students ?? [], [studentsData]);
     const resultByUserId = useMemo(() => {
@@ -120,6 +131,76 @@ export default function LessonDetailPage() {
                     <p className="text-sm text-foreground/80">{lesson.description}</p>
                 )}
             </div>
+
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Resurslar</CardTitle>
+                    {canEdit && (
+                        <Button
+                            size="sm"
+                            onClick={() => { setEditingResource(null); setResourceModalOpen(true); }}
+                        >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Resurs qo'shish
+                        </Button>
+                    )}
+                </CardHeader>
+                <CardContent>
+                    {lessonResources.length === 0 ? (
+                        <p className="py-6 text-center text-sm text-muted-foreground">
+                            Bu darsga hali resurs biriktirilmagan.
+                        </p>
+                    ) : (
+                        <div className="grid gap-3 md:grid-cols-2">
+                            {lessonResources.map(res => (
+                                <div
+                                    key={res.id}
+                                    className="rounded-xl border border-border bg-background p-4 flex flex-col gap-2"
+                                >
+                                    <div className="flex items-start justify-between gap-2">
+                                        <p className="text-sm flex-1 whitespace-pre-wrap">{res.main_text}</p>
+                                        {canEdit && (
+                                            <div className="flex shrink-0 gap-1">
+                                                <button
+                                                    onClick={() => { setEditingResource(res); setResourceModalOpen(true); }}
+                                                    className="rounded p-1 hover:bg-accent text-muted-foreground hover:text-foreground"
+                                                    title="Tahrirlash"
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => setResourceToDelete(res)}
+                                                    className="rounded p-1 hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                                                    title="O'chirish"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                    {res.links.length > 0 && (
+                                        <div className="flex flex-col gap-1">
+                                            {res.links.map((l, i) => (
+                                                <a
+                                                    key={i}
+                                                    href={l.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-xs text-primary hover:underline flex items-center gap-1.5"
+                                                >
+                                                    <Link2 className="h-3 w-3" />
+                                                    <span className="truncate">{l.title || l.url}</span>
+                                                    <ExternalLink className="h-3 w-3 opacity-60" />
+                                                </a>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             <Card>
                 <CardHeader>
@@ -222,6 +303,28 @@ export default function LessonDetailPage() {
                     )}
                 </CardContent>
             </Card>
+
+            <LessonResourceModal
+                isOpen={resourceModalOpen}
+                onClose={() => { setResourceModalOpen(false); setEditingResource(null); }}
+                lesson={lesson}
+                editing={editingResource}
+            />
+
+            <ConfirmDialog
+                isOpen={!!resourceToDelete}
+                onClose={() => setResourceToDelete(null)}
+                onConfirm={() => {
+                    if (!resourceToDelete) return;
+                    deleteResourceMutation.mutate(resourceToDelete.id, {
+                        onSuccess: () => setResourceToDelete(null),
+                    });
+                }}
+                title="Resursni o'chirish"
+                description="Ushbu resursni o'chirmoqchimisiz?"
+                confirmText="O'chirish"
+                cancelText="Bekor qilish"
+            />
         </div>
     );
 }

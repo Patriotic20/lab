@@ -10,10 +10,11 @@ export const useResources = (
     limit = 20,
     subject_teacher_id?: number,
     group_id?: number,
+    lesson_id?: number,
 ) =>
     useQuery({
-        queryKey: ['resources', page, limit, subject_teacher_id, group_id],
-        queryFn: () => resourceService.list({ page, limit, subject_teacher_id, group_id }),
+        queryKey: ['resources', page, limit, subject_teacher_id, group_id, lesson_id],
+        queryFn: () => resourceService.list({ page, limit, subject_teacher_id, group_id, lesson_id }),
     });
 
 export const useResource = (id: number) =>

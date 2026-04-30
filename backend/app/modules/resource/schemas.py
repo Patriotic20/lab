@@ -27,6 +27,7 @@ class ResourceGroupInfo(BaseModel):
 class ResourceCreateRequest(BaseModel):
     subject_teacher_id: int
     group_id: Optional[int] = None
+    lesson_id: Optional[int] = None
     main_text: str
     links: List[ResourceLink] = []
 
@@ -36,12 +37,14 @@ class ResourceUpdateRequest(BaseModel):
     links: Optional[List[ResourceLink]] = None
     group_id: Optional[int] = None
     subject_teacher_id: Optional[int] = None
+    lesson_id: Optional[int] = None
 
 
 class ResourceResponse(BaseModel):
     id: int
     subject_teacher_id: int
     group_id: Optional[int] = None
+    lesson_id: Optional[int] = None
     main_text: str
     links: List[ResourceLink]
     created_at: datetime
@@ -55,6 +58,7 @@ class ResourceResponse(BaseModel):
 class ResourceListRequest(BaseModel):
     subject_teacher_id: Optional[int] = None
     group_id: Optional[int] = None
+    lesson_id: Optional[int] = None
 
     page: int = 1
     limit: int = 20

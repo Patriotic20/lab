@@ -47,7 +47,7 @@ export default function LessonsPage() {
         if (isTeacher && !isAdmin) {
             return (assignedSubjectsData?.subject_teachers ?? []).map(st => ({
                 value: st.id.toString(),
-                label: `${assignedSubjectsData?.full_name ?? ''} / ${st.subject.name}`.trim(),
+                label: st.subject.name,
             }));
         }
         return (teachersData?.teachers ?? []).flatMap(t =>

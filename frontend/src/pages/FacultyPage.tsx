@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Pagination } from '@/components/ui/Pagination';
 import { Button } from '@/components/ui/Button';
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/Table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Plus, Pencil, Trash2, Loader2, Search, ArrowLeft, ChevronRight, FolderEdit } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Search, ArrowLeft, ChevronRight, FolderEdit, CheckCircle2, XCircle } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Input } from '@/components/ui/Input';
@@ -17,6 +18,7 @@ import { type Group } from '@/services/groupService';
 import { type Student } from '@/services/studentService';
 import { useGroups } from '@/hooks/useGroups';
 import { useStudents } from '@/hooks/useStudents';
+import { useUserResults } from '@/hooks/useResults';
 import { ChangeGroupModal } from '@/components/ChangeGroupModal';
 
 type View =
@@ -535,7 +537,15 @@ const StudentDetailView = ({ faculty, group, student, onBackToFaculties, onBackT
     onBackToGroups: () => void;
     onBackToStudents: () => void;
 }) => {
+    const navigate = useNavigate();
     const [moveOpen, setMoveOpen] = useState(false);
+    const [resultsPage, setResultsPage] = useState(1);
+    const resultsPageSize = 5;
+    const { data: resultsData, isLoading: isResultsLoading } =
+        useUserResults(student.user_id, resultsPage, resultsPageSize);
+
+    const results = resultsData?.results || [];
+    const resultsTotalPages = resultsData ? Math.ceil(resultsData.total / resultsPageSize) : 1;
 
     const InfoRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
         <div className="grid grid-cols-2 gap-2">
@@ -602,6 +612,92 @@ const StudentDetailView = ({ faculty, group, student, onBackToFaculties, onBackT
                     </CardContent>
                 </Card>
             </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Natijalar</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {isResultsLoading ? (
+                        <div className="flex justify-center p-8">
+                            <Loader2 className="h-8 w-8 animate-spin" />
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Test Nomi</TableHead>
+                                        <TableHead>Fan</TableHead>
+                                        <TableHead>Sana</TableHead>
+                                        <TableHead>Natija</TableHead>
+                                        <TableHead className="text-right">Batafsil</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {results.map((r) => (
+                                        <TableRow key={r.id}>
+                                            <TableCell className="font-medium align-middle capitalize">
+                                                {r.quiz?.title || '-'}
+                                            </TableCell>
+                                            <TableCell className="align-middle capitalize">
+                                                {r.subject?.name || '-'}
+                                            </TableCell>
+                                            <TableCell className="align-middle">
+                                                {new Date(r.created_at).toLocaleDateString()}
+                                            </TableCell>
+                                            <TableCell className="align-middle">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-lg font-bold">
+                                                        {r.grade.toFixed(1)}
+                                                        <span className="text-sm font-normal text-muted-foreground"> / 5</span>
+                                                    </span>
+                                                    <div className="flex items-center gap-3 text-xs">
+                                                        <div className="flex items-center gap-1 text-green-600 dark:text-green-500">
+                                                            <CheckCircle2 className="h-3.5 w-3.5" />
+                                                            <span>{r.correct_answers}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1 text-red-600 dark:text-red-500">
+                                                            <XCircle className="h-3.5 w-3.5" />
+                                                            <span>{r.wrong_answers}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => navigate(
+                                                        `/results/answers?user_id=${student.user_id}&quiz_id=${r.quiz_id}`
+                                                    )}
+                                                >
+                                                    Javoblarni ko'rish
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {results.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                                                Ushbu talaba uchun natijalar topilmadi.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                            {results.length > 0 && resultsTotalPages > 1 && (
+                                <Pagination
+                                    currentPage={resultsPage}
+                                    totalPages={resultsTotalPages}
+                                    onPageChange={setResultsPage}
+                                    isLoading={isResultsLoading}
+                                />
+                            )}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             <ChangeGroupModal
                 isOpen={moveOpen}
