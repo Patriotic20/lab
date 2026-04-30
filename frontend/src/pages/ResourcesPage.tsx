@@ -208,6 +208,7 @@ export default function ResourcesPage() {
                 group_id: groupIdNum,
                 main_text: formMainText,
                 links: cleanLinks,
+                files: [],
             };
             createMutation.mutate(payload, {
                 onSuccess: closeModal,
