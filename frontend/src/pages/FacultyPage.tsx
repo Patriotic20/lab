@@ -5,7 +5,7 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/Table';
 import { Card, CardContent } from '@/components/ui/Card';
-import { Plus, Pencil, Trash2, Loader2, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Search, ArrowLeft } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Input } from '@/components/ui/Input';
@@ -13,6 +13,27 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { facultyService, type Faculty } from '@/services/facultyService';
+import { type Group } from '@/services/groupService';
+import { useGroups } from '@/hooks/useGroups';
+import { useStudents } from '@/hooks/useStudents';
+
+type View =
+    | { level: 'faculties' }
+    | { level: 'groups'; faculty: Faculty }
+    | { level: 'students'; faculty: Faculty; group: Group };
+
+const Crumbs = ({ items }: { items: { label: string; onClick?: () => void }[] }) => (
+    <nav className="flex items-center gap-1 text-sm text-muted-foreground">
+        {items.map((it, i) => (
+            <span key={i} className="flex items-center gap-1">
+                {i > 0 && <span>/</span>}
+                {it.onClick
+                    ? <button onClick={it.onClick} className="hover:text-foreground hover:underline">{it.label}</button>
+                    : <span className="text-foreground font-medium">{it.label}</span>}
+            </span>
+        ))}
+    </nav>
+);
 
 const facultySchema = z.object({
     name: z.string().min(1, 'Fakultet nomi kiritilishi shart'),
@@ -32,6 +53,7 @@ const FacultyPage = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [view, setView] = useState<View>({ level: 'faculties' });
     const pageSize = 10;
 
     const fetchData = async () => {
@@ -96,6 +118,26 @@ const FacultyPage = () => {
         }
     };
 
+    if (view.level === 'groups') {
+        return (
+            <FacultyGroupsView
+                faculty={view.faculty}
+                onBack={() => setView({ level: 'faculties' })}
+                onOpenGroup={(group) => setView({ level: 'students', faculty: view.faculty, group })}
+            />
+        );
+    }
+    if (view.level === 'students') {
+        return (
+            <GroupStudentsView
+                faculty={view.faculty}
+                group={view.group}
+                onBackToFaculties={() => setView({ level: 'faculties' })}
+                onBackToGroups={() => setView({ level: 'groups', faculty: view.faculty })}
+            />
+        );
+    }
+
     return (
         <div className="space-y-6">
             {/* Page header */}
@@ -141,7 +183,12 @@ const FacultyPage = () => {
                                 {faculties.map((faculty) => (
                                     <TableRow key={faculty.id}>
                                         <TableCell>{faculty.id}</TableCell>
-                                        <TableCell className="font-medium capitalize">{faculty.name}</TableCell>
+                                        <TableCell
+                                            className="font-medium capitalize cursor-pointer text-primary hover:underline"
+                                            onClick={() => setView({ level: 'groups', faculty })}
+                                        >
+                                            {faculty.name}
+                                        </TableCell>
                                         <TableCell>{new Date(faculty.created_at).toLocaleDateString()}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
@@ -238,6 +285,201 @@ const FacultyModal = ({ isOpen, onClose, faculty, onSuccess }: {
                 </div>
             </form>
         </Modal>
+    );
+};
+
+const FacultyGroupsView = ({ faculty, onBack, onOpenGroup }: {
+    faculty: Faculty;
+    onBack: () => void;
+    onOpenGroup: (group: Group) => void;
+}) => {
+    const [currentPage, setCurrentPage] = useState(1);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const pageSize = 10;
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchTerm);
+            setCurrentPage(1);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    const { data: groupsData, isLoading } = useGroups(currentPage, pageSize, debouncedSearch, undefined, faculty.id);
+    const groups = groupsData?.groups || [];
+    const totalPages = groupsData ? Math.ceil(groupsData.total / pageSize) : 1;
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-2">
+                    <Crumbs items={[
+                        { label: 'Fakultetlar', onClick: onBack },
+                        { label: faculty.name },
+                    ]} />
+                    <div className="flex items-center gap-3">
+                        <Button variant="ghost" size="sm" onClick={onBack}>
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Orqaga
+                        </Button>
+                        <h1 className="text-xl font-semibold tracking-tight capitalize">{faculty.name} — guruhlar</h1>
+                    </div>
+                </div>
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Qidirish..."
+                        className="pl-8 w-[220px]"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+            </div>
+
+            <Card>
+                <CardContent className="pt-6">
+                    {isLoading ? (
+                        <div className="flex justify-center p-8">
+                            <Loader2 className="h-8 w-8 animate-spin" />
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[80px]">ID</TableHead>
+                                    <TableHead>Nomi</TableHead>
+                                    <TableHead>Yaratilgan sana</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {groups.map((group) => (
+                                    <TableRow key={group.id}>
+                                        <TableCell>{group.id}</TableCell>
+                                        <TableCell
+                                            className="font-medium cursor-pointer text-primary hover:underline"
+                                            onClick={() => onOpenGroup(group)}
+                                        >
+                                            {group.name}
+                                        </TableCell>
+                                        <TableCell>{new Date(group.created_at).toLocaleDateString()}</TableCell>
+                                    </TableRow>
+                                ))}
+                                {groups.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">Guruhlar topilmadi.</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                isLoading={isLoading}
+            />
+        </div>
+    );
+};
+
+const GroupStudentsView = ({ faculty, group, onBackToFaculties, onBackToGroups }: {
+    faculty: Faculty;
+    group: Group;
+    onBackToFaculties: () => void;
+    onBackToGroups: () => void;
+}) => {
+    const [currentPage, setCurrentPage] = useState(1);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const pageSize = 10;
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchTerm);
+            setCurrentPage(1);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    const { data: studentsData, isLoading } = useStudents(currentPage, pageSize, debouncedSearch, undefined, group.id);
+    const students = studentsData?.students || [];
+    const totalPages = studentsData ? Math.ceil(studentsData.total / pageSize) : 1;
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-2">
+                    <Crumbs items={[
+                        { label: 'Fakultetlar', onClick: onBackToFaculties },
+                        { label: faculty.name, onClick: onBackToGroups },
+                        { label: group.name },
+                    ]} />
+                    <div className="flex items-center gap-3">
+                        <Button variant="ghost" size="sm" onClick={onBackToGroups}>
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Orqaga
+                        </Button>
+                        <h1 className="text-xl font-semibold tracking-tight">{group.name} — talabalar</h1>
+                    </div>
+                </div>
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Qidirish..."
+                        className="pl-8 w-[220px]"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+            </div>
+
+            <Card>
+                <CardContent className="pt-6">
+                    {isLoading ? (
+                        <div className="flex justify-center p-8">
+                            <Loader2 className="h-8 w-8 animate-spin" />
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[80px]">ID</TableHead>
+                                    <TableHead>F.I.SH</TableHead>
+                                    <TableHead>Talaba raqami</TableHead>
+                                    <TableHead>Telefon</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {students.map((student) => (
+                                    <TableRow key={student.id}>
+                                        <TableCell>{student.id}</TableCell>
+                                        <TableCell className="font-medium">{student.full_name || '-'}</TableCell>
+                                        <TableCell>{student.student_id_number || '-'}</TableCell>
+                                        <TableCell>{student.phone || '-'}</TableCell>
+                                    </TableRow>
+                                ))}
+                                {students.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">Talabalar topilmadi.</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                isLoading={isLoading}
+            />
+        </div>
     );
 };
 
