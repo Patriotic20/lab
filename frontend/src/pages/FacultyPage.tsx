@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/Button';
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/Table';
-import { Card, CardContent } from '@/components/ui/Card';
-import { Plus, Pencil, Trash2, Loader2, Search, ArrowLeft } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Plus, Pencil, Trash2, Loader2, Search, ArrowLeft, ChevronRight, FolderEdit } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Input } from '@/components/ui/Input';
@@ -14,13 +14,16 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { facultyService, type Faculty } from '@/services/facultyService';
 import { type Group } from '@/services/groupService';
+import { type Student } from '@/services/studentService';
 import { useGroups } from '@/hooks/useGroups';
 import { useStudents } from '@/hooks/useStudents';
+import { ChangeGroupModal } from '@/components/ChangeGroupModal';
 
 type View =
     | { level: 'faculties' }
     | { level: 'groups'; faculty: Faculty }
-    | { level: 'students'; faculty: Faculty; group: Group };
+    | { level: 'students'; faculty: Faculty; group: Group }
+    | { level: 'student-detail'; faculty: Faculty; group: Group; student: Student };
 
 const Crumbs = ({ items }: { items: { label: string; onClick?: () => void }[] }) => (
     <nav className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -134,6 +137,19 @@ const FacultyPage = () => {
                 group={view.group}
                 onBackToFaculties={() => setView({ level: 'faculties' })}
                 onBackToGroups={() => setView({ level: 'groups', faculty: view.faculty })}
+                onOpenStudent={(student) => setView({ level: 'student-detail', faculty: view.faculty, group: view.group, student })}
+            />
+        );
+    }
+    if (view.level === 'student-detail') {
+        return (
+            <StudentDetailView
+                faculty={view.faculty}
+                group={view.group}
+                student={view.student}
+                onBackToFaculties={() => setView({ level: 'faculties' })}
+                onBackToGroups={() => setView({ level: 'groups', faculty: view.faculty })}
+                onBackToStudents={() => setView({ level: 'students', faculty: view.faculty, group: view.group })}
             />
         );
     }
@@ -181,21 +197,20 @@ const FacultyPage = () => {
                             </TableHeader>
                             <TableBody>
                                 {faculties.map((faculty) => (
-                                    <TableRow key={faculty.id}>
+                                    <TableRow
+                                        key={faculty.id}
+                                        className="cursor-pointer"
+                                        onClick={() => setView({ level: 'groups', faculty })}
+                                    >
                                         <TableCell>{faculty.id}</TableCell>
-                                        <TableCell
-                                            className="font-medium capitalize cursor-pointer text-primary hover:underline"
-                                            onClick={() => setView({ level: 'groups', faculty })}
-                                        >
-                                            {faculty.name}
-                                        </TableCell>
+                                        <TableCell className="font-medium capitalize">{faculty.name}</TableCell>
                                         <TableCell>{new Date(faculty.created_at).toLocaleDateString()}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
-                                                <Button variant="ghost" size="sm" onClick={() => { setSelectedFaculty(faculty); setIsModalOpen(true); }}>
+                                                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedFaculty(faculty); setIsModalOpen(true); }}>
                                                     <Pencil className="h-4 w-4" />
                                                 </Button>
-                                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteClick(faculty)}>
+                                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteClick(faculty); }}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
@@ -350,24 +365,27 @@ const FacultyGroupsView = ({ faculty, onBack, onOpenGroup }: {
                                     <TableHead className="w-[80px]">ID</TableHead>
                                     <TableHead>Nomi</TableHead>
                                     <TableHead>Yaratilgan sana</TableHead>
+                                    <TableHead className="w-[40px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {groups.map((group) => (
-                                    <TableRow key={group.id}>
+                                    <TableRow
+                                        key={group.id}
+                                        className="cursor-pointer"
+                                        onClick={() => onOpenGroup(group)}
+                                    >
                                         <TableCell>{group.id}</TableCell>
-                                        <TableCell
-                                            className="font-medium cursor-pointer text-primary hover:underline"
-                                            onClick={() => onOpenGroup(group)}
-                                        >
-                                            {group.name}
-                                        </TableCell>
+                                        <TableCell className="font-medium">{group.name}</TableCell>
                                         <TableCell>{new Date(group.created_at).toLocaleDateString()}</TableCell>
+                                        <TableCell className="text-right">
+                                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                                 {groups.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">Guruhlar topilmadi.</TableCell>
+                                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">Guruhlar topilmadi.</TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>
@@ -386,15 +404,17 @@ const FacultyGroupsView = ({ faculty, onBack, onOpenGroup }: {
     );
 };
 
-const GroupStudentsView = ({ faculty, group, onBackToFaculties, onBackToGroups }: {
+const GroupStudentsView = ({ faculty, group, onBackToFaculties, onBackToGroups, onOpenStudent }: {
     faculty: Faculty;
     group: Group;
     onBackToFaculties: () => void;
     onBackToGroups: () => void;
+    onOpenStudent: (student: Student) => void;
 }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [studentToMove, setStudentToMove] = useState<Student | null>(null);
     const pageSize = 10;
 
     useEffect(() => {
@@ -451,20 +471,38 @@ const GroupStudentsView = ({ faculty, group, onBackToFaculties, onBackToGroups }
                                     <TableHead>F.I.SH</TableHead>
                                     <TableHead>Talaba raqami</TableHead>
                                     <TableHead>Telefon</TableHead>
+                                    <TableHead className="w-[40px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {students.map((student) => (
-                                    <TableRow key={student.id}>
+                                    <TableRow
+                                        key={student.id}
+                                        className="cursor-pointer"
+                                        onClick={() => onOpenStudent(student)}
+                                    >
                                         <TableCell>{student.id}</TableCell>
                                         <TableCell className="font-medium">{student.full_name || '-'}</TableCell>
                                         <TableCell>{student.student_id_number || '-'}</TableCell>
                                         <TableCell>{student.phone || '-'}</TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    title="Guruhni o'zgartirish"
+                                                    onClick={(e) => { e.stopPropagation(); setStudentToMove(student); }}
+                                                >
+                                                    <FolderEdit className="h-4 w-4" />
+                                                </Button>
+                                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                            </div>
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                                 {students.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">Talabalar topilmadi.</TableCell>
+                                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Talabalar topilmadi.</TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>
@@ -478,6 +516,98 @@ const GroupStudentsView = ({ faculty, group, onBackToFaculties, onBackToGroups }
                 totalPages={totalPages}
                 onPageChange={setCurrentPage}
                 isLoading={isLoading}
+            />
+
+            <ChangeGroupModal
+                isOpen={!!studentToMove}
+                onClose={() => setStudentToMove(null)}
+                student={studentToMove}
+            />
+        </div>
+    );
+};
+
+const StudentDetailView = ({ faculty, group, student, onBackToFaculties, onBackToGroups, onBackToStudents }: {
+    faculty: Faculty;
+    group: Group;
+    student: Student;
+    onBackToFaculties: () => void;
+    onBackToGroups: () => void;
+    onBackToStudents: () => void;
+}) => {
+    const [moveOpen, setMoveOpen] = useState(false);
+
+    const InfoRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
+        <div className="grid grid-cols-2 gap-2">
+            <span className="font-semibold text-muted-foreground">{label}:</span>
+            <span>{value || '-'}</span>
+        </div>
+    );
+
+    return (
+        <div className="space-y-6">
+            <div className="space-y-2">
+                <Crumbs items={[
+                    { label: 'Fakultetlar', onClick: onBackToFaculties },
+                    { label: faculty.name, onClick: onBackToGroups },
+                    { label: group.name, onClick: onBackToStudents },
+                    { label: student.full_name || `Talaba #${student.id}` },
+                ]} />
+                <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="sm" onClick={onBackToStudents}>
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Orqaga
+                    </Button>
+                    <h1 className="text-xl font-semibold tracking-tight">
+                        {student.full_name || `Talaba #${student.id}`}
+                    </h1>
+                    <Button variant="outline" size="sm" className="ml-auto" onClick={() => setMoveOpen(true)}>
+                        <FolderEdit className="h-4 w-4 mr-2" />
+                        Boshqa guruhga o'tkazish
+                    </Button>
+                </div>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Shaxsiy ma'lumotlar</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <InfoRow label="F.I.SH" value={student.full_name} />
+                        <InfoRow label="Talaba raqami" value={student.student_id_number} />
+                        <InfoRow label="Telefon" value={student.phone} />
+                        <InfoRow label="Manzil" value={student.address} />
+                        <InfoRow label="Tug'ilgan sana" value={student.birth_date} />
+                        <InfoRow label="Jinsi" value={student.gender} />
+                        <InfoRow label="User ID" value={student.user_id} />
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Akademik ma'lumotlar</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <InfoRow label="Fakultet" value={student.faculty} />
+                        <InfoRow label="Mutaxassislik" value={student.specialty} />
+                        <InfoRow label="Bosqich" value={student.level} />
+                        <InfoRow label="Semestr" value={student.semester} />
+                        <InfoRow label="Ta'lim shakli" value={student.education_form} />
+                        <InfoRow label="Ta'lim turi" value={student.education_type} />
+                        <InfoRow label="To'lov shakli" value={student.payment_form} />
+                        <InfoRow label="Ta'lim tili" value={student.education_lang} />
+                        <InfoRow label="Status" value={student.student_status} />
+                        <InfoRow label="O'rtacha ball (GPA)" value={student.avg_gpa ?? '-'} />
+                    </CardContent>
+                </Card>
+            </div>
+
+            <ChangeGroupModal
+                isOpen={moveOpen}
+                onClose={() => setMoveOpen(false)}
+                student={student}
+                onSuccess={onBackToStudents}
             />
         </div>
     );

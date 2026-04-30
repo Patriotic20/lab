@@ -11,9 +11,10 @@ interface ChangeGroupModalProps {
     isOpen: boolean;
     onClose: () => void;
     student: Student | null;
+    onSuccess?: () => void;
 }
 
-export const ChangeGroupModal: React.FC<ChangeGroupModalProps> = ({ isOpen, onClose, student }) => {
+export const ChangeGroupModal: React.FC<ChangeGroupModalProps> = ({ isOpen, onClose, student, onSuccess }) => {
     const { data: groupsData, isLoading: isGroupsLoading } = useGroups(1, 100, '');
     const updateGroupMutation = useUpdateStudentGroup();
     const [selectedGroupId, setSelectedGroupId] = useState<string>('');
@@ -38,6 +39,7 @@ export const ChangeGroupModal: React.FC<ChangeGroupModalProps> = ({ isOpen, onCl
             {
                 onSuccess: () => {
                     onClose();
+                    onSuccess?.();
                 },
                 onError: (error: any) => {
                     alert(error?.response?.data?.detail || 'Guruhni o\'zgartirishda xatolik yuz berdi');
