@@ -51,7 +51,7 @@ class UserService:
         self, session: AsyncSession, refresh_token: str
     ) -> UserLoginResponse:
         token = refresh_token.split(" ")[1]
-        payload = self.token_decode(token)
+        payload = self.token_decode(token, secret_key=settings.jwt.refresh_token_secret)
         user = await self.get_user_by_id(session, payload["user_id"])
 
         if not user:
@@ -90,10 +90,12 @@ class UserService:
 
         return user
 
-    def token_decode(self, token: str) -> dict:
+    def token_decode(self, token: str, secret_key: str | None = None) -> dict:
         try:
             return jwt.decode(
-                token, settings.jwt.access_token_secret, algorithms=[settings.jwt.algorithm]
+                token,
+                secret_key or settings.jwt.access_token_secret,
+                algorithms=[settings.jwt.algorithm],
             )
         except jwt.ExpiredSignatureError:
             raise HTTPException(
