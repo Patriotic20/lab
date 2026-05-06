@@ -202,59 +202,57 @@ function MultiChoiceQuestion({
     onChange: (v: number) => void;
 }) {
     const c = question.content as Record<string, string>;
-    const options = (question.options ?? []) as Array<{ text: string; value: number; description?: string }>;
-    const [revealed, setRevealed] = useState<number | null>(
-        typeof value === 'number' ? value : null
+    const options = (question.options ?? []) as Array<{ image_url?: string; description?: string; value: number }>;
+    const [revealedDesc, setRevealedDesc] = useState<string | null>(
+        typeof value === 'number'
+            ? (options.find(o => o.value === value)?.description ?? null)
+            : null
     );
 
-    const select = (optValue: number) => {
-        setRevealed(optValue);
-        onChange(optValue);
+    const select = (opt: typeof options[number]) => {
+        setRevealedDesc(opt.description ?? null);
+        onChange(opt.value);
     };
 
     return (
         <div className="flex flex-col gap-5">
-            {c.image_url && (
-                <img
-                    src={c.image_url}
-                    alt="stimulus"
-                    className="max-h-64 rounded-xl border border-border object-contain shadow"
-                />
-            )}
             <p className="text-center text-lg font-medium text-foreground">{c.text}</p>
             {c.description && (
                 <p className="text-center text-sm text-muted-foreground">{c.description}</p>
             )}
-            <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {options.map((opt, i) => {
                     const isSelected = value === opt.value;
-                    const isRevealed = revealed === opt.value;
                     return (
-                        <div key={i} className="flex flex-col gap-1">
-                            <button
-                                onClick={() => select(opt.value)}
-                                className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3 text-left text-sm transition-all ${
-                                    isSelected
-                                        ? 'border-primary bg-primary/10 text-primary font-medium'
-                                        : 'border-border bg-background text-foreground hover:border-primary/30 hover:bg-accent'
-                                }`}
-                            >
-                                <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-                                    isSelected ? 'border-primary' : 'border-border bg-background'
-                                }`}>
-                                    {isSelected && <span className="h-2 w-2 rounded-full bg-primary" />}
-                                </span>
-                                {opt.text}
-                            </button>
-                            {isRevealed && opt.description && (
-                                <div className="ml-7 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary/80">
-                                    {opt.description}
+                        <button
+                            key={i}
+                            onClick={() => select(opt)}
+                            className={`overflow-hidden rounded-xl border-2 transition-all ${
+                                isSelected
+                                    ? 'border-primary shadow-md'
+                                    : 'border-border hover:border-primary/40'
+                            }`}
+                        >
+                            {opt.image_url ? (
+                                <img
+                                    src={opt.image_url}
+                                    alt={`variant ${i + 1}`}
+                                    className="h-28 w-full object-cover"
+                                />
+                            ) : (
+                                <div className="flex h-28 w-full items-center justify-center bg-muted text-xs text-muted-foreground">
+                                    {i + 1}
                                 </div>
                             )}
-                        </div>
+                        </button>
                     );
                 })}
             </div>
+            {revealedDesc && (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary/90">
+                    {revealedDesc}
+                </div>
+            )}
         </div>
     );
 }

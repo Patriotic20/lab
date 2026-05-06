@@ -22,9 +22,9 @@ function resolveAnswerLabel(question: QuestionResponse | undefined, value: unkno
             return idx >= 0 ? `Variant ${idx + 1}` : String(value ?? '—');
         }
         case 'multi_choice': {
-            const opts = (question.options ?? []) as Array<{ text?: string; value: unknown }>;
+            const opts = (question.options ?? []) as Array<{ description?: string; value: unknown }>;
             const found = opts.find(o => o.value === value);
-            return found?.text ?? String(value ?? '—');
+            return found?.description ?? String(value ?? '—');
         }
         default:
             return String(value ?? '—');
@@ -42,8 +42,9 @@ export function AnswerRow({
 }) {
     const questionText = (question?.content as Record<string, unknown> | undefined)?.text as string | undefined;
     const isImageChoice = question?.question_type === 'image_choice';
+    const isMultiChoice = question?.question_type === 'multi_choice';
     const opts = (question?.options ?? []) as Array<{ image_url?: string; value: unknown }>;
-    const selectedImage = isImageChoice ? opts.find(o => o.value === value)?.image_url : null;
+    const selectedImage = (isImageChoice || isMultiChoice) ? opts.find(o => o.value === value)?.image_url : null;
 
     return (
         <div className="rounded-lg border border-border bg-background p-3">

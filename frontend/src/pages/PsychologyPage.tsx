@@ -28,7 +28,7 @@ const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
     scale: 'Shkala',
     image_stimulus: 'Rasm + matnli variantlar',
     image_choice: 'Rasmli variantlar',
-    multi_choice: "Ko'p tanlov (checkbox)",
+    multi_choice: "Psixologik tanlov",
 };
 
 const QUESTION_TYPE_ICONS: Record<QuestionType, React.ElementType> = {
@@ -92,7 +92,7 @@ const emptyQuestionForm = (): QuestionFormState => ({
     scaleMaxLabel: '',
     imageUrl: '',
     questionDescription: '',
-    options: [{ text: '', value: 1 }, { text: '', value: 0 }],
+    options: [{ text: '', image_url: '', description: '', value: 1 }, { text: '', image_url: '', description: '', value: 2 }],
     order: '0',
     category: '',
 });
@@ -142,15 +142,14 @@ function buildQuestionPayload(form: QuestionFormState) {
     } else if (type === 'multi_choice') {
         content = {
             text: form.textContent,
-            ...(form.imageUrl && { image_url: form.imageUrl }),
             ...(form.questionDescription && { description: form.questionDescription }),
         };
         options = form.options
-            .filter(o => String(o.text ?? '').trim())
-            .map(o => ({
-                text: o.text,
-                value: o.value,
+            .filter(o => String(o.image_url ?? '').trim() || String(o.description ?? '').trim())
+            .map((o, i) => ({
+                ...(o.image_url && { image_url: o.image_url }),
                 ...(o.description && { description: o.description }),
+                value: i + 1,
             }));
     }
     return {
@@ -257,30 +256,46 @@ function QuestionForm({
                     <div className="flex flex-col gap-2">
                         {form.options.map((opt, i) => (
                             <div key={i} className="flex flex-col gap-1.5 rounded-lg border border-border bg-muted/10 p-2">
-                                <div className="flex gap-2 items-center">
-                                    {form.question_type === 'image_choice' ? (
-                                        <div className="flex-1">
-                                            <ImageUploadField
-                                                value={String(opt.image_url ?? '') || null}
-                                                onChange={(url) => updateOption(i, { image_url: url ?? '' })}
-                                                previewSize={56}
-                                                helperText=""
-                                            />
+                                {form.question_type === 'multi_choice' ? (
+                                    <>
+                                        <div className="flex items-start gap-2">
+                                            <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground">{i + 1}</span>
+                                            <div className="flex-1">
+                                                <ImageUploadField
+                                                    label=""
+                                                    helperText="Rasm yuklang"
+                                                    value={String(opt.image_url ?? '') || null}
+                                                    onChange={(url) => updateOption(i, { image_url: url ?? '' })}
+                                                    previewSize={72}
+                                                />
+                                            </div>
+                                            <button type="button" onClick={() => removeOption(i)} className="mt-1 text-destructive shrink-0"><X className="h-4 w-4" /></button>
                                         </div>
-                                    ) : (
-                                        <Input label="" placeholder={`Variant ${i + 1}`} value={String(opt.text ?? '')} onChange={e => updateOption(i, { text: e.target.value })} className="flex-1" />
-                                    )}
-                                    <Input label="" type="number" placeholder="Qiymat" value={String(opt.value)} onChange={e => updateOption(i, { value: Number(e.target.value) })} className="w-20 shrink-0" />
-                                    <button type="button" onClick={() => removeOption(i)} className="text-destructive shrink-0"><X className="h-4 w-4" /></button>
-                                </div>
-                                {form.question_type === 'multi_choice' && (
-                                    <textarea
-                                        value={String(opt.description ?? '')}
-                                        onChange={e => updateOption(i, { description: e.target.value })}
-                                        rows={1}
-                                        placeholder="Talaba bu variantni tanlasa ko'rsatiladigan tavsif..."
-                                        className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                                    />
+                                        <textarea
+                                            value={String(opt.description ?? '')}
+                                            onChange={e => updateOption(i, { description: e.target.value })}
+                                            rows={2}
+                                            placeholder="Foydalanuvchi ushbu rasmni tanlasa ko'rsatiladigan tavsif..."
+                                            className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                        />
+                                    </>
+                                ) : (
+                                    <div className="flex gap-2 items-center">
+                                        {form.question_type === 'image_choice' ? (
+                                            <div className="flex-1">
+                                                <ImageUploadField
+                                                    value={String(opt.image_url ?? '') || null}
+                                                    onChange={(url) => updateOption(i, { image_url: url ?? '' })}
+                                                    previewSize={56}
+                                                    helperText=""
+                                                />
+                                            </div>
+                                        ) : (
+                                            <Input label="" placeholder={`Variant ${i + 1}`} value={String(opt.text ?? '')} onChange={e => updateOption(i, { text: e.target.value })} className="flex-1" />
+                                        )}
+                                        <Input label="" type="number" placeholder="Qiymat" value={String(opt.value)} onChange={e => updateOption(i, { value: Number(e.target.value) })} className="w-20 shrink-0" />
+                                        <button type="button" onClick={() => removeOption(i)} className="text-destructive shrink-0"><X className="h-4 w-4" /></button>
+                                    </div>
                                 )}
                             </div>
                         ))}
