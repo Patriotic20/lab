@@ -168,4 +168,8 @@ export const psychologyService = {
         const response = await api.get<TestResultListResponse>('/psychology/test/results/', { params });
         return response.data;
     },
+
+    deleteResult: async (resultId: number) => {
+        await api.delete(`/psychology/test/results/${resultId}`);
+    },
 };

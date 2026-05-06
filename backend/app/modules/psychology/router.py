@@ -180,6 +180,19 @@ async def list_results(
     )
 
 
+@router.delete(
+    "/test/results/{result_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(RateLimiter(times=20, seconds=60))],
+)
+async def delete_result(
+    result_id: int,
+    session: AsyncSession = Depends(db_helper.session_getter),
+    _: PermissionRequired = Depends(PermissionRequired("delete:psychology")),
+):
+    await get_psychology_service.delete_result(session=session, result_id=result_id)
+
+
 @router.get("/test/results/{result_id}", response_model=TestResultResponse)
 async def get_result(
     result_id: int,

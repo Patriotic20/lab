@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMyResults, useMethods } from '@/hooks/usePsychology';
+import { useMyResults, useMethods, useDeleteResult } from '@/hooks/usePsychology';
 import { useFaculties } from '@/hooks/useReferenceData';
 import { useGroups } from '@/hooks/useGroups';
 import { useTutors } from '@/hooks/useTutors';
@@ -8,7 +8,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Combobox } from '@/components/ui/Combobox';
-import { Loader2, Brain, ClipboardList, Eye, Calendar, User as UserIcon, FilterX } from 'lucide-react';
+import { Loader2, Brain, ClipboardList, Eye, Calendar, User as UserIcon, FilterX, Trash2 } from 'lucide-react';
 import type { TestResultResponse } from '@/services/psychologyService';
 import { DiagnosisCard } from '@/components/psychology/DiagnosisCard';
 import { AnswerRow } from '@/components/psychology/AnswerRow';
@@ -82,6 +82,8 @@ export default function PsychologyResultsPage() {
     const [groupFilter, setGroupFilter] = useState<string>('');
     const [tutorFilter, setTutorFilter] = useState<string>('');
     const [selected, setSelected] = useState<TestResultResponse | null>(null);
+    const [deletingId, setDeletingId] = useState<number | null>(null);
+    const deleteResult = useDeleteResult();
 
     const { data: methodsData } = useMethods(1, 100);
     const { data: facultiesData } = useFaculties(1, 100);
@@ -217,6 +219,7 @@ export default function PsychologyResultsPage() {
                                 {data.results.map(r => (
                                     <div
                                         key={r.id}
+                                        onClick={() => { if (deletingId !== null && deletingId !== r.id) setDeletingId(null); }}
                                         className="flex items-center gap-4 rounded-xl border border-border bg-background px-4 py-3 transition-colors hover:border-primary/30 hover:bg-accent/30"
                                     >
                                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -236,12 +239,33 @@ export default function PsychologyResultsPage() {
                                                 <span>{r.answers.length} javob</span>
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={() => setSelected(r)}
-                                            className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
-                                        >
-                                            <Eye className="h-3.5 w-3.5" /> Ko'rish
-                                        </button>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <button
+                                                onClick={() => setSelected(r)}
+                                                className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+                                            >
+                                                <Eye className="h-3.5 w-3.5" /> Ko'rish
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    if (deletingId === r.id) {
+                                                        deleteResult.mutate(r.id, {
+                                                            onSuccess: () => setDeletingId(null),
+                                                        });
+                                                    } else {
+                                                        setDeletingId(r.id);
+                                                    }
+                                                }}
+                                                className={`flex items-center justify-center rounded-lg p-1.5 transition-colors ${
+                                                    deletingId === r.id
+                                                        ? 'bg-destructive text-white'
+                                                        : 'text-muted-foreground hover:bg-destructive/10 hover:text-destructive'
+                                                }`}
+                                                title={deletingId === r.id ? "Tasdiqlash uchun bosing" : "O'chirish"}
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

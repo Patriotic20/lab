@@ -83,6 +83,14 @@ export const useSubmitTest = () =>
             psychologyService.submitTest(methodId, data),
     });
 
+export const useDeleteResult = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => psychologyService.deleteResult(id),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['psychology-my-results'] }),
+    });
+};
+
 export const useMyResults = (params?: {
     method_id?: number;
     faculty_id?: number;

@@ -51,6 +51,9 @@ class PsychologyService:
     async def submit_test(self, session: AsyncSession, method_id: int, user_id: int, data: TestSubmitRequest) -> PsychologyResult:
         return await get_psychology_repository.submit_test(session=session, method_id=method_id, user_id=user_id, data=data)
 
+    async def delete_result(self, session: AsyncSession, result_id: int) -> None:
+        await get_psychology_repository.delete_result(session=session, result_id=result_id)
+
     async def get_result(self, session: AsyncSession, result_id: int) -> PsychologyResult:
         return await get_psychology_repository.get_result(session=session, result_id=result_id)
 

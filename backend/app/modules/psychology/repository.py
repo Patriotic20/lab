@@ -238,6 +238,11 @@ class PsychologyRepository:
             )
         return await self.get_result(session=session, result_id=result.id)
 
+    async def delete_result(self, session: AsyncSession, result_id: int) -> None:
+        result = await self.get_result(session=session, result_id=result_id)
+        await session.delete(result)
+        await session.commit()
+
     async def get_result(
         self, session: AsyncSession, result_id: int
     ) -> PsychologyResult:
