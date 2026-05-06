@@ -213,27 +213,13 @@ function QuestionForm({
                 />
             )}
 
-            {/* image_stimulus / multi_choice: upload image */}
-            {(form.question_type === 'image_stimulus' || form.question_type === 'multi_choice') && (
+            {/* image_stimulus: upload image */}
+            {form.question_type === 'image_stimulus' && (
                 <ImageUploadField
                     label="Rasm (ixtiyoriy)"
                     value={form.imageUrl}
                     onChange={(url) => set({ imageUrl: url ?? '' })}
                 />
-            )}
-
-            {/* multi_choice: optional question description */}
-            {form.question_type === 'multi_choice' && (
-                <div>
-                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Savol tavsifi (ixtiyoriy)</label>
-                    <textarea
-                        value={form.questionDescription}
-                        onChange={e => set({ questionDescription: e.target.value })}
-                        rows={2}
-                        className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                        placeholder="Savol ostida ko'rsatiladigan qo'shimcha tavsif..."
-                    />
-                </div>
             )}
 
             {/* scale fields */}
