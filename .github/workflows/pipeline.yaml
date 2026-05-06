@@ -82,7 +82,7 @@ jobs:
           APP_CONFIG__ADMIN__USERNAME=admin
           APP_CONFIG__ADMIN__PASSWORD=ci-dummy-admin-password
           APP_CONFIG__ADMIN__SECRET_KEY=ci-dummy-admin-secret-key
-          APP_CONFIG__FILE_URL__HTTP=http://localhost:8000/uploads/questions
+          APP_CONFIG__FILE_URL__HTTP=http://lms.nsumt.uz/uploads/questions
           APP_CONFIG__FILE_URL__UPLOAD_DIR=uploads/questions
           APP_CONFIG__HEMIS__LOGIN_URL=https://student.ndki.uz/rest/v1/auth/login
           APP_CONFIG__HEMIS__ME_URL=https://student.ndki.uz/rest/v1/account/me
