@@ -203,16 +203,6 @@ function MultiChoiceQuestion({
 }) {
     const c = question.content as Record<string, string>;
     const options = (question.options ?? []) as Array<{ image_url?: string; description?: string; value: number }>;
-    const [revealedDesc, setRevealedDesc] = useState<string | null>(
-        typeof value === 'number'
-            ? (options.find(o => o.value === value)?.description ?? null)
-            : null
-    );
-
-    const select = (opt: typeof options[number]) => {
-        setRevealedDesc(opt.description ?? null);
-        onChange(opt.value);
-    };
 
     return (
         <div className="flex flex-col gap-5">
@@ -226,7 +216,7 @@ function MultiChoiceQuestion({
                     return (
                         <button
                             key={i}
-                            onClick={() => select(opt)}
+                            onClick={() => onChange(opt.value)}
                             className={`overflow-hidden rounded-xl border-2 transition-all ${
                                 isSelected
                                     ? 'border-primary shadow-md'
@@ -248,11 +238,6 @@ function MultiChoiceQuestion({
                     );
                 })}
             </div>
-            {revealedDesc && (
-                <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary/90">
-                    {revealedDesc}
-                </div>
-            )}
         </div>
     );
 }

@@ -43,8 +43,10 @@ export function AnswerRow({
     const questionText = (question?.content as Record<string, unknown> | undefined)?.text as string | undefined;
     const isImageChoice = question?.question_type === 'image_choice';
     const isMultiChoice = question?.question_type === 'multi_choice';
-    const opts = (question?.options ?? []) as Array<{ image_url?: string; value: unknown }>;
-    const selectedImage = (isImageChoice || isMultiChoice) ? opts.find(o => o.value === value)?.image_url : null;
+    const opts = (question?.options ?? []) as Array<{ image_url?: string; description?: string; value: unknown }>;
+    const selectedOpt = (isImageChoice || isMultiChoice) ? opts.find(o => o.value === value) : null;
+    const selectedImage = selectedOpt?.image_url ?? null;
+    const selectedDescription = isMultiChoice ? (selectedOpt as { description?: string } | null)?.description ?? null : null;
 
     return (
         <div className="rounded-lg border border-border bg-background p-3">
@@ -54,15 +56,23 @@ export function AnswerRow({
                     <p className="text-sm text-foreground line-clamp-2">{questionText || '—'}</p>
                 </div>
                 {selectedImage && (
-                    <img src={selectedImage} alt="" className="h-12 w-12 shrink-0 rounded-md border border-border object-cover" />
+                    <img src={selectedImage} alt="" className="h-14 w-14 shrink-0 rounded-md border border-border object-cover" />
                 )}
             </div>
-            <div className="mt-1.5 flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Javob:</span>
-                <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                    {resolveAnswerLabel(question, value)}
-                </span>
-            </div>
+            {isMultiChoice ? (
+                selectedDescription ? (
+                    <div className="mt-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary/90">
+                        {selectedDescription}
+                    </div>
+                ) : null
+            ) : (
+                <div className="mt-1.5 flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">Javob:</span>
+                    <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                        {resolveAnswerLabel(question, value)}
+                    </span>
+                </div>
+            )}
         </div>
     );
 }
