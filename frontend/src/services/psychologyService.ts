@@ -62,7 +62,7 @@ export interface QuestionUpdateRequest {
 
 export interface AnswerItem {
     question_id: number;
-    value: boolean | number | string | number[];
+    value: boolean | number | string;
 }
 
 export interface TestSubmitRequest {

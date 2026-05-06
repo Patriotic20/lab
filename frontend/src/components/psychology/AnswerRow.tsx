@@ -23,12 +23,8 @@ function resolveAnswerLabel(question: QuestionResponse | undefined, value: unkno
         }
         case 'multi_choice': {
             const opts = (question.options ?? []) as Array<{ text?: string; value: unknown }>;
-            if (Array.isArray(value) && (value as unknown[]).length > 0) {
-                return (value as unknown[])
-                    .map(v => opts.find(o => o.value === v)?.text ?? String(v))
-                    .join(', ');
-            }
-            return '—';
+            const found = opts.find(o => o.value === value);
+            return found?.text ?? String(value ?? '—');
         }
         default:
             return String(value ?? '—');
@@ -46,10 +42,8 @@ export function AnswerRow({
 }) {
     const questionText = (question?.content as Record<string, unknown> | undefined)?.text as string | undefined;
     const isImageChoice = question?.question_type === 'image_choice';
-    const isMultiChoice = question?.question_type === 'multi_choice';
-    const opts = (question?.options ?? []) as Array<{ image_url?: string; text?: string; value: unknown }>;
+    const opts = (question?.options ?? []) as Array<{ image_url?: string; value: unknown }>;
     const selectedImage = isImageChoice ? opts.find(o => o.value === value)?.image_url : null;
-    const selectedValues: unknown[] = isMultiChoice && Array.isArray(value) ? (value as unknown[]) : [];
 
     return (
         <div className="rounded-lg border border-border bg-background p-3">
@@ -62,28 +56,11 @@ export function AnswerRow({
                     <img src={selectedImage} alt="" className="h-12 w-12 shrink-0 rounded-md border border-border object-cover" />
                 )}
             </div>
-            <div className="mt-1.5 flex flex-col gap-1">
+            <div className="mt-1.5 flex items-center gap-1.5">
                 <span className="text-xs text-muted-foreground">Javob:</span>
-                {isMultiChoice ? (
-                    selectedValues.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                            {selectedValues.map((v, idx) => {
-                                const opt = opts.find(o => o.value === v);
-                                return (
-                                    <span key={idx} className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                                        {opt?.text ?? String(v)}
-                                    </span>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                    )
-                ) : (
-                    <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                        {resolveAnswerLabel(question, value)}
-                    </span>
-                )}
+                <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                    {resolveAnswerLabel(question, value)}
+                </span>
             </div>
         </div>
     );
