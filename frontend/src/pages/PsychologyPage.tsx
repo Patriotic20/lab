@@ -14,7 +14,7 @@ import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import {
     Plus, Trash2, Edit2, Loader2, Brain, ChevronRight, Play,
     X, ListOrdered, AlignLeft, ToggleLeft, SlidersHorizontal, Image,
-    Upload,
+    Upload, CheckSquare,
 } from 'lucide-react';
 import { MethodBuilderModal } from '@/components/psychology/MethodBuilderModal';
 import { ExcelImportModal } from '@/components/psychology/ExcelImportModal';
@@ -28,6 +28,7 @@ const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
     scale: 'Shkala',
     image_stimulus: 'Rasm + matnli variantlar',
     image_choice: 'Rasmli variantlar',
+    multi_choice: "Ko'p tanlov (checkbox)",
 };
 
 const QUESTION_TYPE_ICONS: Record<QuestionType, React.ElementType> = {
@@ -36,6 +37,7 @@ const QUESTION_TYPE_ICONS: Record<QuestionType, React.ElementType> = {
     scale: SlidersHorizontal,
     image_stimulus: Image,
     image_choice: Image,
+    multi_choice: CheckSquare,
 };
 
 // ── Sub-components ─────────────────────────────────────────────────────────
@@ -48,6 +50,7 @@ function QuestionTypeBadge({ type }: { type: QuestionType }) {
         scale: 'bg-purple-100 text-purple-700',
         image_stimulus: 'bg-orange-100 text-orange-700',
         image_choice: 'bg-pink-100 text-pink-700',
+        multi_choice: 'bg-teal-100 text-teal-700',
     };
     return (
         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${colors[type]}`}>
@@ -59,7 +62,7 @@ function QuestionTypeBadge({ type }: { type: QuestionType }) {
 
 // ── Question Form ──────────────────────────────────────────────────────────
 
-interface OptionRow { text?: string; image_url?: string; value: number | string; [key: string]: unknown }
+interface OptionRow { text?: string; image_url?: string; value: number | string; description?: string; [key: string]: unknown }
 
 interface QuestionFormState {
     question_type: QuestionType;
@@ -70,9 +73,11 @@ interface QuestionFormState {
     scaleMax: string;
     scaleMinLabel: string;
     scaleMaxLabel: string;
-    // image_stimulus
+    // image_stimulus / multi_choice
     imageUrl: string;
-    // options (text/image_stimulus/image_choice)
+    // multi_choice: optional question description
+    questionDescription: string;
+    // options (text/image_stimulus/image_choice/multi_choice)
     options: OptionRow[];
     order: string;
     category: string;
@@ -86,6 +91,7 @@ const emptyQuestionForm = (): QuestionFormState => ({
     scaleMinLabel: '',
     scaleMaxLabel: '',
     imageUrl: '',
+    questionDescription: '',
     options: [{ text: '', value: 1 }, { text: '', value: 0 }],
     order: '0',
     category: '',
@@ -102,6 +108,7 @@ function questionToForm(q: QuestionResponse): QuestionFormState {
         scaleMinLabel: (c.min_label as string) ?? '',
         scaleMaxLabel: (c.max_label as string) ?? '',
         imageUrl: (c.image_url as string) ?? '',
+        questionDescription: (c.description as string) ?? '',
         options: opts.length > 0 ? opts : [{ text: '', value: 1 }],
         order: String(q.order),
         category: q.category ?? '',
@@ -132,6 +139,19 @@ function buildQuestionPayload(form: QuestionFormState) {
     } else if (type === 'image_choice') {
         content = { text: form.textContent };
         options = form.options.filter(o => String(o.image_url ?? '').trim());
+    } else if (type === 'multi_choice') {
+        content = {
+            text: form.textContent,
+            ...(form.imageUrl && { image_url: form.imageUrl }),
+            ...(form.questionDescription && { description: form.questionDescription }),
+        };
+        options = form.options
+            .filter(o => String(o.text ?? '').trim())
+            .map(o => ({
+                text: o.text,
+                value: o.value,
+                ...(o.description && { description: o.description }),
+            }));
     }
     return {
         content,
@@ -194,13 +214,27 @@ function QuestionForm({
                 />
             )}
 
-            {/* image_stimulus: upload image */}
-            {form.question_type === 'image_stimulus' && (
+            {/* image_stimulus / multi_choice: upload image */}
+            {(form.question_type === 'image_stimulus' || form.question_type === 'multi_choice') && (
                 <ImageUploadField
-                    label="Rasm"
+                    label="Rasm (ixtiyoriy)"
                     value={form.imageUrl}
                     onChange={(url) => set({ imageUrl: url ?? '' })}
                 />
+            )}
+
+            {/* multi_choice: optional question description */}
+            {form.question_type === 'multi_choice' && (
+                <div>
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Savol tavsifi (ixtiyoriy)</label>
+                    <textarea
+                        value={form.questionDescription}
+                        onChange={e => set({ questionDescription: e.target.value })}
+                        rows={2}
+                        className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        placeholder="Savol ostida ko'rsatiladigan qo'shimcha tavsif..."
+                    />
+                </div>
             )}
 
             {/* scale fields */}
@@ -213,8 +247,8 @@ function QuestionForm({
                 </div>
             )}
 
-            {/* Options for text / image_stimulus / image_choice */}
-            {(form.question_type === 'text' || form.question_type === 'image_stimulus' || form.question_type === 'image_choice') && (
+            {/* Options for text / image_stimulus / image_choice / multi_choice */}
+            {(form.question_type === 'text' || form.question_type === 'image_stimulus' || form.question_type === 'image_choice' || form.question_type === 'multi_choice') && (
                 <div>
                     <div className="mb-2 flex items-center justify-between">
                         <label className="text-xs font-medium text-muted-foreground">Javob variantlari</label>
@@ -222,21 +256,32 @@ function QuestionForm({
                     </div>
                     <div className="flex flex-col gap-2">
                         {form.options.map((opt, i) => (
-                            <div key={i} className="flex gap-2 items-center">
-                                {form.question_type === 'image_choice' ? (
-                                    <div className="flex-1">
-                                        <ImageUploadField
-                                            value={String(opt.image_url ?? '') || null}
-                                            onChange={(url) => updateOption(i, { image_url: url ?? '' })}
-                                            previewSize={56}
-                                            helperText=""
-                                        />
-                                    </div>
-                                ) : (
-                                    <Input label="" placeholder={`Variant ${i + 1}`} value={String(opt.text ?? '')} onChange={e => updateOption(i, { text: e.target.value })} className="flex-1" />
+                            <div key={i} className="flex flex-col gap-1.5 rounded-lg border border-border bg-muted/10 p-2">
+                                <div className="flex gap-2 items-center">
+                                    {form.question_type === 'image_choice' ? (
+                                        <div className="flex-1">
+                                            <ImageUploadField
+                                                value={String(opt.image_url ?? '') || null}
+                                                onChange={(url) => updateOption(i, { image_url: url ?? '' })}
+                                                previewSize={56}
+                                                helperText=""
+                                            />
+                                        </div>
+                                    ) : (
+                                        <Input label="" placeholder={`Variant ${i + 1}`} value={String(opt.text ?? '')} onChange={e => updateOption(i, { text: e.target.value })} className="flex-1" />
+                                    )}
+                                    <Input label="" type="number" placeholder="Qiymat" value={String(opt.value)} onChange={e => updateOption(i, { value: Number(e.target.value) })} className="w-20 shrink-0" />
+                                    <button type="button" onClick={() => removeOption(i)} className="text-destructive shrink-0"><X className="h-4 w-4" /></button>
+                                </div>
+                                {form.question_type === 'multi_choice' && (
+                                    <textarea
+                                        value={String(opt.description ?? '')}
+                                        onChange={e => updateOption(i, { description: e.target.value })}
+                                        rows={1}
+                                        placeholder="Talaba bu variantni tanlasa ko'rsatiladigan tavsif..."
+                                        className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                    />
                                 )}
-                                <Input label="" type="number" placeholder="Qiymat" value={String(opt.value)} onChange={e => updateOption(i, { value: Number(e.target.value) })} className="w-20 shrink-0" />
-                                <button type="button" onClick={() => removeOption(i)} className="text-destructive shrink-0"><X className="h-4 w-4" /></button>
                             </div>
                         ))}
                     </div>

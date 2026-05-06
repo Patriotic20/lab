@@ -8,7 +8,7 @@ import type { QuestionResponse, AnswerItem, Diagnosis, TestResultResponse } from
 import { DiagnosisCard } from '@/components/psychology/DiagnosisCard';
 import { AnswerRow } from '@/components/psychology/AnswerRow';
 
-type AnswerValue = boolean | number | string | null;
+type AnswerValue = boolean | number | string | number[] | null;
 
 // ── Question renderers ──────────────────────────────────────────────────────
 
@@ -192,6 +192,78 @@ function ImageChoiceQuestion({
     );
 }
 
+function MultiChoiceQuestion({
+    question,
+    value,
+    onChange,
+}: {
+    question: QuestionResponse;
+    value: AnswerValue;
+    onChange: (v: number[]) => void;
+}) {
+    const c = question.content as Record<string, string>;
+    const options = (question.options ?? []) as Array<{ text: string; value: number; description?: string }>;
+    const selected: number[] = Array.isArray(value) ? (value as number[]) : [];
+    const [revealed, setRevealed] = useState<Set<number>>(new Set(selected));
+
+    const toggle = (optValue: number) => {
+        const isSelected = selected.includes(optValue);
+        const next = isSelected ? selected.filter(v => v !== optValue) : [...selected, optValue];
+        if (!isSelected) setRevealed(prev => new Set([...prev, optValue]));
+        onChange(next);
+    };
+
+    return (
+        <div className="flex flex-col gap-5">
+            {c.image_url && (
+                <img
+                    src={c.image_url}
+                    alt="stimulus"
+                    className="max-h-64 rounded-xl border border-border object-contain shadow"
+                />
+            )}
+            <p className="text-center text-lg font-medium text-foreground">{c.text}</p>
+            {c.description && (
+                <p className="text-center text-sm text-muted-foreground">{c.description}</p>
+            )}
+            <div className="flex flex-col gap-2">
+                {options.map((opt, i) => {
+                    const isChecked = selected.includes(opt.value);
+                    const isRevealed = revealed.has(opt.value);
+                    return (
+                        <div key={i} className="flex flex-col gap-1">
+                            <button
+                                onClick={() => toggle(opt.value)}
+                                className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3 text-left text-sm transition-all ${
+                                    isChecked
+                                        ? 'border-primary bg-primary/10 text-primary font-medium'
+                                        : 'border-border bg-background text-foreground hover:border-primary/30 hover:bg-accent'
+                                }`}
+                            >
+                                <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition-colors ${
+                                    isChecked ? 'border-primary bg-primary' : 'border-border bg-background'
+                                }`}>
+                                    {isChecked && (
+                                        <svg className="h-2.5 w-2.5 text-primary-foreground" fill="none" viewBox="0 0 10 10">
+                                            <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    )}
+                                </span>
+                                {opt.text}
+                            </button>
+                            {isRevealed && opt.description && (
+                                <div className="ml-7 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary/80">
+                                    {opt.description}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
 function QuestionRenderer({
     question,
     value,
@@ -212,6 +284,8 @@ function QuestionRenderer({
             return <ImageStimulusQuestion question={question} value={value} onChange={v => onChange(v)} />;
         case 'image_choice':
             return <ImageChoiceQuestion question={question} value={value} onChange={v => onChange(v)} />;
+        case 'multi_choice':
+            return <MultiChoiceQuestion question={question} value={value} onChange={v => onChange(v)} />;
         default:
             return <p className="text-muted-foreground text-sm">Noma'lum savol turi</p>;
     }
@@ -340,7 +414,12 @@ export default function PsychologyTestPage() {
     const currentAnswer = answers[question.id] ?? null;
     const progress = Math.round((Object.keys(answers).length / total) * 100);
     const isLast = current === total - 1;
-    const allAnswered = questions.every(q => answers[q.id] !== undefined && answers[q.id] !== null);
+    const allAnswered = questions.every(q => {
+        const ans = answers[q.id];
+        if (ans === undefined || ans === null) return false;
+        if (Array.isArray(ans)) return (ans as number[]).length > 0;
+        return true;
+    });
 
     const handleAnswer = (val: AnswerValue) => {
         setAnswers(prev => ({ ...prev, [question.id]: val }));
@@ -349,7 +428,7 @@ export default function PsychologyTestPage() {
     const handleSubmit = () => {
         const payload: AnswerItem[] = questions.map(q => ({
             question_id: q.id,
-            value: (answers[q.id] ?? null) as boolean | number | string,
+            value: (answers[q.id] ?? null) as boolean | number | string | number[],
         }));
         submitTest.mutate(
             { methodId: method.id, data: { answers: payload } },
@@ -421,7 +500,7 @@ export default function PsychologyTestPage() {
                 ) : (
                     <Button
                         onClick={() => setCurrent(c => c + 1)}
-                        disabled={currentAnswer === null}
+                        disabled={currentAnswer === null || (Array.isArray(currentAnswer) && (currentAnswer as number[]).length === 0)}
                         className="flex-1"
                     >
                         Keyingi
@@ -439,7 +518,7 @@ export default function PsychologyTestPage() {
                         className={`h-2.5 w-2.5 rounded-full transition-all ${
                             i === current
                                 ? 'bg-primary scale-125'
-                                : answers[q.id] !== undefined
+                                : (answers[q.id] !== undefined && !(Array.isArray(answers[q.id]) && (answers[q.id] as number[]).length === 0))
                                 ? 'bg-primary/40'
                                 : 'bg-muted'
                         }`}

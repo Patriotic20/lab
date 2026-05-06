@@ -1,6 +1,6 @@
 import api from './api';
 
-export type QuestionType = 'text' | 'true_false' | 'scale' | 'image_stimulus' | 'image_choice';
+export type QuestionType = 'text' | 'true_false' | 'scale' | 'image_stimulus' | 'image_choice' | 'multi_choice';
 
 export interface QuestionResponse {
     id: number;
@@ -62,7 +62,7 @@ export interface QuestionUpdateRequest {
 
 export interface AnswerItem {
     question_id: number;
-    value: boolean | number | string;
+    value: boolean | number | string | number[];
 }
 
 export interface TestSubmitRequest {

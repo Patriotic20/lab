@@ -5,7 +5,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
-QUESTION_TYPES = Literal["text", "true_false", "scale", "image_stimulus", "image_choice"]
+QUESTION_TYPES = Literal["text", "true_false", "scale", "image_stimulus", "image_choice", "multi_choice"]
 
 
 # ─── Question ────────────────────────────────────────────────────────────────
@@ -38,7 +38,7 @@ class QuestionCreateRequest(BaseModel):
         if not isinstance(v, dict):
             raise ValueError("content must be a dict")
         q_type = info.data.get("question_type") if hasattr(info, "data") else None
-        if q_type in ("text", "true_false", "image_stimulus"):
+        if q_type in ("text", "true_false", "image_stimulus", "multi_choice"):
             if "text" not in v:
                 raise ValueError(f"content.text is required for question_type='{q_type}'")
         if q_type == "scale":

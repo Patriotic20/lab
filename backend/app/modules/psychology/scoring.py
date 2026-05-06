@@ -10,6 +10,8 @@ def _coerce_int(value: Any) -> int:
     """Convert raw answer value into an integer score. Non-numeric → 0."""
     if isinstance(value, bool):
         return 1 if value else 0
+    if isinstance(value, list):
+        return sum(_coerce_int(v) for v in value)
     if isinstance(value, (int, float)):
         return int(value)
     if isinstance(value, str):
