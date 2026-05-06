@@ -1,6 +1,7 @@
 import logging
 
 from fastapi import HTTPException, status
+from app.core.config import settings
 from app.modules.question.model import Question
 from sqlalchemy import func, select, desc
 from sqlalchemy.orm import selectinload
