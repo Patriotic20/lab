@@ -109,12 +109,14 @@ async def init_db(app: FastAPI, session: AsyncSession):
         existing_roles_result = await session.execute(existing_roles_stmt)
         existing_roles = {r.name: r for r in existing_roles_result.scalars().all()}
 
+        created_role_names: set[str] = set()
         for role_name in ROLES:
             if role_name not in existing_roles:
                 new_role = Role(name=role_name)
                 session.add(new_role)
                 await session.flush()
                 existing_roles[role_name] = new_role
+                created_role_names.add(role_name)
                 logger.info(f"Created new role: {role_name}")
 
         await session.commit()
@@ -189,6 +191,16 @@ async def init_db(app: FastAPI, session: AsyncSession):
             role = existing_roles.get(role_name)
             if not role:
                 logger.warning(f"Role '{role_name}' not found, skipping permission assignment.")
+                continue
+
+            # Admin is always force-synced to every discovered permission so the
+            # system can never be locked out. For the other default roles, the
+            # UI is the source of truth: defaults are only seeded when the role
+            # is freshly created in this init_db run.
+            is_admin_role = role_name == "Admin"
+            is_freshly_created = role_name in created_role_names
+            if not is_admin_role and not is_freshly_created:
+                logger.info(f"Skipping permission sync for existing role '{role_name}' (UI is source of truth).")
                 continue
 
             # Get current permissions for this role
