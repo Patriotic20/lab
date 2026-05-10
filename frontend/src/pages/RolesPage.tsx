@@ -135,8 +135,12 @@ const RolesPage = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {roles.map((role) => (
-                                    <TableRow key={role.id}>
+                                {roles.filter((r) => r.name.toLowerCase() !== 'admin').map((role) => (
+                                    <TableRow
+                                        key={role.id}
+                                        onClick={() => navigate(`/roles/${role.id}/permissions`)}
+                                        className="cursor-pointer hover:bg-accent/40 transition-colors"
+                                    >
                                         <TableCell>{role.id}</TableCell>
                                         <TableCell className="font-medium">{role.name}</TableCell>
                                         <TableCell>
@@ -147,8 +151,8 @@ const RolesPage = () => {
                                                             {role.permissions[0].name}
                                                         </span>
                                                         {role.permissions.length > 1 && (
-                                                            <button 
-                                                                onClick={() => navigate(`/roles/${role.id}/permissions`)}
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); navigate(`/roles/${role.id}/permissions`); }}
                                                                 className="inline-flex items-center rounded-full bg-secondary/50 hover:bg-secondary px-2.5 py-0.5 text-xs font-semibold transition-colors text-secondary-foreground cursor-pointer"
                                                             >
                                                                 +{role.permissions.length - 1} ko'proq
@@ -163,17 +167,17 @@ const RolesPage = () => {
                                         <TableCell>{role.created_at ? new Date(role.created_at).toLocaleDateString() : '-'}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
-                                                <Button variant="ghost" size="sm" onClick={() => { setSelectedRole(role); setIsModalOpen(true); }}>
+                                                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedRole(role); setIsModalOpen(true); }}>
                                                     <Pencil className="h-4 w-4" />
                                                 </Button>
-                                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteClick(role)}>
+                                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteClick(role); }}>
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
                                         </TableCell>
                                     </TableRow>
                                 ))}
-                                {roles.length === 0 && (
+                                {roles.filter((r) => r.name.toLowerCase() !== 'admin').length === 0 && (
                                     <TableRow>
                                         <TableCell colSpan={4} className="text-center text-muted-foreground py-8">No roles found.</TableCell>
                                     </TableRow>
