@@ -17,6 +17,8 @@ import {
     LogIn,
     Brain,
     UserCog,
+    Shield,
+    Key,
 } from 'lucide-react';
 import { cn } from '@/utils/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -63,6 +65,8 @@ const adminSections: NavSection[] = [
             { name: 'Tyutorlar', href: '/tutors', icon: UserCog },
             { name: 'Talabalar', href: '/students', icon: GraduationCap },
             { name: 'Talabalar (login)', href: '/student-users', icon: Users },
+            { name: 'Rollar', href: '/roles', icon: Shield },
+            { name: 'Ruxsatlar', href: '/permissions', icon: Key },
         ],
     },
     {

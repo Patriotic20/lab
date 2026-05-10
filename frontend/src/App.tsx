@@ -33,6 +33,9 @@ import PsychologyResultsPage from '@/pages/PsychologyResultsPage';
 import StudentPsychologyPage from '@/pages/StudentPsychologyPage';
 import LessonsPage from '@/pages/LessonsPage';
 import LessonDetailPage from '@/pages/LessonDetailPage';
+import RolesPage from '@/pages/RolesPage';
+import RolePermissionsPage from '@/pages/RolePermissionsPage';
+import PermissionsPage from '@/pages/PermissionsPage';
 
 
 const ProtectedRoute = () => {
@@ -98,6 +101,9 @@ function App() {
                 {/* Admin-only routes */}
                 <Route path="/dashboard" element={<RoleRoute allowedRoles={['admin']}><Dashboard /></RoleRoute>} />
                 <Route path="/users" element={<RoleRoute allowedRoles={['admin']}><UsersPage /></RoleRoute>} />
+                <Route path="/roles" element={<RoleRoute allowedRoles={['admin']}><RolesPage /></RoleRoute>} />
+                <Route path="/roles/:id/permissions" element={<RoleRoute allowedRoles={['admin']}><RolePermissionsPage /></RoleRoute>} />
+                <Route path="/permissions" element={<RoleRoute allowedRoles={['admin']}><PermissionsPage /></RoleRoute>} />
                 <Route path="/teachers" element={<RoleRoute allowedRoles={['admin']}><TeachersPage /></RoleRoute>} />
                 <Route path="/tutors" element={<RoleRoute allowedRoles={['admin']}><TutorsPage /></RoleRoute>} />
                 <Route path="/teacher-ranking" element={<RoleRoute allowedRoles={['admin', 'teacher']}><TeacherRankingPage /></RoleRoute>} />
