@@ -1,7 +1,8 @@
-from datetime import datetime, date as date_type
-from typing import Optional, List, Literal
-from pydantic import BaseModel, ConfigDict, Field
+from datetime import date as date_type
+from datetime import datetime
+from typing import List, Literal, Optional
 
+from pydantic import BaseModel, ConfigDict, Field
 
 ATTENDANCE_VALUES = Literal["present", "absent", "late"]
 
@@ -80,6 +81,7 @@ class LessonListResponse(BaseModel):
 
 
 # ── Lesson results ──────────────────────────────────────────────────────────
+
 
 class LessonResultUserInfo(BaseModel):
     id: int

@@ -1,23 +1,20 @@
 # NUSMT Test Project
 
-A high-performance FastAPI application integrating PostgreSQL, Redis, and an Admin panel.
+A high-performance FastAPI application integrating PostgreSQL and Redis.
 
 ## Features
 
 - **FastAPI**: Modern, fast (high-performance) web framework for building APIs with Python 3.12+.
 - **PostgreSQL**: Robust open-source relational database using `asyncpg` for async support.
 - **Redis**: In-memory data structure store for caching and rate limiting.
-- **SQLAdmin**: Admin interface for managing database models.
-- **Logfire**: Observability and logging integration.
 - **Docker Compose**: Containerized environment for easy deployment.
 - **Alembic**: Database handling and migrations.
 
-## Technlogies
+## Technologies
 
 - Python 3.12
 - FastAPI
 - SQLAlchemy (Async)
-- SQLAdmin
 - Redis
 - Docker & Docker Compose
 - UV (Package Manager)
@@ -48,7 +45,6 @@ A high-performance FastAPI application integrating PostgreSQL, Redis, and an Adm
     The application will be available at:
     -   API: `http://localhost:8000`
     -   Docs: `http://localhost:8000/docs`
-    -   Admin: `http://localhost:8000/admin`
 
 ### Installation & Running (Local)
 

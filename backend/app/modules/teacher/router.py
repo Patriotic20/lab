@@ -6,28 +6,26 @@ from typing import TYPE_CHECKING
 from core.db_helper import db_helper
 from dependence.role_checker import PermissionRequired
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
-# from fastapi_cache.decorator import cache
 from fastapi_limiter.depends import RateLimiter
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .repository import get_teacher_repository
 from .schemas import (
-    TeacherCreateRequest,
-    TeacherCreateResponse,
-    TeacherListRequest,
-    TeacherListResponse,
-    TeacherGroupAssignRequest,
-    TeacherSubjectAssignRequest,
-    TeacherAssignedSubjectsResponse,
-    TeacherAssignedGroupsResponse,
-    TeacherRankingResponse,
     FacultyRankingResponse,
     KafedraRankingResponse,
+    TeacherAssignedGroupsResponse,
+    TeacherAssignedSubjectsResponse,
+    TeacherCreateRequest,
+    TeacherCreateResponse,
+    TeacherGroupAssignRequest,
+    TeacherListRequest,
+    TeacherListResponse,
+    TeacherRankingResponse,
+    TeacherSubjectAssignRequest,
 )
 
 if TYPE_CHECKING:
     from app.modules.user.models.user import User
-# from app.core.cache import clear_cache, custom_key_builder
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +36,10 @@ router = APIRouter(
 
 
 @router.post(
-    "/", 
-    response_model=TeacherCreateResponse, 
+    "/",
+    response_model=TeacherCreateResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(RateLimiter(times=5, seconds=60))]
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
 )
 async def create_teacher(
     data: TeacherCreateRequest,
@@ -60,9 +58,7 @@ async def get_teacher(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:teacher")),
 ):
-    return await get_teacher_repository.get_teacher(
-        session=session, teacher_id=teacher_id
-    )
+    return await get_teacher_repository.get_teacher(session=session, teacher_id=teacher_id)
 
 
 @router.get("/", response_model=TeacherListResponse)
@@ -72,40 +68,47 @@ async def list_teachers(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:teacher")),
 ):
-    return await get_teacher_repository.list_teachers(
-        session=session, request=data
-    )
+    return await get_teacher_repository.list_teachers(session=session, request=data)
 
 
-@router.put("/{teacher_id}", response_model=TeacherCreateResponse, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+@router.put(
+    "/{teacher_id}",
+    response_model=TeacherCreateResponse,
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
+)
 async def update_teacher(
     teacher_id: int,
     data: TeacherCreateRequest,
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("update:teacher")),
 ):
-    result = await get_teacher_repository.update_teacher(
-        session=session, teacher_id=teacher_id, data=data
-    )
+    result = await get_teacher_repository.update_teacher(session=session, teacher_id=teacher_id, data=data)
     # await clear_cache(list_teachers)
     # await clear_cache(get_teacher, teacher_id=teacher_id)
     return result
 
 
-@router.delete("/{teacher_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+@router.delete(
+    "/{teacher_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
+)
 async def delete_teacher(
     teacher_id: int,
     force: bool = False,
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("delete:teacher")),
 ):
-    await get_teacher_repository.delete_teacher(
-        session=session, teacher_id=teacher_id, force=force
-    )
+    await get_teacher_repository.delete_teacher(session=session, teacher_id=teacher_id, force=force)
     # await clear_cache(list_teachers)
     # await clear_cache(get_teacher, teacher_id=teacher_id)
 
-@router.post("/assign_groups", status_code=status.HTTP_200_OK, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+
+@router.post(
+    "/assign_groups",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
+)
 async def assign_groups(
     data: TeacherGroupAssignRequest,
     session: AsyncSession = Depends(db_helper.session_getter),
@@ -114,7 +117,12 @@ async def assign_groups(
     await get_teacher_repository.assign_groups(session=session, data=data)
     return {"message": "Groups assigned successfully"}
 
-@router.post("/assign_subjects", status_code=status.HTTP_200_OK, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+
+@router.post(
+    "/assign_subjects",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
+)
 async def assign_subjects(
     data: TeacherSubjectAssignRequest,
     session: AsyncSession = Depends(db_helper.session_getter),
@@ -123,15 +131,17 @@ async def assign_subjects(
     await get_teacher_repository.assign_subjects(session=session, data=data)
     return {"message": "Subjects assigned successfully"}
 
-@router.get("/assigned_subjects/by-user/{user_id}", response_model=TeacherAssignedSubjectsResponse)
+
+@router.get(
+    "/assigned_subjects/by-user/{user_id}",
+    response_model=TeacherAssignedSubjectsResponse,
+)
 async def get_teacher_assigned_subjects(
     user_id: int,
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: User = Depends(PermissionRequired("read:teacher")),
 ):
-    return await get_teacher_repository.get_assigned_subjects_by_user(
-        session=session, user_id=user_id
-    )
+    return await get_teacher_repository.get_assigned_subjects_by_user(session=session, user_id=user_id)
 
 
 @router.get("/assigned_groups/by-user/{user_id}", response_model=TeacherAssignedGroupsResponse)
@@ -140,10 +150,7 @@ async def get_teacher_assigned_groups(
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: User = Depends(PermissionRequired("read:teacher")),
 ):
-    return await get_teacher_repository.get_assigned_groups_by_user(
-        session=session, user_id=user_id
-    )
-
+    return await get_teacher_repository.get_assigned_groups_by_user(session=session, user_id=user_id)
 
 
 @router.get(

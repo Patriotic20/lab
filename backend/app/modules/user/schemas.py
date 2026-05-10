@@ -47,6 +47,7 @@ class UserUpdateRequest(BaseModel):
 
 class UserChangeCredentialsRequest(BaseModel):
     """Used by any authenticated user to change their own credentials."""
+
     current_password: str
     new_username: str | None = None
     new_password: str | None = None
@@ -142,7 +143,7 @@ class StudentDetailResponse(BaseModel):
 class UserDetailResponse(UserCreateResponse):
     teacher: TeacherDetailResponse | None = None
     student: StudentDetailResponse | None = None
-    password_text: str | None = None
+
 
 class UserListResponse(BaseModel):
     total: int

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.modules.psychology.model import PsychologyMethod, PsychologyQuestion
+
 from .schemas import AnswerItem
 
 
@@ -106,9 +107,7 @@ def compute_diagnosis(
 
         # New path: if any question has `category` set, group by question.category.
         # Fallback: legacy `instruction.scoring.categories[name]: [order_numbers]` lists.
-        use_question_category = any(
-            (q.category or "").strip() for q in method.questions
-        )
+        use_question_category = any((q.category or "").strip() for q in method.questions)
         orders_by_category: dict[str, list[int]] = {}
         if use_question_category:
             for q in method.questions:
@@ -140,19 +139,23 @@ def compute_diagnosis(
             items = cat_interpretations.get(cat_name) or []
             match = _pick_interpretation(items, cat_score)
             if match:
-                categories_out.append({
-                    "name": cat_name,
-                    "score": cat_score,
-                    "label": match["label"],
-                    "description": match["description"],
-                })
+                categories_out.append(
+                    {
+                        "name": cat_name,
+                        "score": cat_score,
+                        "label": match["label"],
+                        "description": match["description"],
+                    }
+                )
             else:
-                categories_out.append({
-                    "name": cat_name,
-                    "score": cat_score,
-                    "label": "",
-                    "description": "",
-                })
+                categories_out.append(
+                    {
+                        "name": cat_name,
+                        "score": cat_score,
+                        "label": "",
+                        "description": "",
+                    }
+                )
 
         if not categories_out:
             return None

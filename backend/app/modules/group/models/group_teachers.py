@@ -1,9 +1,11 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.core.base import Base
 from app.core.mixins.id_int_pk import IdIntPk
 from app.core.mixins.time_stamp_mixin import TimestampMixin
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.modules.group.models.group import Group
@@ -12,9 +14,7 @@ if TYPE_CHECKING:
 
 class GroupTeacher(Base, IdIntPk, TimestampMixin):
     __tablename__ = "group_teachers"
-    __table_args__ = (
-        UniqueConstraint("group_id", "teacher_id", name="idx_unique_group_teacher"),
-    )
+    __table_args__ = (UniqueConstraint("group_id", "teacher_id", name="idx_unique_group_teacher"),)
 
     group_id: Mapped[int] = mapped_column(ForeignKey("groups.id"))
     teacher_id: Mapped[int] = mapped_column(ForeignKey("users.id"))

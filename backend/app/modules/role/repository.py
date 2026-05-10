@@ -1,14 +1,20 @@
 import logging
 
 from fastapi import HTTPException, status
-from app.modules.role.models.role import Role
-from app.modules.permission.model import Permission
-from app.modules.role.models.role_permission import RolePermission
-from sqlalchemy import func, select, desc
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from .schemas import RoleCreateRequest, RoleListRequest, RoleListResponse, RolePermissionAssignRequest
+from app.modules.permission.model import Permission
+from app.modules.role.models.role import Role
+from app.modules.role.models.role_permission import RolePermission
+
+from .schemas import (
+    RoleCreateRequest,
+    RoleListRequest,
+    RoleListResponse,
+    RolePermissionAssignRequest,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,12 +41,12 @@ class RoleRepository:
         if not user_me_perm:
             user_me_perm = Permission(name="user:me")
             session.add(user_me_perm)
-            await session.flush() # Ensure ID is generated
+            await session.flush()  # Ensure ID is generated
 
         # Explicitly create RolePermission
         # We need role_id, so flush new_role
-        await session.flush() 
-        
+        await session.flush()
+
         role_permission = RolePermission(role_id=new_role.id, permission_id=user_me_perm.id)
         session.add(role_permission)
 
@@ -64,15 +70,11 @@ class RoleRepository:
         role = result.scalar_one_or_none()
 
         if not role:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Role not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
 
         return role
 
-    async def list_roles(
-        self, session: AsyncSession, request: RoleListRequest
-    ) -> RoleListResponse:
+    async def list_roles(self, session: AsyncSession, request: RoleListRequest) -> RoleListResponse:
         stmt = (
             select(Role)
             .options(selectinload(Role.permissions))
@@ -87,21 +89,15 @@ class RoleRepository:
         total_result = await session.execute(count_stmt)
         total = total_result.scalar() or 0
 
-        return RoleListResponse(
-            total=total, page=request.page, limit=request.limit, roles=roles
-        )
+        return RoleListResponse(total=total, page=request.page, limit=request.limit, roles=roles)
 
-    async def update_role(
-        self, session: AsyncSession, role_id: int, data: RoleCreateRequest
-    ) -> Role:
+    async def update_role(self, session: AsyncSession, role_id: int, data: RoleCreateRequest) -> Role:
         stmt = select(Role).options(selectinload(Role.permissions)).where(Role.id == role_id)
         result = await session.execute(stmt)
         role = result.scalar_one_or_none()
 
         if not role:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Role not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
 
         # Логика обновления "как в User" (явная проверка полей)
         if data.name is not None:
@@ -125,26 +121,20 @@ class RoleRepository:
         role = result.scalar_one_or_none()
 
         if not role:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Role not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
 
         await session.delete(role)
         await session.commit()
 
-    async def assign_permissions(
-        self, session: AsyncSession, data: RolePermissionAssignRequest
-    ) -> None:
+    async def assign_permissions(self, session: AsyncSession, data: RolePermissionAssignRequest) -> None:
         # 1. Fetch Role
         stmt = select(Role).where(Role.id == data.role_id).options(selectinload(Role.permissions))
         result = await session.execute(stmt)
         role = result.scalar_one_or_none()
 
         if not role:
-             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Role not found"
-            )
-        
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+
         # 2. Fetch Permissions
         if not data.permission_ids:
             role.permissions = []
@@ -152,30 +142,26 @@ class RoleRepository:
             stmt_perms = select(Permission).where(Permission.id.in_(data.permission_ids))
             result_perms = await session.execute(stmt_perms)
             permissions = result_perms.scalars().all()
-            
+
             if len(permissions) != len(data.permission_ids):
-                 found_ids = {p.id for p in permissions}
-                 missing_ids = set(data.permission_ids) - found_ids
-                 raise HTTPException(
+                found_ids = {p.id for p in permissions}
+                missing_ids = set(data.permission_ids) - found_ids
+                raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Permissions with ids {missing_ids} not found"
+                    detail=f"Permissions with ids {missing_ids} not found",
                 )
-            
+
             # 3. Assign
             role.permissions = list(permissions)
-            
+
         try:
             await session.commit()
         except Exception:
-             await session.rollback()
-             raise HTTPException(
+            await session.rollback()
+            raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Database error while assigning permissions"
+                detail="Database error while assigning permissions",
             )
-
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 get_role_repository = RoleRepository()

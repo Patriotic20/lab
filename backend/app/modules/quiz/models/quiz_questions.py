@@ -1,13 +1,15 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.core.base import Base
 from app.core.mixins.id_int_pk import IdIntPk
 from app.core.mixins.time_stamp_mixin import TimestampMixin
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.modules.quiz.models.quiz import Quiz
     from app.modules.question.model import Question
+    from app.modules.quiz.models.quiz import Quiz
 
 
 class QuizQuestion(Base, IdIntPk, TimestampMixin):

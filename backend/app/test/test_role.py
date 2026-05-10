@@ -71,7 +71,7 @@ async def test_update_role_name(auth_client):
 
 
 @pytest.mark.asyncio
-async def test_update_role_name(auth_client):
+async def test_update_role_name_not_found(auth_client):
     response = await auth_client.put("/role/113", json={"name": "admin"})
     assert response.status_code == 404
     assert response.json()["detail"] == "Role not found"

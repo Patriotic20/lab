@@ -1,9 +1,11 @@
 import logging
 
 from fastapi import HTTPException, status
-from app.modules.faculty.model import Faculty
-from sqlalchemy import func, select, desc
+from sqlalchemy import desc, func, select
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.modules.faculty.model import Faculty
 
 from .schemas import (
     FacultyCreateRequest,
@@ -15,9 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class FacultyRepository:
-    async def create_faculty(
-        self, session: AsyncSession, data: FacultyCreateRequest
-    ) -> Faculty:
+    async def create_faculty(self, session: AsyncSession, data: FacultyCreateRequest) -> Faculty:
         stmt_check = select(Faculty).where(Faculty.name == data.name)
         result_check = await session.execute(stmt_check)
         if result_check.scalar_one_or_none():
@@ -32,31 +32,33 @@ class FacultyRepository:
         try:
             await session.commit()
             await session.refresh(new_faculty)
-        except Exception:
+        except IntegrityError as e:
             await session.rollback()
+            logger.warning("Integrity error creating faculty %r: %s", data.name, e)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Faculty '{data.name}' conflicts with an existing record",
+            )
+        except SQLAlchemyError:
+            await session.rollback()
+            logger.exception("Database error creating faculty %r", data.name)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Database error",
             )
         return new_faculty
 
-    async def get_faculty(
-        self, session: AsyncSession, faculty_id: int
-    ) -> Faculty:
+    async def get_faculty(self, session: AsyncSession, faculty_id: int) -> Faculty:
         stmt = select(Faculty).where(Faculty.id == faculty_id)
         result = await session.execute(stmt)
         faculty = result.scalar_one_or_none()
 
         if not faculty:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Faculty not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Faculty not found")
 
         return faculty
 
-    async def list_faculties(
-        self, session: AsyncSession, request: FacultyListRequest
-    ) -> FacultyListResponse:
+    async def list_faculties(self, session: AsyncSession, request: FacultyListRequest) -> FacultyListResponse:
         stmt = select(Faculty)
 
         if request.name:
@@ -75,29 +77,19 @@ class FacultyRepository:
         total_result = await session.execute(count_stmt)
         total = total_result.scalar() or 0
 
-        return FacultyListResponse(
-            total=total, page=request.page, limit=request.limit, faculties=faculties
-        )
+        return FacultyListResponse(total=total, page=request.page, limit=request.limit, faculties=faculties)
 
-    async def update_faculty(
-        self, session: AsyncSession, faculty_id: int, data: FacultyCreateRequest
-    ) -> Faculty:
+    async def update_faculty(self, session: AsyncSession, faculty_id: int, data: FacultyCreateRequest) -> Faculty:
         stmt = select(Faculty).where(Faculty.id == faculty_id)
         result = await session.execute(stmt)
         faculty = result.scalar_one_or_none()
 
         if not faculty:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Faculty not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Faculty not found")
 
         if data.name is not None:
-            stmt_check = select(Faculty).where(
-                Faculty.name == data.name, Faculty.id != faculty_id
-            )
-            existing_faculty = (
-                await session.execute(stmt_check)
-            ).scalar_one_or_none()
+            stmt_check = select(Faculty).where(Faculty.name == data.name, Faculty.id != faculty_id)
+            existing_faculty = (await session.execute(stmt_check)).scalar_one_or_none()
             if existing_faculty:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -109,41 +101,54 @@ class FacultyRepository:
         await session.refresh(faculty)
         return faculty
 
-    async def delete_faculty(
-        self, session: AsyncSession, faculty_id: int, force: bool = False
-    ) -> None:
+    async def delete_faculty(self, session: AsyncSession, faculty_id: int, force: bool = False) -> None:
+        from sqlalchemy import delete, func, select
+
         from app.modules.group.models.group import Group
         from app.modules.kafedra.model import Kafedra
-        from sqlalchemy import delete, select, func
 
         if not force:
-            kafedra_count = (await session.execute(select(func.count(Kafedra.id)).where(Kafedra.faculty_id == faculty_id))).scalar() or 0
-            group_count = (await session.execute(select(func.count(Group.id)).where(Group.faculty_id == faculty_id))).scalar() or 0
+            kafedra_count = (
+                await session.execute(select(func.count(Kafedra.id)).where(Kafedra.faculty_id == faculty_id))
+            ).scalar() or 0
+            group_count = (
+                await session.execute(select(func.count(Group.id)).where(Group.faculty_id == faculty_id))
+            ).scalar() or 0
 
             if kafedra_count > 0 or group_count > 0:
                 warnings = []
-                if kafedra_count > 0: warnings.append(f"{kafedra_count} ta kafedra va ulardagi barcha o'qituvchilar tizimdan o'chadi")
-                if group_count > 0: warnings.append(f"{group_count} ta guruh o'chadi (talabalarning guruhi belgilanmagan holatga o'tadi)")
-                
+                if kafedra_count > 0:
+                    warnings.append(f"{kafedra_count} ta kafedra va ulardagi barcha o'qituvchilar tizimdan o'chadi")
+                if group_count > 0:
+                    warnings.append(
+                        f"{group_count} ta guruh o'chadi (talabalarning guruhi belgilanmagan holatga o'tadi)"
+                    )
+
                 raise HTTPException(
                     status_code=409,
                     detail={
                         "requires_confirmation": True,
                         "message": "Ushbu fakultetni o'chirish quyidagi jiddiy oqibatlarga olib keladi:",
-                        "warnings": warnings
-                    }
+                        "warnings": warnings,
+                    },
                 )
 
         # Proceed with forced aggressive cascade delete
-        
+
         # 1. Cascade delete Kafedras and their Teachers
-        kafedra_ids = (await session.execute(select(Kafedra.id).where(Kafedra.faculty_id == faculty_id))).scalars().all()
+        kafedra_ids = (
+            (await session.execute(select(Kafedra.id).where(Kafedra.faculty_id == faculty_id))).scalars().all()
+        )
         if kafedra_ids:
             from app.modules.teacher.model import Teacher
-            teacher_ids = (await session.execute(select(Teacher.id).where(Teacher.kafedra_id.in_(kafedra_ids)))).scalars().all()
+
+            teacher_ids = (
+                (await session.execute(select(Teacher.id).where(Teacher.kafedra_id.in_(kafedra_ids)))).scalars().all()
+            )
             if teacher_ids:
-                from app.modules.subject.models.subject_teacher import SubjectTeacher
                 from app.modules.group.models.group_teachers import GroupTeacher
+                from app.modules.subject.models.subject_teacher import SubjectTeacher
+
                 await session.execute(delete(SubjectTeacher).where(SubjectTeacher.teacher_id.in_(teacher_ids)))
                 await session.execute(delete(GroupTeacher).where(GroupTeacher.teacher_id.in_(teacher_ids)))
                 await session.execute(delete(Teacher).where(Teacher.id.in_(teacher_ids)))
@@ -153,6 +158,7 @@ class FacultyRepository:
         group_ids = (await session.execute(select(Group.id).where(Group.faculty_id == faculty_id))).scalars().all()
         if group_ids:
             from app.modules.group.models.group_teachers import GroupTeacher
+
             await session.execute(delete(GroupTeacher).where(GroupTeacher.group_id.in_(group_ids)))
             await session.execute(delete(Group).where(Group.faculty_id == faculty_id))
 
@@ -161,13 +167,10 @@ class FacultyRepository:
         faculty = result.scalar_one_or_none()
 
         if not faculty:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Faculty not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Faculty not found")
 
         await session.delete(faculty)
         await session.commit()
-
 
     async def get_or_create(self, session: AsyncSession, name: str) -> Faculty:
         stmt = select(Faculty).where(Faculty.name == name)

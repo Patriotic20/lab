@@ -4,25 +4,24 @@ import logging
 from typing import TYPE_CHECKING
 
 from core.db_helper import db_helper
-from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from dependence.role_checker import PermissionRequired
+from fastapi import APIRouter, Depends, status
 from fastapi_limiter.depends import RateLimiter
+from sqlalchemy.ext.asyncio import AsyncSession
 
 if TYPE_CHECKING:
     from app.modules.user.models.user import User
 
+
 from .repository import get_quiz_process_repository
 from .schemas import (
-    StartQuizRequest,
-    StartQuizResponse,
     EndQuizRequest,
     EndQuizResponse,
+    StartQuizRequest,
+    StartQuizResponse,
     UploadCheatingImageRequest,
     UploadCheatingImageResponse,
 )
-# from app.core.cache import clear_cache
-from app.modules.result.router import list_results
 
 # Note: Permissions might be needed but usually taking a quiz is open to students?
 # For now, keeping it open or simple. If auth is needed, Dependencies can be added.
@@ -36,10 +35,10 @@ router = APIRouter(
 
 
 @router.post(
-    "/start_quiz", 
-    response_model=StartQuizResponse, 
+    "/start_quiz",
+    response_model=StartQuizResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Depends(RateLimiter(times=5, seconds=60))]
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
 )
 async def start_quiz(
     data: StartQuizRequest,
@@ -50,10 +49,10 @@ async def start_quiz(
 
 
 @router.post(
-    "/end_quiz", 
-    response_model=EndQuizResponse, 
+    "/end_quiz",
+    response_model=EndQuizResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Depends(RateLimiter(times=5, seconds=60))]
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
 )
 async def end_quiz(
     data: EndQuizRequest,
@@ -67,7 +66,7 @@ async def end_quiz(
     "/upload_cheating_evidence",
     response_model=UploadCheatingImageResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Depends(RateLimiter(times=10, seconds=60))]
+    dependencies=[Depends(RateLimiter(times=10, seconds=60))],
 )
 async def upload_cheating_evidence(
     data: UploadCheatingImageRequest,

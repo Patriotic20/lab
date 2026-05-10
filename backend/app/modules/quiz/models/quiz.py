@@ -1,16 +1,18 @@
-from sqlalchemy import String, ForeignKey
+from typing import TYPE_CHECKING
+
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.core.base import Base
 from app.core.mixins.id_int_pk import IdIntPk
 from app.core.mixins.time_stamp_mixin import TimestampMixin
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.modules.subject.models.subject import Subject
-    from app.modules.user.models.user import User
     from app.modules.group.models.group import Group
     from app.modules.quiz.models.quiz_questions import QuizQuestion
     from app.modules.result.model import Result
+    from app.modules.subject.models.subject import Subject
+    from app.modules.user.models.user import User
     from app.modules.user_answers.model import UserAnswers
 
 
@@ -30,7 +32,6 @@ class Quiz(Base, IdIntPk, TimestampMixin):
         nullable=True,
     )
 
-
     title: Mapped[str] = mapped_column(nullable=False)
     question_number: Mapped[int] = mapped_column(nullable=False)
     duration: Mapped[int] = mapped_column(nullable=False)
@@ -38,21 +39,11 @@ class Quiz(Base, IdIntPk, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(nullable=False, server_default="false")
     attempt: Mapped[int | None] = mapped_column(nullable=True, default=1)
 
+    user: Mapped["User"] = relationship("User", back_populates="quizzes")
 
-    user: Mapped["User"] = relationship(
-        "User",
-        back_populates="quizzes"
-    )
+    group: Mapped["Group"] = relationship("Group", back_populates="quizzes")
 
-    group: Mapped["Group"] = relationship(
-        "Group",
-        back_populates="quizzes"
-    )
-
-    subject: Mapped["Subject"] = relationship(
-        "Subject",
-        back_populates="quizzes"
-    )
+    subject: Mapped["Subject"] = relationship("Subject", back_populates="quizzes")
 
     quiz_questions: Mapped[list["QuizQuestion"]] = relationship(
         "QuizQuestion",

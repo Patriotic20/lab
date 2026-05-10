@@ -1,11 +1,13 @@
 import pytest
 from sqlalchemy import select
-from app.modules.subject.models.subject import Subject
-from app.modules.quiz.models.quiz import Quiz
+
 from app.modules.question.model import Question
+from app.modules.quiz.models.quiz import Quiz
 from app.modules.quiz.models.quiz_questions import QuizQuestion
-from app.modules.user_answers.model import UserAnswers
+from app.modules.subject.models.subject import Subject
 from app.modules.user.models.user import User
+from app.modules.user_answers.model import UserAnswers
+
 
 @pytest.mark.asyncio
 async def test_user_answers_flow(auth_client, async_db):
@@ -42,7 +44,7 @@ async def test_user_answers_flow(auth_client, async_db):
         question_number=1,
         duration=10,
         is_active=True,
-        pin="1234"
+        pin="1234",
     )
     async_db.add(quiz)
     await async_db.commit()
@@ -54,56 +56,50 @@ async def test_user_answers_flow(auth_client, async_db):
     await async_db.commit()
 
     # 2. Start Quiz
-    start_response = await auth_client.post(
-        "/quiz_process/start_quiz",
-        json={"quiz_id": quiz.id, "pin": "1234"}
-    )
+    start_response = await auth_client.post("/quiz_process/start_quiz", json={"quiz_id": quiz.id, "pin": "1234"})
     assert start_response.status_code == 200
     data = start_response.json()
     assert len(data["questions"]) == 1
     question_dto = data["questions"][0]
-    
+
     # 3. End Quiz with Correct Answer
     end_payload = {
         "quiz_id": quiz.id,
-        "user_id": user.id, 
+        "user_id": user.id,
         "answers": [
             {
                 "question_id": question_dto["id"],
-                "answer": "4" # Correct answer (Option A)
+                "answer": "4",  # Correct answer (Option A)
             }
-        ]
+        ],
     }
-    
-    end_response = await auth_client.post(
-        "/quiz_process/end_quiz",
-        json=end_payload
-    )
+
+    end_response = await auth_client.post("/quiz_process/end_quiz", json=end_payload)
     assert end_response.status_code == 200
     end_data = end_response.json()
     assert end_data["correct_answers"] == 1
-    
+
     # 4. Verify UserAnswers in DB
     stmt = select(UserAnswers).where(UserAnswers.quiz_id == quiz.id)
     result = await async_db.execute(stmt)
     user_answers = result.scalars().all()
-    
+
     assert len(user_answers) == 1
     assert user_answers[0].answer == "4"
-    assert user_answers[0].is_correct == True
-    
+    assert user_answers[0].is_correct is True
+
     # 5. Verify via API
     api_response = await auth_client.get("/user_answers/")
     assert api_response.status_code == 200
     api_data = api_response.json()
-    
+
     # Filter for our specific answer in case other tests run
     found = False
     for item in api_data["answers"]:
         if item["quiz_id"] == quiz.id and item["question_id"] == question_dto["id"]:
             assert item["answer"] == "4"
-            assert item["is_correct"] == True
+            assert item["is_correct"] is True
             found = True
             break
-            
+
     assert found

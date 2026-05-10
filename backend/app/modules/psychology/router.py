@@ -2,29 +2,29 @@ from __future__ import annotations
 
 import logging
 
+from core.db_helper import db_helper
+from dependence.role_checker import PermissionRequired
 from fastapi import APIRouter, Depends, status
 from fastapi_limiter.depends import RateLimiter
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.db_helper import db_helper
-from dependence.role_checker import PermissionRequired
 from app.modules.user.models.user import User
 
-from .service import get_psychology_service
 from .schemas import (
     MethodCreateRequest,
-    MethodUpdateRequest,
-    MethodResponse,
     MethodListRequest,
     MethodListResponse,
+    MethodResponse,
+    MethodUpdateRequest,
     QuestionCreateRequest,
-    QuestionUpdateRequest,
     QuestionResponse,
-    TestSubmitRequest,
-    TestResultResponse,
+    QuestionUpdateRequest,
     TestResultListRequest,
     TestResultListResponse,
+    TestResultResponse,
+    TestSubmitRequest,
 )
+from .service import get_psychology_service
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +34,7 @@ router = APIRouter(
 )
 
 # ─── Method endpoints ────────────────────────────────────────────────────────
+
 
 @router.post(
     "/method/",
@@ -96,6 +97,7 @@ async def delete_method(
 
 # ─── Question endpoints ───────────────────────────────────────────────────────
 
+
 @router.post(
     "/question/",
     response_model=QuestionResponse,
@@ -130,9 +132,7 @@ async def update_question(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("update:psychology")),
 ):
-    return await get_psychology_service.update_question(
-        session=session, question_id=question_id, data=data
-    )
+    return await get_psychology_service.update_question(session=session, question_id=question_id, data=data)
 
 
 @router.delete(
@@ -149,6 +149,7 @@ async def delete_question(
 
 
 # ─── Test / Result endpoints ──────────────────────────────────────────────────
+
 
 @router.post(
     "/test/{method_id}/submit",
@@ -175,9 +176,7 @@ async def list_results(
 ):
     is_admin = any(r.name == "Admin" for r in (current_user.roles or []))
     user_filter = None if is_admin else current_user.id
-    return await get_psychology_service.list_results(
-        session=session, request=request, user_id=user_filter
-    )
+    return await get_psychology_service.list_results(session=session, request=request, user_id=user_filter)
 
 
 @router.delete(

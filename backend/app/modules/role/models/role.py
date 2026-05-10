@@ -1,10 +1,11 @@
 from typing import TYPE_CHECKING
 
+from sqlalchemy import String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.core.base import Base
 from app.core.mixins.id_int_pk import IdIntPk
 from app.core.mixins.time_stamp_mixin import TimestampMixin
-from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
     from app.modules.permission.model import Permission

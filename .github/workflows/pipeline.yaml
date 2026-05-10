@@ -13,7 +13,60 @@ concurrency:
 
 jobs:
   # ──────────────────────────────────────────
-  # JOB 1: Backend Tests
+  # JOB 1a: Backend Lint (ruff)
+  # ──────────────────────────────────────────
+  backend-lint:
+    name: Backend Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Run ruff check
+        working-directory: backend
+        run: uvx ruff check .
+
+      - name: Run ruff format check
+        working-directory: backend
+        run: uvx ruff format --check .
+
+  # ──────────────────────────────────────────
+  # JOB 1b: Frontend Lint (eslint)
+  # ──────────────────────────────────────────
+  frontend-lint:
+    name: Frontend Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: frontend
+        run: npm run lint
+
+  # ──────────────────────────────────────────
+  # JOB 2: Backend Tests
   # ──────────────────────────────────────────
   backend-test:
     name: Backend Tests
@@ -111,7 +164,7 @@ jobs:
         run: uv run pytest -v --tb=short
 
   # ──────────────────────────────────────────
-  # JOB 2: Frontend Build Check
+  # JOB 3: Frontend Build Check
   # ──────────────────────────────────────────
   frontend-build:
     name: Frontend Build
@@ -145,11 +198,11 @@ jobs:
         run: npm run build
 
   # ──────────────────────────────────────────
-  # JOB 3: Deploy to Production
+  # JOB 4: Deploy to Production
   # ──────────────────────────────────────────
   deploy:
     name: Deploy to Production
-    needs: [backend-test, frontend-build]
+    needs: [backend-lint, backend-test, frontend-lint, frontend-build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: [self-hosted, lms]
     timeout-minutes: 35
@@ -227,26 +280,44 @@ jobs:
       - name: Zero-Downtime Deploy
         run: make deploy
 
-      - name: Health check
+      - name: Wait for backend to be healthy
         run: |
-          echo "⏳ Waiting for services..."
-          sleep 15
-          echo "📋 Container status:"
+          echo "⏳ Waiting for backend /health to respond..."
+          for i in {1..30}; do
+            if curl -fsS http://localhost:8000/health > /dev/null 2>&1; then
+              echo "✅ Backend healthy after ${i} attempts"
+              docker compose ps
+              exit 0
+            fi
+            echo "  attempt ${i}/30 — not ready, waiting 2s..."
+            sleep 2
+          done
+          echo "❌ Backend never became healthy within 60s"
           docker compose ps
+          docker compose logs --tail=50 backend
+          exit 1
 
       - name: Cleanup old images
         if: always()
+        continue-on-error: true
         run: |
+          echo "🧹 Pruning unused images..."
           docker image prune -f
-          # Keep build cache around so the next deploy can reuse layers.
-          # Drop only entries unused for 7+ days, capped at 20GB.
+
+          echo "🧹 Pruning old build cache (>7d, cap 20GB)..."
           docker builder prune -f --filter 'until=168h' --keep-storage 20GB
-          # Drop dangling face-detection hash tags older than 7 days so old
-          # versions don't accumulate forever.
-          docker images --filter 'reference=nusmt-face-detection:*' \
+
+          echo "🧹 Removing old face-detection image versions..."
+          OLD_IMAGES=$(docker images --filter 'reference=nusmt-face-detection:*' \
             --filter 'dangling=false' --format '{{.Repository}}:{{.Tag}} {{.CreatedSince}}' \
-            | awk '$1 != "nusmt-face-detection:latest" && $0 ~ /(weeks|months|years) ago/ {print $1}' \
-            | xargs -r docker rmi -f || true
+            | awk '$1 != "nusmt-face-detection:latest" && $1 != "nusmt-face-detection:rollback" && $0 ~ /(weeks|months|years) ago/ {print $1}')
+          if [ -n "$OLD_IMAGES" ]; then
+            COUNT=$(echo "$OLD_IMAGES" | wc -l)
+            echo "$OLD_IMAGES" | xargs docker rmi -f
+            echo "  Removed ${COUNT} old face-detection images"
+          else
+            echo "  No old face-detection images to remove"
+          fi
 
       - name: Deploy notification
         if: success()

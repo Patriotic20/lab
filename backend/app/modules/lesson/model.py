@@ -1,6 +1,7 @@
-from typing import TYPE_CHECKING
 from datetime import date as date_type
-from sqlalchemy import Integer, String, Text, Date, ForeignKey, UniqueConstraint
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Date, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.base import Base
@@ -8,8 +9,8 @@ from app.core.mixins.id_int_pk import IdIntPk
 from app.core.mixins.time_stamp_mixin import TimestampMixin
 
 if TYPE_CHECKING:
-    from app.modules.subject.models.subject_teacher import SubjectTeacher
     from app.modules.group.models.group import Group
+    from app.modules.subject.models.subject_teacher import SubjectTeacher
     from app.modules.user.models.user import User
 
 
@@ -46,9 +47,7 @@ class Lesson(Base, IdIntPk, TimestampMixin):
 
 class LessonResult(Base, IdIntPk, TimestampMixin):
     __tablename__ = "lesson_results"
-    __table_args__ = (
-        UniqueConstraint("lesson_id", "user_id", name="uq_lesson_result_per_user"),
-    )
+    __table_args__ = (UniqueConstraint("lesson_id", "user_id", name="uq_lesson_result_per_user"),)
 
     lesson_id: Mapped[int] = mapped_column(
         Integer,

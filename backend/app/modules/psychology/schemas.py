@@ -10,6 +10,7 @@ QUESTION_TYPES = Literal["text", "true_false", "scale", "image_stimulus", "image
 
 # ─── Question ────────────────────────────────────────────────────────────────
 
+
 class QuestionResponse(BaseModel):
     id: int
     method_id: int
@@ -61,6 +62,7 @@ class QuestionUpdateRequest(BaseModel):
 
 # ─── Method ──────────────────────────────────────────────────────────────────
 
+
 class MethodCreateRequest(BaseModel):
     name: str
     description: str
@@ -102,6 +104,7 @@ class MethodListResponse(BaseModel):
 
 
 # ─── Test / Result ────────────────────────────────────────────────────────────
+
 
 class AnswerItem(BaseModel):
     question_id: int

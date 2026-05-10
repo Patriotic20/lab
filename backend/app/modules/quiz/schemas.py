@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Optional
+
 from pydantic import BaseModel, ConfigDict, field_validator
+
 
 class QuizCreateRequest(BaseModel):
     title: str
@@ -31,23 +33,24 @@ class QuizCreateResponse(BaseModel):
     user_id: Optional[int]
     group_id: Optional[int]
     subject_id: Optional[int]
-    created_at: datetime  
+    created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(
         from_attributes=True,
     )
 
+
 class QuizListRequest(BaseModel):
-    title: Optional[str] = None 
+    title: Optional[str] = None
     user_id: Optional[int] = None
     group_id: Optional[int] = None
     subject_id: Optional[int] = None
     is_active: Optional[bool] = None
-    
-    page: int = 1 
-    
-    limit: int = 10 
+
+    page: int = 1
+
+    limit: int = 10
     sort_dir: Optional[str] = "desc"
 
     @property
@@ -55,6 +58,7 @@ class QuizListRequest(BaseModel):
         if self.page < 1:
             return 0
         return (self.page - 1) * self.limit
+
 
 class QuizListResponse(BaseModel):
     total: int

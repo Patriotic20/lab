@@ -2,23 +2,23 @@ import logging
 import uuid
 
 from fastapi import HTTPException, UploadFile, status
-from sqlalchemy import func, select, desc, or_
-from sqlalchemy.orm import selectinload
+from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
-from app.modules.resource.model import Resource
-from app.modules.subject.models.subject_teacher import SubjectTeacher
 from app.modules.group.models.group_teachers import GroupTeacher
+from app.modules.resource.model import Resource
 from app.modules.student.model import Student
+from app.modules.subject.models.subject_teacher import SubjectTeacher
 from app.modules.teacher.model import Teacher
 from app.modules.user.models.user import User
 
 from .schemas import (
     ResourceCreateRequest,
-    ResourceUpdateRequest,
     ResourceListRequest,
     ResourceListResponse,
+    ResourceUpdateRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,13 +30,10 @@ _DOC_MAX = 20 * 1024 * 1024
 
 
 class ResourceRepository:
-
     async def _is_role(self, user: User, role_name: str) -> bool:
         return any(r.name.lower() == role_name for r in user.roles)
 
-    async def _teacher_owns_subject_teacher(
-        self, session: AsyncSession, user_id: int, subject_teacher_id: int
-    ) -> bool:
+    async def _teacher_owns_subject_teacher(self, session: AsyncSession, user_id: int, subject_teacher_id: int) -> bool:
         stmt = (
             select(SubjectTeacher.id)
             .join(Teacher, Teacher.id == SubjectTeacher.teacher_id)
@@ -48,9 +45,7 @@ class ResourceRepository:
         result = await session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    async def _teacher_assigned_to_group(
-        self, session: AsyncSession, user_id: int, group_id: int
-    ) -> bool:
+    async def _teacher_assigned_to_group(self, session: AsyncSession, user_id: int, group_id: int) -> bool:
         stmt = select(GroupTeacher.id).where(
             GroupTeacher.teacher_id == user_id,
             GroupTeacher.group_id == group_id,
@@ -99,9 +94,7 @@ class ResourceRepository:
         is_teacher = await self._is_role(current_user, "teacher")
 
         if not is_admin and is_teacher:
-            if not await self._teacher_owns_subject_teacher(
-                session, current_user.id, data.subject_teacher_id
-            ):
+            if not await self._teacher_owns_subject_teacher(session, current_user.id, data.subject_teacher_id):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Teacher does not own this subject_teacher",
@@ -137,9 +130,7 @@ class ResourceRepository:
 
         return await self.get_resource(session=session, resource_id=new_resource.id)
 
-    async def get_resource(
-        self, session: AsyncSession, resource_id: int
-    ) -> Resource:
+    async def get_resource(self, session: AsyncSession, resource_id: int) -> Resource:
         stmt = (
             select(Resource)
             .options(
@@ -152,9 +143,7 @@ class ResourceRepository:
         resource = result.scalar_one_or_none()
 
         if not resource:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
 
         return resource
 
@@ -233,9 +222,7 @@ class ResourceRepository:
         total_result = await session.execute(count_stmt)
         total = total_result.scalar() or 0
 
-        return ResourceListResponse(
-            total=total, page=request.page, limit=request.limit, resources=resources
-        )
+        return ResourceListResponse(total=total, page=request.page, limit=request.limit, resources=resources)
 
     async def update_resource(
         self,
@@ -256,17 +243,13 @@ class ResourceRepository:
         resource = result.scalar_one_or_none()
 
         if not resource:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
 
         is_admin = await self._is_role(current_user, "admin")
         is_teacher = await self._is_role(current_user, "teacher")
 
         if not is_admin and is_teacher:
-            if not await self._teacher_owns_subject_teacher(
-                session, current_user.id, resource.subject_teacher_id
-            ):
+            if not await self._teacher_owns_subject_teacher(session, current_user.id, resource.subject_teacher_id):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Teacher does not own this resource",
@@ -324,17 +307,13 @@ class ResourceRepository:
         resource = result.scalar_one_or_none()
 
         if not resource:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
 
         is_admin = await self._is_role(current_user, "admin")
         is_teacher = await self._is_role(current_user, "teacher")
 
         if not is_admin and is_teacher:
-            if not await self._teacher_owns_subject_teacher(
-                session, current_user.id, resource.subject_teacher_id
-            ):
+            if not await self._teacher_owns_subject_teacher(session, current_user.id, resource.subject_teacher_id):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Teacher does not own this resource",

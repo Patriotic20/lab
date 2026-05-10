@@ -1,31 +1,31 @@
 import logging
 
+from core.config import settings
 from fastapi import HTTPException, status
-from app.modules.quiz.models.quiz import Quiz
-from app.modules.question.model import Question
-from app.modules.quiz.models.quiz_questions import QuizQuestion
-from sqlalchemy import func, select, or_, desc, asc
-from sqlalchemy.orm import selectinload
+from sqlalchemy import asc, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.modules.user.models.user import User
-from app.modules.teacher.model import Teacher
-from app.modules.subject.models.subject_teacher import SubjectTeacher
+from sqlalchemy.orm import selectinload
+
+from app.modules.group.models.group_teachers import GroupTeacher
+from app.modules.question.model import Question
+from app.modules.quiz.models.quiz import Quiz
+from app.modules.quiz.models.quiz_questions import QuizQuestion
 from app.modules.student.model import Student
+from app.modules.subject.models.subject_teacher import SubjectTeacher
+from app.modules.teacher.model import Teacher
+from app.modules.user.models.user import User
 
 from .schemas import (
     QuizCreateRequest,
     QuizListRequest,
     QuizListResponse,
 )
-from core.config import settings
-from app.modules.group.models.group_teachers import GroupTeacher
 
 logger = logging.getLogger(__name__)
 
+
 class QuizRepository:
-    async def create_quiz(
-        self, session: AsyncSession, data: QuizCreateRequest
-    ) -> Quiz:
+    async def create_quiz(self, session: AsyncSession, data: QuizCreateRequest) -> Quiz:
         new_quiz = Quiz(
             title=data.title,
             question_number=data.question_number,
@@ -42,35 +42,28 @@ class QuizRepository:
         if data.user_id and data.subject_id:
             # Find all questions with matching user_id and subject_id
             stmt_questions = select(Question).where(
-                Question.user_id == data.user_id,
-                Question.subject_id == data.subject_id
+                Question.user_id == data.user_id, Question.subject_id == data.subject_id
             )
             result_questions = await session.execute(stmt_questions)
             questions = result_questions.scalars().all()
 
             for question in questions:
                 # Create relation
-                quiz_question = QuizQuestion(
-                    quiz=new_quiz,
-                    question=question
-                )
+                quiz_question = QuizQuestion(quiz=new_quiz, question=question)
                 session.add(quiz_question)
-        
+
         # Auto-create GroupTeacher relation if user_id and group_id are provided
         if data.user_id and data.group_id:
             # Check if relation already exists
             stmt_check = select(GroupTeacher).where(
                 GroupTeacher.teacher_id == data.user_id,
-                GroupTeacher.group_id == data.group_id
+                GroupTeacher.group_id == data.group_id,
             )
             result_check = await session.execute(stmt_check)
             existing_relation = result_check.scalar_one_or_none()
-            
+
             if not existing_relation:
-                new_group_teacher = GroupTeacher(
-                    teacher_id=data.user_id,
-                    group_id=data.group_id
-                )
+                new_group_teacher = GroupTeacher(teacher_id=data.user_id, group_id=data.group_id)
                 session.add(new_group_teacher)
 
         try:
@@ -84,17 +77,13 @@ class QuizRepository:
             )
         return new_quiz
 
-    async def get_quiz(
-        self, session: AsyncSession, quiz_id: int
-    ) -> Quiz:
+    async def get_quiz(self, session: AsyncSession, quiz_id: int) -> Quiz:
         stmt = select(Quiz).where(Quiz.id == quiz_id)
         result = await session.execute(stmt)
         quiz = result.scalar_one_or_none()
 
         if not quiz:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
 
         return quiz
 
@@ -125,7 +114,11 @@ class QuizRepository:
             allowed_group_ids = gt_result.scalars().all()
 
             # Check teacher's subjects
-            st_stmt = select(SubjectTeacher.subject_id).join(Teacher, Teacher.id == SubjectTeacher.teacher_id).where(Teacher.user_id == current_user.id)
+            st_stmt = (
+                select(SubjectTeacher.subject_id)
+                .join(Teacher, Teacher.id == SubjectTeacher.teacher_id)
+                .where(Teacher.user_id == current_user.id)
+            )
             st_result = await session.execute(st_stmt)
             allowed_subject_ids = st_result.scalars().all()
 
@@ -134,7 +127,7 @@ class QuizRepository:
                 conditions.append(Quiz.group_id.in_(allowed_group_ids))
             if allowed_subject_ids:
                 conditions.append(Quiz.subject_id.in_(allowed_subject_ids))
-            
+
             if conditions:
                 teacher_filter = or_(*conditions)
             else:
@@ -144,10 +137,10 @@ class QuizRepository:
 
         if request.title:
             stmt = stmt.where(Quiz.title.ilike(f"%{request.title}%"))
-        
+
         if request.user_id:
             stmt = stmt.where(Quiz.user_id == request.user_id)
-        
+
         if request.group_id:
             stmt = stmt.where(Quiz.group_id == request.group_id)
 
@@ -155,12 +148,14 @@ class QuizRepository:
             stmt = stmt.where(Quiz.subject_id == request.subject_id)
 
         if request.is_active is not None:
-             stmt = stmt.where(Quiz.is_active == request.is_active)
+            stmt = stmt.where(Quiz.is_active == request.is_active)
 
         # Always prioritize active quizzes first, then sort by date
-        sort_field = asc(Quiz.created_at) if request.sort_dir and request.sort_dir.lower() == "asc" else desc(Quiz.created_at)
+        sort_field = (
+            asc(Quiz.created_at) if request.sort_dir and request.sort_dir.lower() == "asc" else desc(Quiz.created_at)
+        )
         stmt = stmt.order_by(desc(Quiz.is_active), sort_field)
-        
+
         stmt = stmt.offset(request.offset).limit(request.limit)
 
         result = await session.execute(stmt)
@@ -190,22 +185,16 @@ class QuizRepository:
         total_result = await session.execute(count_stmt)
         total = total_result.scalar() or 0
 
-        return QuizListResponse(
-            total=total, page=request.page, limit=request.limit, quizzes=quizzes
-        )
+        return QuizListResponse(total=total, page=request.page, limit=request.limit, quizzes=quizzes)
 
-    async def update_quiz(
-        self, session: AsyncSession, quiz_id: int, data: QuizCreateRequest
-    ) -> Quiz:
+    async def update_quiz(self, session: AsyncSession, quiz_id: int, data: QuizCreateRequest) -> Quiz:
         stmt = select(Quiz).where(Quiz.id == quiz_id)
         result = await session.execute(stmt)
         quiz = result.scalar_one_or_none()
 
         if not quiz:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
-            )
-        
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
+
         quiz.title = data.title
         quiz.question_number = data.question_number
         quiz.duration = data.duration
@@ -219,31 +208,30 @@ class QuizRepository:
         await session.refresh(quiz)
         return quiz
 
-    async def delete_quiz(
-        self, session: AsyncSession, quiz_id: int, force: bool = False
-    ) -> None:
-        from app.modules.result.model import Result
+    async def delete_quiz(self, session: AsyncSession, quiz_id: int, force: bool = False) -> None:
         from sqlalchemy import delete as sa_delete
+
+        from app.modules.result.model import Result
 
         stmt = select(Quiz).where(Quiz.id == quiz_id)
         result = await session.execute(stmt)
         quiz = result.scalar_one_or_none()
 
         if not quiz:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
 
         if not force:
-            result_count = (await session.execute(select(func.count(Result.id)).where(Result.quiz_id == quiz_id))).scalar() or 0
+            result_count = (
+                await session.execute(select(func.count(Result.id)).where(Result.quiz_id == quiz_id))
+            ).scalar() or 0
             if result_count > 0:
                 raise HTTPException(
                     status_code=409,
                     detail={
                         "requires_confirmation": True,
                         "message": "Ushbu testni o'chirish quyidagi bog'langan ma'lumotlarga ta'sir qiladi:",
-                        "warnings": [f"{result_count} ta talaba natijalari (ballari) butunlay o'chib ketadi"]
-                    }
+                        "warnings": [f"{result_count} ta talaba natijalari (ballari) butunlay o'chib ketadi"],
+                    },
                 )
 
         # Cascade-delete all results linked to this quiz before deleting the quiz
@@ -252,11 +240,9 @@ class QuizRepository:
         await session.delete(quiz)
         await session.commit()
 
-
-    async def repeat_quiz(
-        self, session: AsyncSession, quiz_id: int
-    ) -> Quiz:
+    async def repeat_quiz(self, session: AsyncSession, quiz_id: int) -> Quiz:
         import random
+
         stmt = (
             select(Quiz)
             .options(selectinload(Quiz.quiz_questions).selectinload(QuizQuestion.question))
@@ -266,9 +252,7 @@ class QuizRepository:
         quiz = result.scalar_one_or_none()
 
         if not quiz:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
 
         new_quiz = Quiz(
             title=quiz.title,
@@ -279,31 +263,25 @@ class QuizRepository:
             user_id=quiz.user_id,
             group_id=quiz.group_id,
             subject_id=quiz.subject_id,
-            attempt=2
+            attempt=2,
         )
         session.add(new_quiz)
         await session.flush()
 
         for qq in quiz.quiz_questions:
             if qq.question:
-                new_qq = QuizQuestion(
-                    quiz_id=new_quiz.id,
-                    question_id=qq.question_id
-                )
+                new_qq = QuizQuestion(quiz_id=new_quiz.id, question_id=qq.question_id)
                 session.add(new_qq)
 
         # Handle GroupTeacher relation if needed, though usually it's already there from original quiz creation
         if new_quiz.user_id and new_quiz.group_id:
             stmt_check = select(GroupTeacher).where(
                 GroupTeacher.teacher_id == new_quiz.user_id,
-                GroupTeacher.group_id == new_quiz.group_id
+                GroupTeacher.group_id == new_quiz.group_id,
             )
             result_check = await session.execute(stmt_check)
             if not result_check.scalar_one_or_none():
-                new_group_teacher = GroupTeacher(
-                    teacher_id=new_quiz.user_id,
-                    group_id=new_quiz.group_id
-                )
+                new_group_teacher = GroupTeacher(teacher_id=new_quiz.user_id, group_id=new_quiz.group_id)
                 session.add(new_group_teacher)
 
         try:
@@ -317,17 +295,15 @@ class QuizRepository:
             )
         return new_quiz
 
-
-
     async def upload_image(self, file) -> str:
+        import os
         import shutil
         import uuid
-        import os
 
         # Generate unique filename
         file_ext = file.filename.split(".")[-1]
         filename = f"{uuid.uuid4()}.{file_ext}"
-        
+
         # Use config for upload dir
         # Ensure dir exists (though ideally create on startup or here)
         os.makedirs(settings.file_url.upload_dir, exist_ok=True)
@@ -335,7 +311,7 @@ class QuizRepository:
 
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-        
+
         # Use config for http url
         return f"{settings.file_url.http}/{filename}"
 

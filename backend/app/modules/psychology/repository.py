@@ -3,39 +3,41 @@ from __future__ import annotations
 import logging
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select, desc
+from sqlalchemy import desc, func, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from app.modules.psychology.model import PsychologyMethod, PsychologyQuestion, PsychologyResult
-from app.modules.user.models.user import User
-from app.modules.student.model import Student
 from app.modules.group.models.group import Group
+from app.modules.psychology.model import (
+    PsychologyMethod,
+    PsychologyQuestion,
+    PsychologyResult,
+)
+from app.modules.student.model import Student
 from app.modules.tutor.models.tutor_groups import TutorGroup
-from .scoring import compute_diagnosis
+from app.modules.user.models.user import User
+
 from .schemas import (
     MethodCreateRequest,
-    MethodUpdateRequest,
     MethodListRequest,
     MethodListResponse,
+    MethodUpdateRequest,
     QuestionCreateRequest,
     QuestionUpdateRequest,
-    TestSubmitRequest,
     TestResultListRequest,
     TestResultListResponse,
+    TestSubmitRequest,
 )
+from .scoring import compute_diagnosis
 
 logger = logging.getLogger(__name__)
 
 
 class PsychologyRepository:
-
     # ── Method ────────────────────────────────────────────────────────────────
 
-    async def create_method(
-        self, session: AsyncSession, data: MethodCreateRequest
-    ) -> PsychologyMethod:
+    async def create_method(self, session: AsyncSession, data: MethodCreateRequest) -> PsychologyMethod:
         method = PsychologyMethod(
             name=data.name,
             description=data.description,
@@ -60,9 +62,7 @@ class PsychologyRepository:
             )
         return await self.get_method(session=session, method_id=method.id)
 
-    async def get_method(
-        self, session: AsyncSession, method_id: int
-    ) -> PsychologyMethod:
+    async def get_method(self, session: AsyncSession, method_id: int) -> PsychologyMethod:
         stmt = (
             select(PsychologyMethod)
             .options(selectinload(PsychologyMethod.questions))
@@ -77,9 +77,7 @@ class PsychologyRepository:
             )
         return method
 
-    async def list_methods(
-        self, session: AsyncSession, request: MethodListRequest
-    ) -> MethodListResponse:
+    async def list_methods(self, session: AsyncSession, request: MethodListRequest) -> MethodListResponse:
         stmt = (
             select(PsychologyMethod)
             .options(selectinload(PsychologyMethod.questions))
@@ -100,9 +98,7 @@ class PsychologyRepository:
             methods=list(methods),
         )
 
-    async def update_method(
-        self, session: AsyncSession, method_id: int, data: MethodUpdateRequest
-    ) -> PsychologyMethod:
+    async def update_method(self, session: AsyncSession, method_id: int, data: MethodUpdateRequest) -> PsychologyMethod:
         method = await self.get_method(session=session, method_id=method_id)
 
         if data.name is not None:
@@ -137,9 +133,7 @@ class PsychologyRepository:
 
     # ── Question ──────────────────────────────────────────────────────────────
 
-    async def create_question(
-        self, session: AsyncSession, data: QuestionCreateRequest
-    ) -> PsychologyQuestion:
+    async def create_question(self, session: AsyncSession, data: QuestionCreateRequest) -> PsychologyQuestion:
         # Verify method exists
         await self.get_method(session=session, method_id=data.method_id)
 
@@ -164,9 +158,7 @@ class PsychologyRepository:
             )
         return question
 
-    async def get_question(
-        self, session: AsyncSession, question_id: int
-    ) -> PsychologyQuestion:
+    async def get_question(self, session: AsyncSession, question_id: int) -> PsychologyQuestion:
         stmt = select(PsychologyQuestion).where(PsychologyQuestion.id == question_id)
         result = await session.execute(stmt)
         question = result.scalar_one_or_none()
@@ -213,7 +205,11 @@ class PsychologyRepository:
     # ── Test / Result ──────────────────────────────────────────────────────────
 
     async def submit_test(
-        self, session: AsyncSession, method_id: int, user_id: int, data: TestSubmitRequest
+        self,
+        session: AsyncSession,
+        method_id: int,
+        user_id: int,
+        data: TestSubmitRequest,
     ) -> PsychologyResult:
         # Load method (with questions) for diagnosis computation
         method = await self.get_method(session=session, method_id=method_id)
@@ -243,9 +239,7 @@ class PsychologyRepository:
         await session.delete(result)
         await session.commit()
 
-    async def get_result(
-        self, session: AsyncSession, result_id: int
-    ) -> PsychologyResult:
+    async def get_result(self, session: AsyncSession, result_id: int) -> PsychologyResult:
         stmt = (
             select(PsychologyResult)
             .options(
@@ -260,7 +254,10 @@ class PsychologyRepository:
         return result
 
     async def list_results(
-        self, session: AsyncSession, request: TestResultListRequest, user_id: int | None = None
+        self,
+        session: AsyncSession,
+        request: TestResultListRequest,
+        user_id: int | None = None,
     ) -> TestResultListResponse:
         stmt = (
             select(PsychologyResult)
@@ -282,9 +279,7 @@ class PsychologyRepository:
             stmt = stmt.where(PsychologyResult.user_id == user_id)
             count_stmt = count_stmt.where(PsychologyResult.user_id == user_id)
 
-        needs_org_join = bool(
-            request.faculty_id or request.group_id or request.tutor_id
-        )
+        needs_org_join = bool(request.faculty_id or request.group_id or request.tutor_id)
         if needs_org_join:
             stmt = (
                 stmt.join(User, User.id == PsychologyResult.user_id)
@@ -304,13 +299,9 @@ class PsychologyRepository:
                 stmt = stmt.where(Group.id == request.group_id)
                 count_stmt = count_stmt.where(Group.id == request.group_id)
             if request.tutor_id:
-                tutor_group_subq = select(TutorGroup.group_id).where(
-                    TutorGroup.tutor_id == request.tutor_id
-                )
+                tutor_group_subq = select(TutorGroup.group_id).where(TutorGroup.tutor_id == request.tutor_id)
                 stmt = stmt.where(Student.group_id.in_(tutor_group_subq))
-                count_stmt = count_stmt.where(
-                    Student.group_id.in_(tutor_group_subq)
-                )
+                count_stmt = count_stmt.where(Student.group_id.in_(tutor_group_subq))
 
         stmt = stmt.offset(request.offset).limit(request.limit)
 

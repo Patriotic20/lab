@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Optional
+
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+
 
 class QuestionCreateRequest(BaseModel):
     subject_id: int
@@ -18,6 +20,7 @@ class QuestionCreateRequest(BaseModel):
             raise ValueError("Field cannot be empty")
         return v.strip()
 
+
 class QuestionBulkDeleteRequest(BaseModel):
     subject_id: int
     user_id: int
@@ -34,7 +37,7 @@ class QuestionCreateResponse(BaseModel):
     option_b: str
     option_c: str
     option_d: str
-    created_at: datetime  
+    created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(
@@ -51,20 +54,22 @@ class QuestionCreateResponse(BaseModel):
                 data.username = data.user.username
         return data
 
+
 class QuestionListRequest(BaseModel):
-    text: Optional[str] = None 
+    text: Optional[str] = None
     subject_id: Optional[int] = None
     user_id: Optional[int] = None
-    
-    page: int = 1 
-    
-    limit: int = 10 
+
+    page: int = 1
+
+    limit: int = 10
 
     @property
     def offset(self) -> int:
         if self.page < 1:
             return 0
         return (self.page - 1) * self.limit
+
 
 class QuestionListResponse(BaseModel):
     total: int

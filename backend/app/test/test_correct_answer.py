@@ -1,6 +1,8 @@
 import pytest
-from app.modules.user_answers.model import UserAnswers
 from sqlalchemy import select
+
+from app.modules.user_answers.model import UserAnswers
+
 
 @pytest.mark.asyncio
 async def test_end_quiz_check_correct_answer(auth_client, test_subject, test_group, async_db):
@@ -15,7 +17,7 @@ async def test_end_quiz_check_correct_answer(auth_client, test_subject, test_gro
         "user_id": user_id,
         "group_id": test_group["id"],
         "subject_id": test_subject.id,
-        "is_active": True
+        "is_active": True,
     }
     quiz_resp = await auth_client.post("/quiz/", json=quiz_payload)
     quiz_id = quiz_resp.json()["id"]
@@ -27,7 +29,7 @@ async def test_end_quiz_check_correct_answer(auth_client, test_subject, test_gro
         "option_a": "CorrectChoice",
         "option_b": "WrongChoice1",
         "option_c": "WrongChoice2",
-        "option_d": "WrongChoice3"
+        "option_d": "WrongChoice3",
     }
     q_resp = await auth_client.post("/question/", json=q_payload)
     question_id = q_resp.json()["id"]
@@ -35,11 +37,9 @@ async def test_end_quiz_check_correct_answer(auth_client, test_subject, test_gro
     end_payload = {
         "quiz_id": quiz_id,
         "user_id": user_id,
-        "answers": [
-            {"question_id": question_id, "answer": "WrongChoice1"}
-        ]
+        "answers": [{"question_id": question_id, "answer": "WrongChoice1"}],
     }
-    
+
     response = await auth_client.post("/quiz_process/end_quiz", json=end_payload)
     assert response.status_code == 200
 

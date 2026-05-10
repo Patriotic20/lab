@@ -5,19 +5,18 @@ from typing import TYPE_CHECKING
 
 from core.db_helper import db_helper
 from dependence.role_checker import PermissionRequired
-from fastapi import APIRouter, Depends, status, UploadFile, File, Query
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-# from fastapi_cache.decorator import cache
 from fastapi_limiter.depends import RateLimiter
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .repository import get_question_repository
 from .schemas import (
+    QuestionBulkDeleteRequest,
     QuestionCreateRequest,
     QuestionCreateResponse,
     QuestionListRequest,
     QuestionListResponse,
-    QuestionBulkDeleteRequest,
 )
 
 if TYPE_CHECKING:
@@ -47,11 +46,11 @@ async def download_questions_excel(
         user_id=user_id,
         text=text,
     )
-    
+
     filename = "savollar.xlsx"
     if subject_id:
         filename = f"savollar_fan_{subject_id}.xlsx"
-    
+
     return StreamingResponse(
         io.BytesIO(excel_bytes),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -62,10 +61,10 @@ async def download_questions_excel(
 
 
 @router.post(
-    "/", 
-    response_model=QuestionCreateResponse, 
+    "/",
+    response_model=QuestionCreateResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(RateLimiter(times=5, seconds=60))]
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
 )
 async def create_question(
     data: QuestionCreateRequest,
@@ -96,12 +95,14 @@ async def list_questions(
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: User = Depends(PermissionRequired("read:question")),
 ):
-    return await get_question_repository.list_questions(
-        session=session, request=data, current_user=current_user
-    )
+    return await get_question_repository.list_questions(session=session, request=data, current_user=current_user)
 
 
-@router.put("/{question_id}", response_model=QuestionCreateResponse, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+@router.put(
+    "/{question_id}",
+    response_model=QuestionCreateResponse,
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
+)
 async def update_question(
     question_id: int,
     data: QuestionCreateRequest,
@@ -116,32 +117,39 @@ async def update_question(
     return result
 
 
-@router.delete("/{question_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+@router.delete(
+    "/{question_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
+)
 async def delete_question(
     question_id: int,
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: User = Depends(PermissionRequired("delete:question")),
 ):
-    await get_question_repository.delete_question(
-        session=session, question_id=question_id, current_user=current_user
-    )
+    await get_question_repository.delete_question(session=session, question_id=question_id, current_user=current_user)
     # await clear_cache(list_questions)
     # await clear_cache(get_question, question_id=question_id)
 
 
-@router.delete("/bulk/subject-user", status_code=status.HTTP_200_OK, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+@router.delete(
+    "/bulk/subject-user",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
+)
 async def bulk_delete_questions(
     data: QuestionBulkDeleteRequest,
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: User = Depends(PermissionRequired("delete:question")),
 ):
-    return await get_question_repository.bulk_delete_questions(
-        session=session, data=data, current_user=current_user
-    )
-    return {"deleted_count": count}
+    return await get_question_repository.bulk_delete_questions(session=session, data=data, current_user=current_user)
 
 
-@router.post("/upload_image", status_code=status.HTTP_200_OK, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+@router.post(
+    "/upload_image",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
+)
 async def upload_image(
     file: UploadFile = File(...),
     _: PermissionRequired = Depends(PermissionRequired("create:question")),
@@ -150,7 +158,11 @@ async def upload_image(
     return {"url": url}
 
 
-@router.post("/upload_excel", status_code=status.HTTP_201_CREATED, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+@router.post(
+    "/upload_excel",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
+)
 async def upload_questions_excel(
     subject_id: int,
     file: UploadFile = File(...),

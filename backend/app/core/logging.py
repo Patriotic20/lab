@@ -1,4 +1,3 @@
-
 import logging
 import os
 from datetime import datetime
@@ -16,18 +15,14 @@ for level in LEVELS:
 
 # --- Formatters ---
 detailed_formatter = logging.Formatter(
-    (
-        "%(asctime)s | %(levelname)-8s | %(name)s | "
-        "%(filename)s:%(lineno)d | %(funcName)s() | %(message)s"
-    ),
+    ("%(asctime)s | %(levelname)-8s | %(name)s | %(filename)s:%(lineno)d | %(funcName)s() | %(message)s"),
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
 console_formatter = logging.Formatter(
-    "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
-
-
 
 
 # --- Filters ---
@@ -58,11 +53,19 @@ logger.setLevel(logging.DEBUG)
 
 # --- Suppress Noisy Libraries ---
 # Keep third-party libraries at WARNING+ to avoid flooding debug logs
-for lib in ["watchfiles", "uvicorn.error", "uvicorn.access", "httpcore", "httpx",
-            "hpack", "multipart", "sqlalchemy.engine", "aioredis", "asyncio"]:
+for lib in [
+    "watchfiles",
+    "uvicorn.error",
+    "uvicorn.access",
+    "httpcore",
+    "httpx",
+    "hpack",
+    "multipart",
+    "sqlalchemy.engine",
+    "aioredis",
+    "asyncio",
+]:
     logging.getLogger(lib).setLevel(logging.WARNING)
-
-
 
 
 # --- Console handler ---

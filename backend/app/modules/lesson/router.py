@@ -6,18 +6,18 @@ from typing import TYPE_CHECKING
 from core.db_helper import db_helper
 from dependence.role_checker import PermissionRequired
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_limiter.depends import RateLimiter
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .repository import get_lesson_repository
 from .schemas import (
     LessonCreateRequest,
-    LessonUpdateRequest,
-    LessonResponse,
     LessonListRequest,
     LessonListResponse,
-    LessonResultsBulkUpsertRequest,
+    LessonResponse,
     LessonResultListResponse,
+    LessonResultsBulkUpsertRequest,
+    LessonUpdateRequest,
 )
 
 if TYPE_CHECKING:
@@ -42,9 +42,7 @@ async def create_lesson(
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: "User" = Depends(PermissionRequired("create:lesson")),
 ):
-    return await get_lesson_repository.create_lesson(
-        session=session, data=data, current_user=current_user
-    )
+    return await get_lesson_repository.create_lesson(session=session, data=data, current_user=current_user)
 
 
 @router.get("/", response_model=LessonListResponse)
@@ -53,9 +51,7 @@ async def list_lessons(
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: "User" = Depends(PermissionRequired("read:lesson")),
 ):
-    return await get_lesson_repository.list_lessons(
-        session=session, request=data, current_user=current_user
-    )
+    return await get_lesson_repository.list_lessons(session=session, request=data, current_user=current_user)
 
 
 @router.get("/{lesson_id}", response_model=LessonResponse)
@@ -93,12 +89,11 @@ async def delete_lesson(
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: "User" = Depends(PermissionRequired("delete:lesson")),
 ):
-    await get_lesson_repository.delete_lesson(
-        session=session, lesson_id=lesson_id, current_user=current_user
-    )
+    await get_lesson_repository.delete_lesson(session=session, lesson_id=lesson_id, current_user=current_user)
 
 
 # ── Lesson results ──────────────────────────────────────────────────────────
+
 
 @router.get(
     "/{lesson_id}/results",

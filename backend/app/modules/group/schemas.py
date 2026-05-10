@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Optional
+
 from pydantic import BaseModel, ConfigDict, field_validator
+
 
 class GroupCreateRequest(BaseModel):
     name: str
@@ -18,27 +20,29 @@ class GroupCreateResponse(BaseModel):
     id: int
     name: str
     faculty_id: int
-    created_at: datetime  
+    created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(
         from_attributes=True,
     )
 
+
 class GroupListRequest(BaseModel):
-    name: Optional[str] = None 
+    name: Optional[str] = None
     faculty_id: Optional[int] = None
     teacher_id: Optional[int] = None
-    
-    page: int = 1 
-    
-    limit: int = 10 
+
+    page: int = 1
+
+    limit: int = 10
 
     @property
     def offset(self) -> int:
         if self.page < 1:
             return 0
         return (self.page - 1) * self.limit
+
 
 class GroupListResponse(BaseModel):
     total: int

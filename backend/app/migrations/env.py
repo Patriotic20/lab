@@ -1,19 +1,16 @@
 import asyncio
-from logging.config import fileConfig
 import sys
-from pathlib import Path
+from logging.config import fileConfig
+from os.path import abspath, dirname
 
 from alembic import context
-from app.core.config import settings
-from app.core.base import Base
-import app.core.models_registry  # noqa: F401 — registers all models with Base.metadata
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-
-import sys
-from os.path import abspath, dirname
+import app.core.models_registry  # noqa: F401 — registers all models with Base.metadata
+from app.core.base import Base
+from app.core.config import settings
 
 # Добавляем родительскую директорию папки app в пути поиска
 sys.path.insert(0, abspath(dirname(dirname(__file__))))
@@ -69,7 +66,7 @@ def run_migrations_offline() -> None:
 
 def do_run_migrations(connection: Connection) -> None:
     context.configure(
-        connection=connection, 
+        connection=connection,
         target_metadata=target_metadata,
         compare_type=True,
     )

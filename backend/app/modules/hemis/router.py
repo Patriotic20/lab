@@ -1,20 +1,21 @@
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 from core.db_helper import db_helper
+from fastapi import APIRouter, Depends, Query
 from fastapi_limiter.depends import RateLimiter
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
 from app.dependence.role_checker import PermissionRequired, get_current_user_id
+
 from .schemas import (
     HemisLoginRequest,
     HemisLoginResponse,
-    HemisTransactionResponse,
-    HemisTransactionListResponse,
     HemisPreviewResponse,
     HemisSyncResponse,
+    HemisTransactionListResponse,
+    HemisTransactionResponse,
 )
 from .service import hemis_service
 
@@ -64,6 +65,7 @@ async def sync_hemis_data(
     session: AsyncSession = Depends(db_helper.session_getter),
 ):
     return await hemis_service.sync_hemis_data(session=session, data=data)
+
 
 # ------------------------------------------------------------------ #
 #  TRANSACTIONS — Admin
@@ -118,6 +120,4 @@ async def get_transaction_by_id(
     transaction_id: int,
     session: AsyncSession = Depends(db_helper.session_getter),
 ):
-    return await hemis_service.get_transaction_by_id(
-        session=session, transaction_id=transaction_id
-    )
+    return await hemis_service.get_transaction_by_id(session=session, transaction_id=transaction_id)

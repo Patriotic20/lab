@@ -1,7 +1,9 @@
-import pytest
-from httpx import AsyncClient
 import os
 import tempfile
+
+import pytest
+from httpx import AsyncClient
+
 
 @pytest.mark.asyncio
 async def test_quiz_upload_image(auth_client: AsyncClient, monkeypatch):
@@ -10,6 +12,7 @@ async def test_quiz_upload_image(auth_client: AsyncClient, monkeypatch):
     with tempfile.TemporaryDirectory() as tmp_dir:
         # Patch the upload_dir setting so the repository writes to our temp dir
         from core.config import settings
+
         monkeypatch.setattr(settings.file_url, "upload_dir", tmp_dir)
 
         # Create a dummy image file

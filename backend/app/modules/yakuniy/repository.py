@@ -1,26 +1,25 @@
 import logging
 
 from fastapi import HTTPException, status
-from app.modules.yakuniy.model import Yakuniy
-from app.modules.user.models.user import User
-from sqlalchemy import func, select, desc
-from sqlalchemy.orm import selectinload
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.modules.user.models.user import User
+from app.modules.yakuniy.model import Yakuniy
 
 from .schemas import (
     YakuniyCreateRequest,
-    YakuniyUpdateRequest,
     YakuniyListRequest,
     YakuniyListResponse,
+    YakuniyUpdateRequest,
 )
 
 logger = logging.getLogger(__name__)
 
 
 class YakuniyRepository:
-    async def create_yakuniy(
-        self, session: AsyncSession, data: YakuniyCreateRequest
-    ) -> Yakuniy:
+    async def create_yakuniy(self, session: AsyncSession, data: YakuniyCreateRequest) -> Yakuniy:
         new_yakuniy = Yakuniy(
             user_id=data.user_id,
             subject_id=data.subject_id,
@@ -42,26 +41,24 @@ class YakuniyRepository:
         # Reload with relationships
         return await self.get_yakuniy(session=session, yakuniy_id=new_yakuniy.id)
 
-    async def get_yakuniy(
-        self, session: AsyncSession, yakuniy_id: int
-    ) -> Yakuniy:
-        stmt = select(Yakuniy).options(
-            selectinload(Yakuniy.user).selectinload(User.student),
-            selectinload(Yakuniy.subject),
-        ).where(Yakuniy.id == yakuniy_id)
+    async def get_yakuniy(self, session: AsyncSession, yakuniy_id: int) -> Yakuniy:
+        stmt = (
+            select(Yakuniy)
+            .options(
+                selectinload(Yakuniy.user).selectinload(User.student),
+                selectinload(Yakuniy.subject),
+            )
+            .where(Yakuniy.id == yakuniy_id)
+        )
         result = await session.execute(stmt)
         yakuniy = result.scalar_one_or_none()
 
         if not yakuniy:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Yakuniy not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Yakuniy not found")
 
         return yakuniy
 
-    async def list_yakuniy(
-        self, session: AsyncSession, request: YakuniyListRequest
-    ) -> YakuniyListResponse:
+    async def list_yakuniy(self, session: AsyncSession, request: YakuniyListRequest) -> YakuniyListResponse:
         stmt = select(Yakuniy).options(
             selectinload(Yakuniy.user).selectinload(User.student),
             selectinload(Yakuniy.subject),
@@ -74,9 +71,7 @@ class YakuniyRepository:
         if request.grade is not None:
             stmt = stmt.where(Yakuniy.grade == request.grade)
         if request.username:
-            stmt = stmt.join(User, Yakuniy.user_id == User.id).where(
-                User.username.ilike(f"%{request.username}%")
-            )
+            stmt = stmt.join(User, Yakuniy.user_id == User.id).where(User.username.ilike(f"%{request.username}%"))
 
         stmt = stmt.order_by(desc(Yakuniy.created_at))
         stmt = stmt.offset(request.offset).limit(request.limit)
@@ -101,23 +96,26 @@ class YakuniyRepository:
         total = total_result.scalar() or 0
 
         return YakuniyListResponse(
-            total=total, page=request.page, limit=request.limit, yakuniy_results=yakuniy_results
+            total=total,
+            page=request.page,
+            limit=request.limit,
+            yakuniy_results=yakuniy_results,
         )
 
-    async def update_yakuniy(
-        self, session: AsyncSession, yakuniy_id: int, data: YakuniyUpdateRequest
-    ) -> Yakuniy:
-        stmt = select(Yakuniy).options(
-            selectinload(Yakuniy.user).selectinload(User.student),
-            selectinload(Yakuniy.subject),
-        ).where(Yakuniy.id == yakuniy_id)
+    async def update_yakuniy(self, session: AsyncSession, yakuniy_id: int, data: YakuniyUpdateRequest) -> Yakuniy:
+        stmt = (
+            select(Yakuniy)
+            .options(
+                selectinload(Yakuniy.user).selectinload(User.student),
+                selectinload(Yakuniy.subject),
+            )
+            .where(Yakuniy.id == yakuniy_id)
+        )
         result = await session.execute(stmt)
         yakuniy = result.scalar_one_or_none()
 
         if not yakuniy:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Yakuniy not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Yakuniy not found")
 
         if data.user_id is not None:
             yakuniy.user_id = data.user_id
@@ -130,17 +128,13 @@ class YakuniyRepository:
         await session.refresh(yakuniy)
         return yakuniy
 
-    async def delete_yakuniy(
-        self, session: AsyncSession, yakuniy_id: int
-    ) -> None:
+    async def delete_yakuniy(self, session: AsyncSession, yakuniy_id: int) -> None:
         stmt = select(Yakuniy).where(Yakuniy.id == yakuniy_id)
         result = await session.execute(stmt)
         yakuniy = result.scalar_one_or_none()
 
         if not yakuniy:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Yakuniy not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Yakuniy not found")
 
         await session.delete(yakuniy)
         await session.commit()

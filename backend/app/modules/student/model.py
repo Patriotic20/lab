@@ -1,27 +1,24 @@
 from typing import TYPE_CHECKING
 
+from sqlalchemy import Date, Float, ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.core.base import Base
 from app.core.mixins.id_int_pk import IdIntPk
 from app.core.mixins.time_stamp_mixin import TimestampMixin
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
+    from app.modules.group.models.group import Group
+    from app.modules.hemis.model import HemisTransaction
     from app.modules.user.models.user import User
-
-
-from sqlalchemy import Date, Float, ForeignKey, Integer, String
 
 
 class Student(Base, TimestampMixin, IdIntPk):
     __tablename__ = "students"
 
-    user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
-    )
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
-    group_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("groups.id", ondelete="SET NULL"), nullable=True
-    )
+    group_id: Mapped[int] = mapped_column(Integer, ForeignKey("groups.id", ondelete="SET NULL"), nullable=True)
 
     first_name: Mapped[str] = mapped_column(String)
     last_name: Mapped[str] = mapped_column(String)
@@ -47,7 +44,4 @@ class Student(Base, TimestampMixin, IdIntPk):
 
     group: Mapped["Group"] = relationship("Group", back_populates="students")
     user: Mapped["User"] = relationship("User", back_populates="student")
-    hemis_transactions: Mapped[list["HemisTransaction"]] = relationship(
-        "HemisTransaction",
-        back_populates="student"
-    )
+    hemis_transactions: Mapped[list["HemisTransaction"]] = relationship("HemisTransaction", back_populates="student")

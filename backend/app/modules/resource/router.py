@@ -6,16 +6,16 @@ from typing import TYPE_CHECKING
 from core.db_helper import db_helper
 from dependence.role_checker import PermissionRequired
 from fastapi import APIRouter, Depends, File, UploadFile, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_limiter.depends import RateLimiter
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .repository import get_resource_repository
 from .schemas import (
     ResourceCreateRequest,
-    ResourceUpdateRequest,
-    ResourceResponse,
     ResourceListRequest,
     ResourceListResponse,
+    ResourceResponse,
+    ResourceUpdateRequest,
 )
 
 if TYPE_CHECKING:
@@ -40,9 +40,7 @@ async def create_resource(
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: User = Depends(PermissionRequired("create:resource")),
 ):
-    return await get_resource_repository.create_resource(
-        session=session, data=data, current_user=current_user
-    )
+    return await get_resource_repository.create_resource(session=session, data=data, current_user=current_user)
 
 
 @router.get("/", response_model=ResourceListResponse)
@@ -51,9 +49,7 @@ async def list_resources(
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: User = Depends(PermissionRequired("read:resource")),
 ):
-    return await get_resource_repository.list_resources(
-        session=session, request=data, current_user=current_user
-    )
+    return await get_resource_repository.list_resources(session=session, request=data, current_user=current_user)
 
 
 @router.post(
@@ -103,6 +99,4 @@ async def delete_resource(
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: User = Depends(PermissionRequired("delete:resource")),
 ):
-    await get_resource_repository.delete_resource(
-        session=session, resource_id=resource_id, current_user=current_user
-    )
+    await get_resource_repository.delete_resource(session=session, resource_id=resource_id, current_user=current_user)

@@ -3,6 +3,10 @@
 Thumbs.db
 *.log
 
+# ── Office lock files (LibreOffice / MS Office) ───────────────
+.~lock.*#
+~$*
+
 # ── IDEs ──────────────────────────────────────────────────────
 .idea/
 .vscode/
@@ -47,14 +51,12 @@ docker-compose.override.yml
 postgres_data_quiz/
 redis_data/
 pgadmin_data/
-grafana_data/
-loki_data/
-prometheus_data/
 
 # ── App runtime ───────────────────────────────────────────────
 backend/logs/
 frontend/logs/
 backend/uploads/
+backend/cheating_evidence/
 
 # ── Backups / dumps / exports ─────────────────────────────────
 backups/

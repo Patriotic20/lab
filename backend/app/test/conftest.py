@@ -1,13 +1,9 @@
 import pytest_asyncio
+import redis.asyncio as redis
 from core.config import settings
 from core.db_helper import db_helper
-from httpx import ASGITransport, AsyncClient
-import redis.asyncio as redis
 from fastapi_limiter import FastAPILimiter
-from fastapi_cache import FastAPICache
-from fastapi_cache.backends.redis import RedisBackend
-import app.core.models_registry  # noqa: F401
-from app.core.base import Base
+from httpx import ASGITransport, AsyncClient
 from main import app as fastapi_app
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -16,28 +12,23 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 
+import app.core.models_registry  # noqa: F401
+from app.core.base import Base
 
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def init_test_services():
     """
-    Инициализация всех внешних сервисов (Limiter + Cache).
+    Инициализация всех внешних сервисов (Limiter).
     """
-    test_redis = redis.from_url(
-        "redis://localhost:6379", 
-        encoding="utf-8", 
-        decode_responses=True
-    )
-    
-    # 1. Инициализируем Limiter
+    test_redis = redis.from_url("redis://localhost:6379", encoding="utf-8", decode_responses=True)
+
     await FastAPILimiter.init(test_redis)
-    
-    # 2. Инициализируем Cache (исправляет ошибку 'You must call init first!')
-    FastAPICache.init(RedisBackend(test_redis), prefix="fastapi-cache")
-    
+
     yield
-    
-    await test_redis.aclose() # Используем aclose() вместо close() для новых версий
+
+    await test_redis.aclose()
+
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def clear_test_redis():
@@ -45,9 +36,10 @@ async def clear_test_redis():
     Очистка Redis перед каждым тестом, чтобы избежать ошибки 429 (Rate Limit).
     """
     test_redis = redis.from_url("redis://localhost:6379")
-    await test_redis.flushdb() # Полностью очищаем базу перед тестом
+    await test_redis.flushdb()  # Полностью очищаем базу перед тестом
     await test_redis.aclose()
     yield
+
 
 async_engine = create_async_engine(
     url=str(settings.database.test_url),
@@ -157,6 +149,7 @@ async def create_permission(async_client, access_token):
 async def test_subject(async_db):
     """Create a subject directly in DB since there is no API for it"""
     from app.modules.subject.models.subject import Subject
+
     subject = Subject(name="Mathematics")
     async_db.add(subject)
     await async_db.commit()
@@ -174,10 +167,7 @@ async def test_faculty(auth_client):
 
 @pytest_asyncio.fixture
 async def test_kafedra(auth_client, test_faculty):
-    payload = {
-        "name": "Software Engineering",
-        "faculty_id": test_faculty["id"]
-    }
+    payload = {"name": "Software Engineering", "faculty_id": test_faculty["id"]}
     response = await auth_client.post("/kafedra/", json=payload)
     assert response.status_code == 201
     return response.json()
@@ -185,10 +175,7 @@ async def test_kafedra(auth_client, test_faculty):
 
 @pytest_asyncio.fixture
 async def test_group(auth_client, test_faculty):
-    payload = {
-        "name": "SE-2023",
-        "faculty_id": test_faculty["id"]
-    }
+    payload = {"name": "SE-2023", "faculty_id": test_faculty["id"]}
     response = await auth_client.post("/group/", json=payload)
     assert response.status_code == 201
     return response.json()
@@ -199,7 +186,7 @@ async def test_teacher(auth_client, test_kafedra):
     user_payload = {
         "username": "teacher_fixture_user",
         "password": "password123",
-        "roles": [{"name": "Admin"}]
+        "roles": [{"name": "Admin"}],
     }
     user_response = await auth_client.post("/user/", json=user_payload)
     assert user_response.status_code == 201
@@ -210,7 +197,7 @@ async def test_teacher(auth_client, test_kafedra):
         "last_name": "Doe",
         "third_name": "Smith",
         "kafedra_id": test_kafedra["id"],
-        "user_id": user_data["id"]
+        "user_id": user_data["id"],
     }
     response = await auth_client.post("/teacher/", json=payload)
     assert response.status_code == 201

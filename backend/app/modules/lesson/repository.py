@@ -1,39 +1,35 @@
 import logging
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select, desc, or_, and_
-from sqlalchemy.orm import selectinload
+from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from app.modules.lesson.model import Lesson, LessonResult
-from app.modules.subject.models.subject_teacher import SubjectTeacher
 from app.modules.group.models.group_teachers import GroupTeacher
+from app.modules.lesson.model import Lesson, LessonResult
 from app.modules.student.model import Student
+from app.modules.subject.models.subject_teacher import SubjectTeacher
 from app.modules.teacher.model import Teacher
 from app.modules.user.models.user import User
 
 from .schemas import (
     LessonCreateRequest,
-    LessonUpdateRequest,
     LessonListRequest,
     LessonListResponse,
-    LessonResponse,
-    LessonResultsBulkUpsertRequest,
     LessonResultListResponse,
     LessonResultResponse,
+    LessonResultsBulkUpsertRequest,
+    LessonUpdateRequest,
 )
 
 logger = logging.getLogger(__name__)
 
 
 class LessonRepository:
-
     async def _is_role(self, user: User, role_name: str) -> bool:
         return any(r.name.lower() == role_name for r in user.roles)
 
-    async def _teacher_owns_subject_teacher(
-        self, session: AsyncSession, user_id: int, subject_teacher_id: int
-    ) -> bool:
+    async def _teacher_owns_subject_teacher(self, session: AsyncSession, user_id: int, subject_teacher_id: int) -> bool:
         stmt = (
             select(SubjectTeacher.id)
             .join(Teacher, Teacher.id == SubjectTeacher.teacher_id)
@@ -45,9 +41,7 @@ class LessonRepository:
         result = await session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    async def _teacher_assigned_to_group(
-        self, session: AsyncSession, user_id: int, group_id: int
-    ) -> bool:
+    async def _teacher_assigned_to_group(self, session: AsyncSession, user_id: int, group_id: int) -> bool:
         stmt = select(GroupTeacher.id).where(
             GroupTeacher.teacher_id == user_id,
             GroupTeacher.group_id == group_id,
@@ -62,16 +56,12 @@ class LessonRepository:
         subject_teacher_id: int,
         group_id: int,
     ) -> None:
-        if not await self._teacher_owns_subject_teacher(
-            session, current_user.id, subject_teacher_id
-        ):
+        if not await self._teacher_owns_subject_teacher(session, current_user.id, subject_teacher_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Teacher does not own this subject_teacher",
             )
-        if not await self._teacher_assigned_to_group(
-            session, current_user.id, group_id
-        ):
+        if not await self._teacher_assigned_to_group(session, current_user.id, group_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Teacher is not assigned to this group",
@@ -89,9 +79,7 @@ class LessonRepository:
         is_teacher = await self._is_role(current_user, "teacher")
 
         if not is_admin and is_teacher:
-            await self._check_teacher_access(
-                session, current_user, data.subject_teacher_id, data.group_id
-            )
+            await self._check_teacher_access(session, current_user, data.subject_teacher_id, data.group_id)
 
         new_lesson = Lesson(
             subject_teacher_id=data.subject_teacher_id,
@@ -128,9 +116,7 @@ class LessonRepository:
         lesson = result.scalar_one_or_none()
 
         if not lesson:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lesson not found")
 
         return lesson
 
@@ -153,9 +139,7 @@ class LessonRepository:
         if is_admin:
             pass
         elif is_teacher:
-            gt_stmt = select(GroupTeacher.group_id).where(
-                GroupTeacher.teacher_id == current_user.id
-            )
+            gt_stmt = select(GroupTeacher.group_id).where(GroupTeacher.teacher_id == current_user.id)
             allowed_group_ids = (await session.execute(gt_stmt)).scalars().all()
 
             st_stmt = (
@@ -163,17 +147,13 @@ class LessonRepository:
                 .join(Teacher, Teacher.id == SubjectTeacher.teacher_id)
                 .where(Teacher.user_id == current_user.id)
             )
-            allowed_subject_teacher_ids = (
-                await session.execute(st_stmt)
-            ).scalars().all()
+            allowed_subject_teacher_ids = (await session.execute(st_stmt)).scalars().all()
 
             conditions = []
             if allowed_group_ids:
                 conditions.append(Lesson.group_id.in_(allowed_group_ids))
             if allowed_subject_teacher_ids:
-                conditions.append(
-                    Lesson.subject_teacher_id.in_(allowed_subject_teacher_ids)
-                )
+                conditions.append(Lesson.subject_teacher_id.in_(allowed_subject_teacher_ids))
             role_filter = or_(*conditions) if conditions else (Lesson.id == -1)
         elif is_student:
             student_stmt = select(Student.group_id).where(Student.user_id == current_user.id)
@@ -205,9 +185,7 @@ class LessonRepository:
         if role_filter is not None:
             count_stmt = count_stmt.where(role_filter)
         if request.subject_teacher_id:
-            count_stmt = count_stmt.where(
-                Lesson.subject_teacher_id == request.subject_teacher_id
-            )
+            count_stmt = count_stmt.where(Lesson.subject_teacher_id == request.subject_teacher_id)
         if request.group_id:
             count_stmt = count_stmt.where(Lesson.group_id == request.group_id)
         if request.date_from:
@@ -217,9 +195,7 @@ class LessonRepository:
 
         total = (await session.execute(count_stmt)).scalar() or 0
 
-        return LessonListResponse(
-            total=total, page=request.page, limit=request.limit, lessons=lessons
-        )
+        return LessonListResponse(total=total, page=request.page, limit=request.limit, lessons=lessons)
 
     async def update_lesson(
         self,
@@ -277,9 +253,7 @@ class LessonRepository:
         is_teacher = await self._is_role(current_user, "teacher")
 
         if not is_admin and is_teacher:
-            await self._check_teacher_access(
-                session, current_user, lesson.subject_teacher_id, lesson.group_id
-            )
+            await self._check_teacher_access(session, current_user, lesson.subject_teacher_id, lesson.group_id)
 
         await session.delete(lesson)
         await session.commit()
@@ -298,16 +272,10 @@ class LessonRepository:
         is_teacher = await self._is_role(current_user, "teacher")
         is_student = await self._is_role(current_user, "student")
 
-        stmt = (
-            select(LessonResult)
-            .options(selectinload(LessonResult.user))
-            .where(LessonResult.lesson_id == lesson_id)
-        )
+        stmt = select(LessonResult).options(selectinload(LessonResult.user)).where(LessonResult.lesson_id == lesson_id)
 
         if not is_admin and is_teacher:
-            await self._check_teacher_access(
-                session, current_user, lesson.subject_teacher_id, lesson.group_id
-            )
+            await self._check_teacher_access(session, current_user, lesson.subject_teacher_id, lesson.group_id)
         elif is_student:
             stmt = stmt.where(LessonResult.user_id == current_user.id)
 
@@ -331,9 +299,7 @@ class LessonRepository:
         is_teacher = await self._is_role(current_user, "teacher")
 
         if not is_admin and is_teacher:
-            await self._check_teacher_access(
-                session, current_user, lesson.subject_teacher_id, lesson.group_id
-            )
+            await self._check_teacher_access(session, current_user, lesson.subject_teacher_id, lesson.group_id)
         elif not is_admin and not is_teacher:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -341,10 +307,7 @@ class LessonRepository:
             )
 
         existing_stmt = select(LessonResult).where(LessonResult.lesson_id == lesson_id)
-        existing = {
-            r.user_id: r
-            for r in (await session.execute(existing_stmt)).scalars().all()
-        }
+        existing = {r.user_id: r for r in (await session.execute(existing_stmt)).scalars().all()}
 
         for item in data.items:
             current = existing.get(item.user_id)
@@ -373,9 +336,7 @@ class LessonRepository:
                 detail=f"Database error: {str(e)}",
             )
 
-        return await self.list_lesson_results(
-            session=session, lesson_id=lesson_id, current_user=current_user
-        )
+        return await self.list_lesson_results(session=session, lesson_id=lesson_id, current_user=current_user)
 
 
 get_lesson_repository = LessonRepository()

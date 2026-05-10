@@ -1,25 +1,26 @@
 import logging
-import httpx
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException, Request
 
+import httpx
 from core.config import settings
 from core.utils.password_hash import verify_password
-from app.modules.hemis.model import HemisTransaction
+from fastapi import HTTPException, Request
+from modules.user.service import auth_service
+from sqlalchemy import desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.modules.faculty.repository import get_faculty_repository
 from app.modules.group.repository import get_group_repository
-from app.modules.user.repository import get_user_repository
-from app.modules.student.repository import student_repository
+from app.modules.hemis.model import HemisTransaction
 from app.modules.result.repository import get_result_repository
-from modules.user.service import auth_service
+from app.modules.student.repository import student_repository
+from app.modules.user.repository import get_user_repository
+
 from .schemas import (
     HemisLoginRequest,
     HemisLoginResponse,
-    HemisTransactionResponse,
     HemisTransactionListResponse,
+    HemisTransactionResponse,
 )
-
-from sqlalchemy import select, func, desc
 
 logger = logging.getLogger(__name__)
 
@@ -55,24 +56,16 @@ class HemisLoginService:
                     ip_address=ip_address,
                     user_agent=user_agent,
                 )
-                return HemisLoginResponse(
-                    access_token=access_token, refresh_token=refresh_token
-                )
+                return HemisLoginResponse(access_token=access_token, refresh_token=refresh_token)
             else:
                 logger.warning(
-                    f"Local login failed for user {data.login} (password mismatch), "
-                    "attempting Hemis fallback."
+                    f"Local login failed for user {data.login} (password mismatch), attempting Hemis fallback."
                 )
         else:
-            logger.info(
-                f"User {data.login} not found locally or has no password, "
-                "attempting Hemis login."
-            )
+            logger.info(f"User {data.login} not found locally or has no password, attempting Hemis login.")
 
         try:
-            return await self.request_to_hemis(
-                session, data, ip_address=ip_address, user_agent=user_agent
-            )
+            return await self.request_to_hemis(session, data, ip_address=ip_address, user_agent=user_agent)
         except HTTPException as exc:
             await self._log_transaction(
                 session,
@@ -103,9 +96,7 @@ class HemisLoginService:
 
                 login_data = login_resp.json()
                 if not login_data.get("success"):
-                    raise HTTPException(
-                        status_code=400, detail="Hemis login returned unsuccessful"
-                    )
+                    raise HTTPException(status_code=400, detail="Hemis login returned unsuccessful")
 
                 token = login_data["data"]["token"]
 
@@ -118,9 +109,7 @@ class HemisLoginService:
 
                 me_result = me_resp.json()
                 if not me_result.get("success"):
-                    raise HTTPException(
-                        status_code=400, detail="Hemis ME returned unsuccessful"
-                    )
+                    raise HTTPException(status_code=400, detail="Hemis ME returned unsuccessful")
 
                 return me_result["data"]
         except httpx.RequestError as e:
@@ -155,16 +144,12 @@ class HemisLoginService:
             user_agent=user_agent,
         )
 
-        return HemisLoginResponse(
-            access_token=access_token, refresh_token=refresh_token
-        )
+        return HemisLoginResponse(access_token=access_token, refresh_token=refresh_token)
 
     # ------------------------------------------------------------------ #
     #  ADMIN PREVIEW & SYNC
     # ------------------------------------------------------------------ #
-    async def preview_hemis_data(
-        self, session: AsyncSession, data: HemisLoginRequest
-    ) -> dict:
+    async def preview_hemis_data(self, session: AsyncSession, data: HemisLoginRequest) -> dict:
         me_data = await self._fetch_hemis_data(data.login, data.password)
 
         user = await get_user_repository.find_by_username(session, data.login)
@@ -172,17 +157,13 @@ class HemisLoginService:
 
         existing_results_list = []
         if user_id:
-            existing_results_list = await get_result_repository.get_recent_by_user(
-                session, user_id, limit=10
-            )
+            existing_results_list = await get_result_repository.get_recent_by_user(session, user_id, limit=10)
 
         faculty_name = self._extract_name(me_data.get("faculty")) or "Unknown"
         faculty_id = await get_faculty_repository.find_id_by_name(session, faculty_name)
 
         group_name = self._extract_name(me_data.get("group")) or "Unknown"
-        group_id, suggested_group = await get_group_repository.find_id_by_name_fuzzy(
-            session, group_name
-        )
+        group_id, suggested_group = await get_group_repository.find_id_by_name_fuzzy(session, group_name)
 
         return {
             "hemis_data": me_data,
@@ -196,9 +177,7 @@ class HemisLoginService:
             "suggested_group": suggested_group,
         }
 
-    async def sync_hemis_data(
-        self, session: AsyncSession, data: HemisLoginRequest
-    ) -> dict:
+    async def sync_hemis_data(self, session: AsyncSession, data: HemisLoginRequest) -> dict:
         me_data = await self._fetch_hemis_data(data.login, data.password)
         user = await self.save_user_data(
             session=session,
@@ -238,20 +217,14 @@ class HemisLoginService:
             group = await get_group_repository.get_group(session, group_id)
         else:
             group_name = self._extract_name(me_data.get("group")) or "Unknown"
-            group = await get_group_repository.get_or_create(
-                session, group_name, faculty.id
-            )
+            group = await get_group_repository.get_or_create(session, group_name, faculty.id)
 
         # User — repo hashes internally and stores both hash + plaintext
-        user = await get_user_repository.get_or_create_for_hemis(
-            session, username, password
-        )
+        user = await get_user_repository.get_or_create_for_hemis(session, username, password)
         await get_user_repository.ensure_role(session, user, "Student")
 
         # Student
-        await student_repository.upsert_for_hemis(
-            session, user.id, group.id, faculty.name, me_data
-        )
+        await student_repository.upsert_for_hemis(session, user.id, group.id, faculty.name, me_data)
 
         await session.commit()
         await session.refresh(user)
@@ -318,11 +291,7 @@ class HemisLoginService:
         count_stmt = select(func.count()).select_from(stmt.subquery())
         total = (await session.execute(count_stmt)).scalar() or 0
 
-        stmt = (
-            stmt.order_by(desc(HemisTransaction.created_at))
-            .offset((page - 1) * page_size)
-            .limit(page_size)
-        )
+        stmt = stmt.order_by(desc(HemisTransaction.created_at)).offset((page - 1) * page_size).limit(page_size)
         result = await session.execute(stmt)
         items = result.scalars().all()
 
@@ -333,9 +302,7 @@ class HemisLoginService:
             page_size=page_size,
         )
 
-    async def get_transaction_by_id(
-        self, session: AsyncSession, transaction_id: int
-    ) -> HemisTransactionResponse:
+    async def get_transaction_by_id(self, session: AsyncSession, transaction_id: int) -> HemisTransactionResponse:
         stmt = select(HemisTransaction).where(HemisTransaction.id == transaction_id)
         result = await session.execute(stmt)
         transaction = result.scalar_one_or_none()
@@ -357,11 +324,7 @@ class HemisLoginService:
         count_stmt = select(func.count()).select_from(stmt.subquery())
         total = (await session.execute(count_stmt)).scalar() or 0
 
-        stmt = (
-            stmt.order_by(desc(HemisTransaction.created_at))
-            .offset((page - 1) * page_size)
-            .limit(page_size)
-        )
+        stmt = stmt.order_by(desc(HemisTransaction.created_at)).offset((page - 1) * page_size).limit(page_size)
         result = await session.execute(stmt)
         items = result.scalars().all()
 

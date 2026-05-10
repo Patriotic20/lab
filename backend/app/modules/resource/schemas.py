@@ -1,10 +1,12 @@
 from datetime import datetime
-from typing import Literal, Optional, List
+from typing import List, Literal, Optional
+
 from pydantic import BaseModel, ConfigDict
 
 
 class ResourceLink(BaseModel):
     """A single link entry inside a Resource."""
+
     title: str
     url: str
 

@@ -6,14 +6,15 @@ from core.db_helper import db_helper
 from fastapi import Depends, HTTPException, status
 from fastapi.security import APIKeyHeader
 from jwt import PyJWTError
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from app.modules.permission.model import Permission
 from app.modules.role.models.role import Role
 from app.modules.role.models.role_permission import RolePermission
 from app.modules.user.models.user import User
 from app.modules.user.models.user_role import UserRole
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +28,7 @@ async def get_current_user_id(token: str = Depends(api_key_header)):
         token = token.replace("Bearer ", "")
 
     try:
-        payload = jwt.decode(
-            token, settings.jwt.access_token_secret, algorithms=[settings.jwt.algorithm]
-        )
+        payload = jwt.decode(token, settings.jwt.access_token_secret, algorithms=[settings.jwt.algorithm])
         user_id: int = payload.get("user_id")
         if user_id is None:
             raise HTTPException(
@@ -54,16 +53,12 @@ class PermissionRequired:
         session: AsyncSession = Depends(db_helper.session_getter),
     ) -> User:
         # Загружаем пользователя с ролями один раз
-        user_stmt = (
-            select(User).where(User.id == user_id).options(selectinload(User.roles))
-        )
+        user_stmt = select(User).where(User.id == user_id).options(selectinload(User.roles))
         result = await session.execute(user_stmt)
         user = result.scalar_one_or_none()
 
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
         # Проверяем, является ли пользователь админом
         is_admin = any(role.name == "Admin" for role in user.roles)

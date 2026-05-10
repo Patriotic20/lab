@@ -42,7 +42,7 @@ async def test_update_faculty(auth_client, test_faculty):
 async def test_delete_faculty(auth_client, test_faculty):
     response = await auth_client.delete(f"/faculty/{test_faculty['id']}")
     assert response.status_code == 204
-    
+
     # Verify deletion
     response = await auth_client.get(f"/faculty/{test_faculty['id']}")
     assert response.status_code == 404

@@ -1,50 +1,26 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Pagination } from '@/components/ui/Pagination';
 import { Button } from '@/components/ui/Button';
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/Table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Plus, Pencil, Trash2, Loader2, Search, ArrowLeft, ChevronRight, FolderEdit, CheckCircle2, XCircle } from 'lucide-react';
-import { Modal } from '@/components/ui/Modal';
+import { Card, CardContent } from '@/components/ui/Card';
+import { Plus, Pencil, Trash2, Loader2, Search } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Input } from '@/components/ui/Input';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { facultyService, type Faculty } from '@/services/facultyService';
-import { type Group } from '@/services/groupService';
-import { type Student } from '@/services/studentService';
-import { useGroups } from '@/hooks/useGroups';
-import { useStudents } from '@/hooks/useStudents';
-import { useUserResults } from '@/hooks/useResults';
-import { ChangeGroupModal } from '@/components/ChangeGroupModal';
+import type { Group } from '@/services/groupService';
+import type { Student } from '@/services/studentService';
+import { FacultyModal } from '@/components/faculty/FacultyModal';
+import { FacultyGroupsView } from '@/components/faculty/FacultyGroupsView';
+import { GroupStudentsView } from '@/components/faculty/GroupStudentsView';
+import { StudentDetailView } from '@/components/faculty/StudentDetailView';
 
 type View =
     | { level: 'faculties' }
     | { level: 'groups'; faculty: Faculty }
     | { level: 'students'; faculty: Faculty; group: Group }
     | { level: 'student-detail'; faculty: Faculty; group: Group; student: Student };
-
-const Crumbs = ({ items }: { items: { label: string; onClick?: () => void }[] }) => (
-    <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-        {items.map((it, i) => (
-            <span key={i} className="flex items-center gap-1">
-                {i > 0 && <span>/</span>}
-                {it.onClick
-                    ? <button onClick={it.onClick} className="hover:text-foreground hover:underline">{it.label}</button>
-                    : <span className="text-foreground font-medium">{it.label}</span>}
-            </span>
-        ))}
-    </nav>
-);
-
-const facultySchema = z.object({
-    name: z.string().min(1, 'Fakultet nomi kiritilishi shart'),
-});
-
-type FacultyFormValues = z.infer<typeof facultySchema>;
 
 const FacultyPage = () => {
     const [faculties, setFaculties] = useState<Faculty[]>([]);
@@ -101,7 +77,7 @@ const FacultyPage = () => {
             if (error.response?.status === 409 && error.response?.data?.detail?.requires_confirmation) {
                 setCascadeWarnings(error.response.data.detail.warnings || []);
             } else {
-                console.error('Fakultetni o\'chirishda xatolik', error);
+                console.error("Fakultetni o'chirishda xatolik", error);
                 alert("O'chirishda xatolik yuz berdi");
                 setIsDeleteModalOpen(false);
                 setFacultyToDelete(null);
@@ -158,7 +134,6 @@ const FacultyPage = () => {
 
     return (
         <div className="space-y-6">
-            {/* Page header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-xl font-semibold tracking-tight">Fakultetlar</h1>
@@ -237,8 +212,13 @@ const FacultyPage = () => {
                 isLoading={isLoading}
             />
 
-            <FacultyModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} faculty={selectedFaculty}
-                onSuccess={handleSuccess} />
+            <FacultyModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                faculty={selectedFaculty}
+                onSuccess={handleSuccess}
+            />
+
             <ConfirmDialog
                 isOpen={isDeleteModalOpen}
                 onClose={() => { setIsDeleteModalOpen(false); setCascadeWarnings([]); setFacultyToDelete(null); }}
@@ -257,453 +237,6 @@ const FacultyPage = () => {
                 }
                 confirmText={cascadeWarnings.length > 0 ? "Ha, majburiy o'chirish" : "O'chirish"}
                 cancelText="Bekor qilish"
-            />
-        </div>
-    );
-};
-
-const FacultyModal = ({ isOpen, onClose, faculty, onSuccess }: {
-    isOpen: boolean; onClose: () => void; faculty: Faculty | null; onSuccess: (faculty?: Faculty) => void;
-}) => {
-    const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FacultyFormValues>({
-        resolver: zodResolver(facultySchema),
-        defaultValues: { name: '' },
-    });
-
-    useEffect(() => {
-        reset({ name: faculty?.name || '' });
-    }, [faculty, reset]);
-
-    const onSubmit = async (data: FacultyFormValues) => {
-        try {
-            let result;
-            if (faculty) {
-                result = await facultyService.updateFaculty(faculty.id, data);
-            } else {
-                result = await facultyService.createFaculty(data);
-            }
-            onSuccess(result);
-        } catch (error) {
-            console.error('Fakultetni saqlashda xatolik', error);
-            alert('Fakultetni saqlashda xatolik');
-        }
-    };
-
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title={faculty ? 'Fakultetni tahrirlash' : 'Fakultet yaratish'}>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Fakultet nomi</label>
-                    <Input {...register('name')} error={errors.name?.message} placeholder="Fakultet nomini kiriting" />
-                </div>
-                <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={onClose}>Bekor qilish</Button>
-                    <Button type="submit" isLoading={isSubmitting}>{faculty ? 'Yangilash' : 'Yaratish'}</Button>
-                </div>
-            </form>
-        </Modal>
-    );
-};
-
-const FacultyGroupsView = ({ faculty, onBack, onOpenGroup }: {
-    faculty: Faculty;
-    onBack: () => void;
-    onOpenGroup: (group: Group) => void;
-}) => {
-    const [currentPage, setCurrentPage] = useState(1);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
-    const pageSize = 10;
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearch(searchTerm);
-            setCurrentPage(1);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [searchTerm]);
-
-    const { data: groupsData, isLoading } = useGroups(currentPage, pageSize, debouncedSearch, undefined, faculty.id);
-    const groups = groupsData?.groups || [];
-    const totalPages = groupsData ? Math.ceil(groupsData.total / pageSize) : 1;
-
-    return (
-        <div className="space-y-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-2">
-                    <Crumbs items={[
-                        { label: 'Fakultetlar', onClick: onBack },
-                        { label: faculty.name },
-                    ]} />
-                    <div className="flex items-center gap-3">
-                        <Button variant="ghost" size="sm" onClick={onBack}>
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Orqaga
-                        </Button>
-                        <h1 className="text-xl font-semibold tracking-tight capitalize">{faculty.name} — guruhlar</h1>
-                    </div>
-                </div>
-                <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Qidirish..."
-                        className="pl-8 w-[220px]"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-            </div>
-
-            <Card>
-                <CardContent className="pt-6">
-                    {isLoading ? (
-                        <div className="flex justify-center p-8">
-                            <Loader2 className="h-8 w-8 animate-spin" />
-                        </div>
-                    ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[80px]">ID</TableHead>
-                                    <TableHead>Nomi</TableHead>
-                                    <TableHead>Yaratilgan sana</TableHead>
-                                    <TableHead className="w-[40px]"></TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {groups.map((group) => (
-                                    <TableRow
-                                        key={group.id}
-                                        className="cursor-pointer"
-                                        onClick={() => onOpenGroup(group)}
-                                    >
-                                        <TableCell>{group.id}</TableCell>
-                                        <TableCell className="font-medium">{group.name}</TableCell>
-                                        <TableCell>{new Date(group.created_at).toLocaleDateString()}</TableCell>
-                                        <TableCell className="text-right">
-                                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                                {groups.length === 0 && (
-                                    <TableRow>
-                                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">Guruhlar topilmadi.</TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    )}
-                </CardContent>
-            </Card>
-
-            <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-                isLoading={isLoading}
-            />
-        </div>
-    );
-};
-
-const GroupStudentsView = ({ faculty, group, onBackToFaculties, onBackToGroups, onOpenStudent }: {
-    faculty: Faculty;
-    group: Group;
-    onBackToFaculties: () => void;
-    onBackToGroups: () => void;
-    onOpenStudent: (student: Student) => void;
-}) => {
-    const [currentPage, setCurrentPage] = useState(1);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
-    const [studentToMove, setStudentToMove] = useState<Student | null>(null);
-    const pageSize = 10;
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearch(searchTerm);
-            setCurrentPage(1);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [searchTerm]);
-
-    const { data: studentsData, isLoading } = useStudents(currentPage, pageSize, debouncedSearch, undefined, group.id);
-    const students = studentsData?.students || [];
-    const totalPages = studentsData ? Math.ceil(studentsData.total / pageSize) : 1;
-
-    return (
-        <div className="space-y-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-2">
-                    <Crumbs items={[
-                        { label: 'Fakultetlar', onClick: onBackToFaculties },
-                        { label: faculty.name, onClick: onBackToGroups },
-                        { label: group.name },
-                    ]} />
-                    <div className="flex items-center gap-3">
-                        <Button variant="ghost" size="sm" onClick={onBackToGroups}>
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Orqaga
-                        </Button>
-                        <h1 className="text-xl font-semibold tracking-tight">{group.name} — talabalar</h1>
-                    </div>
-                </div>
-                <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Qidirish..."
-                        className="pl-8 w-[220px]"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-            </div>
-
-            <Card>
-                <CardContent className="pt-6">
-                    {isLoading ? (
-                        <div className="flex justify-center p-8">
-                            <Loader2 className="h-8 w-8 animate-spin" />
-                        </div>
-                    ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[80px]">ID</TableHead>
-                                    <TableHead>F.I.SH</TableHead>
-                                    <TableHead>Talaba raqami</TableHead>
-                                    <TableHead>Telefon</TableHead>
-                                    <TableHead className="w-[40px]"></TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {students.map((student) => (
-                                    <TableRow
-                                        key={student.id}
-                                        className="cursor-pointer"
-                                        onClick={() => onOpenStudent(student)}
-                                    >
-                                        <TableCell>{student.id}</TableCell>
-                                        <TableCell className="font-medium">{student.full_name || '-'}</TableCell>
-                                        <TableCell>{student.student_id_number || '-'}</TableCell>
-                                        <TableCell>{student.phone || '-'}</TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex items-center justify-end gap-1">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    title="Guruhni o'zgartirish"
-                                                    onClick={(e) => { e.stopPropagation(); setStudentToMove(student); }}
-                                                >
-                                                    <FolderEdit className="h-4 w-4" />
-                                                </Button>
-                                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                                {students.length === 0 && (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Talabalar topilmadi.</TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    )}
-                </CardContent>
-            </Card>
-
-            <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-                isLoading={isLoading}
-            />
-
-            <ChangeGroupModal
-                isOpen={!!studentToMove}
-                onClose={() => setStudentToMove(null)}
-                student={studentToMove}
-            />
-        </div>
-    );
-};
-
-const StudentDetailView = ({ faculty, group, student, onBackToFaculties, onBackToGroups, onBackToStudents }: {
-    faculty: Faculty;
-    group: Group;
-    student: Student;
-    onBackToFaculties: () => void;
-    onBackToGroups: () => void;
-    onBackToStudents: () => void;
-}) => {
-    const navigate = useNavigate();
-    const [moveOpen, setMoveOpen] = useState(false);
-    const [resultsPage, setResultsPage] = useState(1);
-    const resultsPageSize = 5;
-    const { data: resultsData, isLoading: isResultsLoading } =
-        useUserResults(student.user_id, resultsPage, resultsPageSize);
-
-    const results = resultsData?.results || [];
-    const resultsTotalPages = resultsData ? Math.ceil(resultsData.total / resultsPageSize) : 1;
-
-    const InfoRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
-        <div className="grid grid-cols-2 gap-2">
-            <span className="font-semibold text-muted-foreground">{label}:</span>
-            <span>{value || '-'}</span>
-        </div>
-    );
-
-    return (
-        <div className="space-y-6">
-            <div className="space-y-2">
-                <Crumbs items={[
-                    { label: 'Fakultetlar', onClick: onBackToFaculties },
-                    { label: faculty.name, onClick: onBackToGroups },
-                    { label: group.name, onClick: onBackToStudents },
-                    { label: student.full_name || `Talaba #${student.id}` },
-                ]} />
-                <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="sm" onClick={onBackToStudents}>
-                        <ArrowLeft className="h-4 w-4 mr-2" />
-                        Orqaga
-                    </Button>
-                    <h1 className="text-xl font-semibold tracking-tight">
-                        {student.full_name || `Talaba #${student.id}`}
-                    </h1>
-                    <Button variant="outline" size="sm" className="ml-auto" onClick={() => setMoveOpen(true)}>
-                        <FolderEdit className="h-4 w-4 mr-2" />
-                        Boshqa guruhga o'tkazish
-                    </Button>
-                </div>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Shaxsiy ma'lumotlar</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <InfoRow label="F.I.SH" value={student.full_name} />
-                        <InfoRow label="Talaba raqami" value={student.student_id_number} />
-                        <InfoRow label="Telefon" value={student.phone} />
-                        <InfoRow label="Manzil" value={student.address} />
-                        <InfoRow label="Tug'ilgan sana" value={student.birth_date} />
-                        <InfoRow label="Jinsi" value={student.gender} />
-                        <InfoRow label="User ID" value={student.user_id} />
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Akademik ma'lumotlar</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <InfoRow label="Fakultet" value={student.faculty} />
-                        <InfoRow label="Mutaxassislik" value={student.specialty} />
-                        <InfoRow label="Bosqich" value={student.level} />
-                        <InfoRow label="Semestr" value={student.semester} />
-                        <InfoRow label="Ta'lim shakli" value={student.education_form} />
-                        <InfoRow label="Ta'lim turi" value={student.education_type} />
-                        <InfoRow label="To'lov shakli" value={student.payment_form} />
-                        <InfoRow label="Ta'lim tili" value={student.education_lang} />
-                        <InfoRow label="Status" value={student.student_status} />
-                        <InfoRow label="O'rtacha ball (GPA)" value={student.avg_gpa ?? '-'} />
-                    </CardContent>
-                </Card>
-            </div>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Natijalar</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {isResultsLoading ? (
-                        <div className="flex justify-center p-8">
-                            <Loader2 className="h-8 w-8 animate-spin" />
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Test Nomi</TableHead>
-                                        <TableHead>Fan</TableHead>
-                                        <TableHead>Sana</TableHead>
-                                        <TableHead>Natija</TableHead>
-                                        <TableHead className="text-right">Batafsil</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {results.map((r) => (
-                                        <TableRow key={r.id}>
-                                            <TableCell className="font-medium align-middle capitalize">
-                                                {r.quiz?.title || '-'}
-                                            </TableCell>
-                                            <TableCell className="align-middle capitalize">
-                                                {r.subject?.name || '-'}
-                                            </TableCell>
-                                            <TableCell className="align-middle">
-                                                {new Date(r.created_at).toLocaleDateString()}
-                                            </TableCell>
-                                            <TableCell className="align-middle">
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="text-lg font-bold">
-                                                        {r.grade.toFixed(1)}
-                                                        <span className="text-sm font-normal text-muted-foreground"> / 5</span>
-                                                    </span>
-                                                    <div className="flex items-center gap-3 text-xs">
-                                                        <div className="flex items-center gap-1 text-green-600 dark:text-green-500">
-                                                            <CheckCircle2 className="h-3.5 w-3.5" />
-                                                            <span>{r.correct_answers}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1 text-red-600 dark:text-red-500">
-                                                            <XCircle className="h-3.5 w-3.5" />
-                                                            <span>{r.wrong_answers}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => navigate(
-                                                        `/results/answers?user_id=${student.user_id}&quiz_id=${r.quiz_id}`
-                                                    )}
-                                                >
-                                                    Javoblarni ko'rish
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {results.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                                                Ushbu talaba uchun natijalar topilmadi.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                            {results.length > 0 && resultsTotalPages > 1 && (
-                                <Pagination
-                                    currentPage={resultsPage}
-                                    totalPages={resultsTotalPages}
-                                    onPageChange={setResultsPage}
-                                    isLoading={isResultsLoading}
-                                />
-                            )}
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-
-            <ChangeGroupModal
-                isOpen={moveOpen}
-                onClose={() => setMoveOpen(false)}
-                student={student}
-                onSuccess={onBackToStudents}
             />
         </div>
     );

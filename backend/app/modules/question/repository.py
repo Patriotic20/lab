@@ -1,30 +1,29 @@
 import logging
 
 from fastapi import HTTPException, status
+from sqlalchemy import desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from app.core.config import settings
 from app.modules.question.model import Question
-from sqlalchemy import func, select, desc
-from sqlalchemy.orm import selectinload
-from sqlalchemy.ext.asyncio import AsyncSession
+from app.modules.user.models.user import User
 
 from .schemas import (
+    QuestionBulkDeleteRequest,
     QuestionCreateRequest,
     QuestionListRequest,
     QuestionListResponse,
-    QuestionBulkDeleteRequest,
 )
-from app.modules.user.models.user import User
 
 logger = logging.getLogger(__name__)
 
 
 class QuestionRepository:
-    async def create_question(
-        self, session: AsyncSession, data: QuestionCreateRequest
-    ) -> Question:
-        # No unique check on text requested, but it's often good practice. 
+    async def create_question(self, session: AsyncSession, data: QuestionCreateRequest) -> Question:
+        # No unique check on text requested, but it's often good practice.
         # For now, just create it.
-        
+
         new_question = Question(
             subject_id=data.subject_id,
             user_id=data.user_id,
@@ -47,26 +46,27 @@ class QuestionRepository:
             )
         return new_question
 
-    async def get_question(
-        self, session: AsyncSession, question_id: int, current_user: User
-    ) -> Question:
-        stmt = select(Question).options(
-            selectinload(Question.subject),
-            selectinload(Question.user),
-        ).where(Question.id == question_id)
+    async def get_question(self, session: AsyncSession, question_id: int, current_user: User) -> Question:
+        stmt = (
+            select(Question)
+            .options(
+                selectinload(Question.subject),
+                selectinload(Question.user),
+            )
+            .where(Question.id == question_id)
+        )
         result = await session.execute(stmt)
         question = result.scalar_one_or_none()
 
         if not question:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Question not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
 
         # Check ownership for teachers
         is_admin = any(role.name.lower() == "admin" for role in current_user.roles)
         if not is_admin and question.user_id != current_user.id:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: you can only access your own questions"
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: you can only access your own questions",
             )
 
         return question
@@ -89,7 +89,7 @@ class QuestionRepository:
 
         if request.text:
             stmt = stmt.where(Question.text.ilike(f"%{request.text}%"))
-        
+
         if request.subject_id:
             stmt = stmt.where(Question.subject_id == request.subject_id)
 
@@ -115,32 +115,37 @@ class QuestionRepository:
         total_result = await session.execute(count_stmt)
         total = total_result.scalar() or 0
 
-        return QuestionListResponse(
-            total=total, page=request.page, limit=request.limit, questions=questions
-        )
+        return QuestionListResponse(total=total, page=request.page, limit=request.limit, questions=questions)
 
     async def update_question(
-        self, session: AsyncSession, question_id: int, data: QuestionCreateRequest, current_user: User
+        self,
+        session: AsyncSession,
+        question_id: int,
+        data: QuestionCreateRequest,
+        current_user: User,
     ) -> Question:
-        stmt = select(Question).options(
-            selectinload(Question.subject),
-            selectinload(Question.user),
-        ).where(Question.id == question_id)
+        stmt = (
+            select(Question)
+            .options(
+                selectinload(Question.subject),
+                selectinload(Question.user),
+            )
+            .where(Question.id == question_id)
+        )
         result = await session.execute(stmt)
         question = result.scalar_one_or_none()
 
         if not question:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Question not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
 
         # Check ownership for teachers
         is_admin = any(role.name.lower() == "admin" for role in current_user.roles)
         if not is_admin and question.user_id != current_user.id:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: you can only update your own questions"
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: you can only update your own questions",
             )
-        
+
         question.subject_id = data.subject_id
         question.user_id = data.user_id
         question.text = data.text
@@ -153,23 +158,20 @@ class QuestionRepository:
         await session.refresh(question)
         return question
 
-    async def delete_question(
-        self, session: AsyncSession, question_id: int, current_user: User
-    ) -> None:
+    async def delete_question(self, session: AsyncSession, question_id: int, current_user: User) -> None:
         stmt = select(Question).where(Question.id == question_id)
         result = await session.execute(stmt)
         question = result.scalar_one_or_none()
 
         if not question:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Question not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
 
         # Check ownership for teachers
         is_admin = any(role.name.lower() == "admin" for role in current_user.roles)
         if not is_admin and question.user_id != current_user.id:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: you can only delete your own questions"
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: you can only delete your own questions",
             )
 
         await session.delete(question)
@@ -185,29 +187,26 @@ class QuestionRepository:
         if not is_admin:
             if data.user_id != current_user.id:
                 raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: you can only delete your own questions"
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: you can only delete your own questions",
                 )
-        
-        stmt = delete(Question).where(
-            Question.subject_id == data.subject_id,
-            Question.user_id == data.user_id
-        )
-        
+
+        stmt = delete(Question).where(Question.subject_id == data.subject_id, Question.user_id == data.user_id)
+
         result = await session.execute(stmt)
         await session.commit()
-        
+
         return result.rowcount
 
-
     async def upload_image(self, file) -> str:
+        import os
         import shutil
         import uuid
-        import os
 
         # Generate unique filename
         file_ext = file.filename.split(".")[-1]
         filename = f"{uuid.uuid4()}.{file_ext}"
-        
+
         # Use config for upload dir
         # Ensure dir exists (though ideally create on startup or here)
         os.makedirs(settings.file_url.upload_dir, exist_ok=True)
@@ -215,45 +214,46 @@ class QuestionRepository:
 
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-        
+
         # Use config for http url
         return f"{settings.file_url.http}/{filename}"
 
     async def upload_questions_excel(
         self, session: AsyncSession, file, subject_id: int, user_id: int
     ) -> list[Question]:
-        import pandas as pd
         import io
+
+        import pandas as pd
 
         contents = await file.read()
         df = pd.read_excel(io.BytesIO(contents))
-        
+
         # Verify there are at least 5 columns
         if len(df.columns) < 5:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Excel file must contain at least 5 columns (question, option A, option B, option C, option D)",
             )
-        
+
         questions = []
         for index, row in df.iterrows():
             # If subject_id is in row, use it, else use param
             # If image is in row, use it
-            
+
             # Using positional indices instead of column names
             text = str(row.iloc[0]) if not pd.isna(row.iloc[0]) else ""
             opt_a = str(row.iloc[1]) if not pd.isna(row.iloc[1]) else ""
             opt_b = str(row.iloc[2]) if not pd.isna(row.iloc[2]) else ""
             opt_c = str(row.iloc[3]) if not pd.isna(row.iloc[3]) else ""
             opt_d = str(row.iloc[4]) if not pd.isna(row.iloc[4]) else ""
-            
+
             q_subject_id = subject_id
             if "subject_id" in df.columns and not pd.isna(row["subject_id"]):
-                 try:
+                try:
                     q_subject_id = int(row["subject_id"])
-                 except:
+                except (ValueError, TypeError):
                     pass
-            
+
             question = Question(
                 subject_id=q_subject_id,
                 user_id=user_id,
@@ -264,9 +264,9 @@ class QuestionRepository:
                 option_d=opt_d,
             )
             questions.append(question)
-            
+
         session.add_all(questions)
-        
+
         try:
             await session.commit()
         except Exception:
@@ -287,12 +287,13 @@ class QuestionRepository:
     ) -> bytes:
         import io
         import re
+
         from openpyxl import Workbook
-        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+        from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
         def strip_html(html: str) -> str:
             """Remove HTML tags and return plain text."""
-            clean = re.sub(r'<[^>]+>', '', html or '')
+            clean = re.sub(r"<[^>]+>", "", html or "")
             return clean.strip()
 
         # Query all matching questions (no pagination)
@@ -329,7 +330,16 @@ class QuestionRepository:
             bottom=Side(style="thin"),
         )
 
-        headers = ["№", "Savol", "A variant", "B variant", "C variant", "D variant", "Fan", "Foydalanuvchi"]
+        headers = [
+            "№",
+            "Savol",
+            "A variant",
+            "B variant",
+            "C variant",
+            "D variant",
+            "Fan",
+            "Foydalanuvchi",
+        ]
         for col_idx, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col_idx, value=header)
             cell.font = header_font
@@ -359,19 +369,20 @@ class QuestionRepository:
                 cell.border = thin_border
 
         # Column widths
-        ws.column_dimensions["A"].width = 6    # №
-        ws.column_dimensions["B"].width = 50   # Savol
-        ws.column_dimensions["C"].width = 25   # A
-        ws.column_dimensions["D"].width = 25   # B
-        ws.column_dimensions["E"].width = 25   # C
-        ws.column_dimensions["F"].width = 25   # D
-        ws.column_dimensions["G"].width = 20   # Fan
-        ws.column_dimensions["H"].width = 18   # Foydalanuvchi
+        ws.column_dimensions["A"].width = 6  # №
+        ws.column_dimensions["B"].width = 50  # Savol
+        ws.column_dimensions["C"].width = 25  # A
+        ws.column_dimensions["D"].width = 25  # B
+        ws.column_dimensions["E"].width = 25  # C
+        ws.column_dimensions["F"].width = 25  # D
+        ws.column_dimensions["G"].width = 20  # Fan
+        ws.column_dimensions["H"].width = 18  # Foydalanuvchi
 
         # Save to buffer
         buffer = io.BytesIO()
         wb.save(buffer)
         buffer.seek(0)
         return buffer.getvalue()
+
 
 get_question_repository = QuestionRepository()

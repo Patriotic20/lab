@@ -17,9 +17,7 @@ async def test_create_user(async_client):
 
 @pytest.mark.asyncio
 async def test_get_all_users(auth_client):
-    response = await auth_client.get(
-        "/user/", params={"page": 1, "limit": 10, "username": "admin"}
-    )
+    response = await auth_client.get("/user/", params={"page": 1, "limit": 10, "username": "admin"})
     assert response.status_code == 200
 
 
@@ -56,7 +54,7 @@ async def test_delete_user(auth_client):
 
 
 @pytest.mark.asyncio
-async def test_delete_user(auth_client):
+async def test_delete_user_not_found(auth_client):
     response = await auth_client.delete("/user/1999")
     assert response.status_code == 404
     assert response.json()["detail"] == "User not found"

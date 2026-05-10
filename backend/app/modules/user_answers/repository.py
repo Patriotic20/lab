@@ -1,23 +1,22 @@
 import logging
 
-from sqlalchemy import select, and_, func, desc
-from sqlalchemy.orm import selectinload
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from app.modules.user_answers.model import UserAnswers
-from .schemas import UserAnswersListRequest, UserAnswersListResponse, UserAnswerResponse
+
+from .schemas import UserAnswersListRequest, UserAnswersListResponse
 
 logger = logging.getLogger(__name__)
 
+
 class UserAnswersRepository:
-    async def get_all(
-        self, 
-        session: AsyncSession,
-        data: UserAnswersListRequest
-    ) -> UserAnswersListResponse:
+    async def get_all(self, session: AsyncSession, data: UserAnswersListRequest) -> UserAnswersListResponse:
         stmt = select(UserAnswers).options(
             selectinload(UserAnswers.question),
         )
-        
+
         filters = []
         if data.user_id is not None:
             filters.append(UserAnswers.user_id == data.user_id)
@@ -25,7 +24,7 @@ class UserAnswersRepository:
             filters.append(UserAnswers.quiz_id == data.quiz_id)
         if data.question_id is not None:
             filters.append(UserAnswers.question_id == data.question_id)
-            
+
         if filters:
             stmt = stmt.where(and_(*filters))
 
@@ -38,7 +37,7 @@ class UserAnswersRepository:
 
         stmt = stmt.order_by(desc(UserAnswers.created_at))
         stmt = stmt.offset(data.offset).limit(data.limit)
-        
+
         result = await session.execute(stmt)
         answers = result.scalars().all()
 
@@ -48,5 +47,6 @@ class UserAnswersRepository:
             limit=data.limit,
             answers=answers,
         )
+
 
 user_answers_repository = UserAnswersRepository()

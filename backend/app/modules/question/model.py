@@ -1,28 +1,25 @@
 import random
-from sqlalchemy import String, ForeignKey
+from typing import TYPE_CHECKING
+
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.core.base import Base
 from app.core.mixins.id_int_pk import IdIntPk
 from app.core.mixins.time_stamp_mixin import TimestampMixin
 
-from typing import TYPE_CHECKING
-
 if TYPE_CHECKING:
+    from app.modules.quiz.models.quiz_questions import QuizQuestion
     from app.modules.subject.models.subject import Subject
     from app.modules.user.models.user import User
     from app.modules.user_answers.model import UserAnswers
-    from app.modules.quiz.models.quiz_questions import QuizQuestion
 
 
 class Question(Base, IdIntPk, TimestampMixin):
     __tablename__ = "questions"
 
-    subject_id: Mapped[int | None] = mapped_column(
-        ForeignKey("subjects.id", ondelete="SET NULL"), nullable=True
-    )
-    user_id: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
-    )
+    subject_id: Mapped[int | None] = mapped_column(ForeignKey("subjects.id", ondelete="SET NULL"), nullable=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     text: Mapped[str] = mapped_column(nullable=False)
     option_a: Mapped[str] = mapped_column(nullable=False)
@@ -30,30 +27,19 @@ class Question(Base, IdIntPk, TimestampMixin):
     option_c: Mapped[str] = mapped_column(nullable=False)
     option_d: Mapped[str] = mapped_column(nullable=False)
 
-    subject: Mapped["Subject"] = relationship(
-        "Subject",
-        back_populates="questions"
-    )
+    subject: Mapped["Subject"] = relationship("Subject", back_populates="questions")
 
-    user: Mapped["User"] = relationship(
-        "User",
-        back_populates="questions"
-    )
-
+    user: Mapped["User"] = relationship("User", back_populates="questions")
 
     quiz_questions: Mapped[list["QuizQuestion"]] = relationship(
         "QuizQuestion",
         back_populates="question",
     )
 
-    user_answers: Mapped[list["UserAnswers"]] = relationship(
-        "UserAnswers",
-        back_populates="question"
-    )
+    user_answers: Mapped[list["UserAnswers"]] = relationship("UserAnswers", back_populates="question")
 
     def __str__(self):
         return self.text
-
 
     def to_dict(self, randomize_options: bool = True):
         """

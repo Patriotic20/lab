@@ -15,7 +15,7 @@ async def test_create_quiz(auth_client, test_subject, test_group):
         "user_id": user_id,
         "group_id": test_group["id"],
         "subject_id": test_subject.id,
-        "is_active": True
+        "is_active": True,
     }
     response = await auth_client.post("/quiz/", json=payload)
     assert response.status_code == 201
@@ -36,7 +36,7 @@ async def test_get_quiz(auth_client, test_subject, test_group):
         "pin": "5678",
         "user_id": user_id,
         "group_id": test_group["id"],
-        "subject_id": test_subject.id
+        "subject_id": test_subject.id,
     }
     create_resp = await auth_client.post("/quiz/", json=payload)
     quiz_id = create_resp.json()["id"]
@@ -60,7 +60,7 @@ async def test_update_quiz(auth_client, test_subject, test_group):
         "pin": "9999",
         "user_id": user_id,
         "group_id": test_group["id"],
-        "subject_id": test_subject.id
+        "subject_id": test_subject.id,
     }
     create_resp = await auth_client.post("/quiz/", json=payload)
     quiz_id = create_resp.json()["id"]
@@ -84,13 +84,13 @@ async def test_delete_quiz(auth_client, test_subject, test_group):
         "pin": "0000",
         "user_id": user_id,
         "group_id": test_group["id"],
-        "subject_id": test_subject.id
+        "subject_id": test_subject.id,
     }
     create_resp = await auth_client.post("/quiz/", json=payload)
     quiz_id = create_resp.json()["id"]
 
     response = await auth_client.delete(f"/quiz/{quiz_id}")
     assert response.status_code == 204
-    
+
     response = await auth_client.get(f"/quiz/{quiz_id}")
     assert response.status_code == 404

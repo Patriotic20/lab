@@ -51,9 +51,7 @@ def downgrade() -> None:
             autoincrement=False,
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(
-            ["faculty_id"], ["faculties.id"], name=op.f("departments_faculty_id_fkey")
-        ),
+        sa.ForeignKeyConstraint(["faculty_id"], ["faculties.id"], name=op.f("departments_faculty_id_fkey")),
         sa.PrimaryKeyConstraint("id", name=op.f("departments_pkey")),
     )
     op.create_index(op.f("ix_departments_name"), "departments", ["name"], unique=False)

@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional
+
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 
@@ -49,12 +50,13 @@ class ResultResponse(BaseModel):
     cheating_detected: bool = False
     cheating_image_url: Optional[str] = None
 
-    @field_validator('cheating_detected', mode='before')
+    @field_validator("cheating_detected", mode="before")
     @classmethod
     def coerce_cheating_bool(cls, v):
         if v is None:
             return False
         return bool(v)
+
     reason_for_stop: Optional[str] = None
 
     model_config = ConfigDict(
@@ -81,7 +83,7 @@ class ResultListRequest(BaseModel):
     group_id: Optional[int] = None
     grade: Optional[int] = None
     username: Optional[str] = None
-    
+
     page: int = 1
     limit: int = 10
     sort_dir: Optional[str] = "desc"
@@ -91,6 +93,7 @@ class ResultListRequest(BaseModel):
         if self.page < 1:
             return 0
         return (self.page - 1) * self.limit
+
 
 class ResultListResponse(BaseModel):
     total: int

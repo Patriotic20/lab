@@ -67,9 +67,7 @@ async def update_tutor(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("update:tutor")),
 ):
-    return await get_tutor_repository.update_tutor(
-        session=session, tutor_id=tutor_id, data=data
-    )
+    return await get_tutor_repository.update_tutor(session=session, tutor_id=tutor_id, data=data)
 
 
 @router.delete(
@@ -105,6 +103,4 @@ async def get_tutor_groups(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:tutor")),
 ):
-    return await get_tutor_repository.get_groups_by_tutor(
-        session=session, tutor_id=tutor_id
-    )
+    return await get_tutor_repository.get_groups_by_tutor(session=session, tutor_id=tutor_id)

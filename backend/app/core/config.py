@@ -1,7 +1,7 @@
-from typing import Any
 from pathlib import Path
+
 from dotenv import load_dotenv
-from pydantic import BaseModel, PostgresDsn, field_validator
+from pydantic import BaseModel, PostgresDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
@@ -15,19 +15,6 @@ class ServerConfig(BaseModel):
     host: str
     port: int
     reload: bool = True
-    workers: int = 1
-    # When True, Swagger / ReDoc / OpenAPI endpoints are disabled at the app level.
-    # Keep False in dev; set APP_CONFIG__SERVER__IS_PROD=True in production.
-    is_prod: bool = False
-
-    @field_validator("reload", "is_prod", mode="before")
-    @classmethod
-    def coerce_server_bool(cls, v: Any) -> Any:
-        if v == "":
-            return False
-        if isinstance(v, str):
-            return v.strip().lower() in {"1", "true", "yes", "on"}
-        return v
 
 
 class JwtConfig(BaseModel):
@@ -53,36 +40,6 @@ class DatabaseConfig(BaseModel):
         "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
         "pk": "pk_%(table_name)s",
     }
-
-    @field_validator("echo", "echo_pool", mode="before")
-    @classmethod
-    def coerce_bool(cls, v: Any) -> Any:
-        """Treat empty string as the field default (False)."""
-        if v == "":
-            return False
-        return v
-
-    @field_validator("pool_size", mode="before")
-    @classmethod
-    def coerce_pool_size(cls, v: Any) -> Any:
-        """Treat empty string as the field default (50)."""
-        if v == "":
-            return 50
-        return v
-
-    @field_validator("max_overflow", mode="before")
-    @classmethod
-    def coerce_max_overflow(cls, v: Any) -> Any:
-        """Treat empty string as the field default (10)."""
-        if v == "":
-            return 10
-        return v
-
-
-class AdminConfig(BaseModel):
-    username: str
-    password: str
-    secret_key: str
 
 
 class FileUrl(BaseModel):
@@ -111,6 +68,10 @@ class RedisConfig(BaseModel):
         return f"redis://{self.host}:{self.port}/0"
 
 
+class CorsConfig(BaseModel):
+    origins: list[str] = []
+
+
 class AppConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -123,11 +84,11 @@ class AppConfig(BaseSettings):
     server: ServerConfig
     database: DatabaseConfig
     jwt: JwtConfig
-    admin: AdminConfig
     hemis: HemisConfig
     face_service: FaceServiceConfig = FaceServiceConfig()
     file_url: FileUrl
     redis: RedisConfig
+    cors: CorsConfig = CorsConfig()
 
     # Add derived absolute paths
     @property

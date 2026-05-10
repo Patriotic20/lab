@@ -8,12 +8,10 @@ dependencies = [
     "alembic>=1.18.2",
     "asyncpg>=0.31.0",
     "bcrypt<4.0",
-    "fastapi-cache2>=0.2.2",
     "fastapi-limiter>=0.1.6",
     "fastapi[standard]>=0.128.0",
     "httpx>=0.28.1",
     "itsdangerous>=2.2.0",
-    "prometheus-fastapi-instrumentator>=7.0.0",
     "openpyxl>=3.1.5",
     "pandas>=3.0.0",
     "passlib>=1.7.4",
@@ -21,7 +19,6 @@ dependencies = [
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
     "redis>=7.1.0",
-    "sqladmin>=0.22.0",
     "sqlalchemy>=2.0.46",
     "xlrd>=2.0.1",
 ]
@@ -38,15 +35,25 @@ filterwarnings = [
 
 
 
+[dependency-groups]
+dev = [
+    "ruff>=0.8.0",
+]
+
 [tool.ruff]
-# Target Python 3.14 features
-target-version = "py314"
-line-length = 88
+target-version = "py312"
+line-length = 120
 
 [tool.ruff.lint]
 # E/W = pycodestyle, F = Pyflakes, I = isort (import sorting)
 select = ["E", "W", "F", "I"]
 ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+# Tests often contain long URLs, payloads, fixtures — line length is not useful here.
+"app/test/*" = ["E501"]
+# init_db.py contains long SQL string literals; will be rewritten in upcoming RBAC simplification.
+"app/core/init_db.py" = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"

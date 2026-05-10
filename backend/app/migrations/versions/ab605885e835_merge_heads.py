@@ -5,6 +5,7 @@ Revises: 3ca41e559d6f, e6c5d2a8f0b3
 Create Date: 2026-04-30 11:40:00.000000
 
 """
+
 from typing import Sequence, Union
 
 revision: str = "ab605885e835"

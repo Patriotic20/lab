@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
@@ -48,9 +48,7 @@ class PsychologyQuestion(Base, IdIntPk, TimestampMixin):
 
     __tablename__ = "psychology_questions"
 
-    method_id: Mapped[int] = mapped_column(
-        ForeignKey("psychology_methods.id", ondelete="CASCADE"), nullable=False
-    )
+    method_id: Mapped[int] = mapped_column(ForeignKey("psychology_methods.id", ondelete="CASCADE"), nullable=False)
     question_type: Mapped[str] = mapped_column(String(20), nullable=False)
     content: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     options: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
@@ -71,14 +69,11 @@ class PsychologyResult(Base, IdIntPk, TimestampMixin):
 
     __tablename__ = "psychology_results"
 
-    method_id: Mapped[int] = mapped_column(
-        ForeignKey("psychology_methods.id", ondelete="CASCADE"), nullable=False
-    )
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
-    )
+    method_id: Mapped[int] = mapped_column(ForeignKey("psychology_methods.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     answers: Mapped[list[Any]] = mapped_column(
-        JSONB, nullable=False,
+        JSONB,
+        nullable=False,
         # [{question_id, value}] where value depends on question_type
     )
     diagnosis: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)

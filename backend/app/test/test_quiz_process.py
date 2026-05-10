@@ -16,7 +16,7 @@ async def test_start_quiz(auth_client, test_subject, test_group, async_db):
         "user_id": user_id,
         "group_id": test_group["id"],
         "subject_id": test_subject.id,
-        "is_active": True
+        "is_active": True,
     }
     quiz_resp = await auth_client.post("/quiz/", json=quiz_payload)
     quiz_id = quiz_resp.json()["id"]
@@ -31,25 +31,23 @@ async def test_start_quiz(auth_client, test_subject, test_group, async_db):
             "option_a": "A",
             "option_b": "B",
             "option_c": "C",
-            "option_d": "D"
+            "option_d": "D",
         }
         q_resp = await auth_client.post("/question/", json=q_payload)
         questions.append(q_resp.json()["id"])
 
     # 3. Manually link questions to quiz (since no API for it)
     from app.modules.quiz.models.quiz_questions import QuizQuestion
+
     for q_id in questions:
         qq = QuizQuestion(quiz_id=quiz_id, question_id=q_id)
         async_db.add(qq)
     await async_db.commit()
 
     # 4. Start Quiz
-    start_payload = {
-        "quiz_id": quiz_id,
-        "pin": "1234"
-    }
+    start_payload = {"quiz_id": quiz_id, "pin": "1234"}
     response = await auth_client.post("/quiz_process/start_quiz", json=start_payload)
-    
+
     assert response.status_code == 200
     data = response.json()
     assert data["quiz_id"] == quiz_id
@@ -70,7 +68,7 @@ async def test_end_quiz(auth_client, test_subject, test_group):
         "user_id": user_id,
         "group_id": test_group["id"],
         "subject_id": test_subject.id,
-        "is_active": True
+        "is_active": True,
     }
     quiz_resp = await auth_client.post("/quiz/", json=quiz_payload)
     quiz_id = quiz_resp.json()["id"]
@@ -80,7 +78,7 @@ async def test_end_quiz(auth_client, test_subject, test_group):
         "subject_id": test_subject.id,
         "user_id": user_id,
         "text": "What is A?",
-        "option_a": "A", # Let's assume A is correct? We don't know the logic for correctness here without looking at model/logic.
+        "option_a": "A",  # Let's assume A is correct? We don't know the logic for correctness here without looking at model/logic.
         # Usually correctness is stored in Question model. Schema for creation didn't specify correct answer explicitly?
         # Let's check QuestionCreateRequest...
         # It has option_a..d. Where is correct answer?
@@ -90,16 +88,16 @@ async def test_end_quiz(auth_client, test_subject, test_group):
         # Let's check Question model if possible or just View File.
         "option_b": "B",
         "option_c": "C",
-        "option_d": "D"
+        "option_d": "D",
     }
     # Wait, if I can't specify correct answer, how is it graded?
     # Let's check Question model or Schema again.
     # Step 37: QuestionCreateRequest fields: subject_id, user_id, text, option_a, option_b, option_c, option_d.
     # NO correct_answer.
-    
+
     # Maybe the "answer" logic is handled differently? Or maybe I missed it.
     # I'll check the Question model in a sec.
-    
+
     q_resp = await auth_client.post("/question/", json=q_payload)
     question_id = q_resp.json()["id"]
 
@@ -107,11 +105,9 @@ async def test_end_quiz(auth_client, test_subject, test_group):
     end_payload = {
         "quiz_id": quiz_id,
         "user_id": user_id,
-        "answers": [
-            {"question_id": question_id, "answer": "A"}
-        ]
+        "answers": [{"question_id": question_id, "answer": "A"}],
     }
-    
+
     response = await auth_client.post("/quiz_process/end_quiz", json=end_payload)
     assert response.status_code == 200
     data = response.json()

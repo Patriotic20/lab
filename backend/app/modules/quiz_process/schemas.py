@@ -1,9 +1,12 @@
 from typing import Optional
+
 from pydantic import BaseModel
+
 
 class StartQuizRequest(BaseModel):
     quiz_id: int
     pin: str
+
 
 class QuestionDTO(BaseModel):
     id: int
@@ -12,6 +15,7 @@ class QuestionDTO(BaseModel):
     option_b: str
     option_c: str
     option_d: str
+
 
 class StartQuizResponse(BaseModel):
     quiz_id: int
@@ -25,13 +29,15 @@ class AnswerDTO(BaseModel):
     question_id: int
     answer: str
 
+
 class EndQuizRequest(BaseModel):
     quiz_id: int
-    user_id: Optional[int] = None 
+    user_id: Optional[int] = None
     answers: list[AnswerDTO]
     cheating_detected: Optional[bool] = False
     reason: Optional[str] = None
     cheating_image_url: Optional[str] = None
+
 
 class EndQuizResponse(BaseModel):
     total_questions: int
@@ -41,10 +47,12 @@ class EndQuizResponse(BaseModel):
     cheating_detected: Optional[bool] = False
     reason: Optional[str] = None
 
+
 class UploadCheatingImageRequest(BaseModel):
     quiz_id: int
     user_id: Optional[int] = None
     image_data: str  # Base64 encoded JPEG
+
 
 class UploadCheatingImageResponse(BaseModel):
     success: bool

@@ -1,20 +1,20 @@
-from sqlalchemy import String, ForeignKey
+from typing import TYPE_CHECKING
+
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.core.base import Base
 from app.core.mixins.id_int_pk import IdIntPk
 from app.core.mixins.time_stamp_mixin import TimestampMixin
 
-
-from typing import TYPE_CHECKING
-
 if TYPE_CHECKING:
     from app.modules.faculty.model import Faculty
-    from app.modules.student.model import Student
-    from app.modules.quiz.models.quiz import Quiz
-    from app.modules.result.model import Result
     from app.modules.group.models.group_teachers import GroupTeacher
-    from app.modules.tutor.models.tutor_groups import TutorGroup
+    from app.modules.quiz.models.quiz import Quiz
     from app.modules.resource.model import Resource
+    from app.modules.result.model import Result
+    from app.modules.student.model import Student
+    from app.modules.tutor.models.tutor_groups import TutorGroup
 
 
 class Group(Base, IdIntPk, TimestampMixin):
@@ -23,43 +23,22 @@ class Group(Base, IdIntPk, TimestampMixin):
 
     name: Mapped[str] = mapped_column(String(255), unique=True)
 
-    faculty: Mapped["Faculty"] = relationship(
-        "Faculty",
-        back_populates="groups"
-    )
-    students: Mapped[list["Student"]] = relationship(
-        "Student",
-        back_populates="group"
-    )
+    faculty: Mapped["Faculty"] = relationship("Faculty", back_populates="groups")
+    students: Mapped[list["Student"]] = relationship("Student", back_populates="group")
 
-    quizzes: Mapped[list["Quiz"]] = relationship(
-        "Quiz",
-        back_populates="group"
-    )
+    quizzes: Mapped[list["Quiz"]] = relationship("Quiz", back_populates="group")
 
-    results: Mapped[list["Result"]] = relationship(
-        "Result",
-        back_populates="group"
-    )
+    results: Mapped[list["Result"]] = relationship("Result", back_populates="group")
 
     group_teachers: Mapped[list["GroupTeacher"]] = relationship(
-        "GroupTeacher",
-        back_populates="group",
-        cascade="all, delete-orphan"
+        "GroupTeacher", back_populates="group", cascade="all, delete-orphan"
     )
 
     tutor_groups: Mapped[list["TutorGroup"]] = relationship(
-        "TutorGroup",
-        back_populates="group",
-        cascade="all, delete-orphan"
+        "TutorGroup", back_populates="group", cascade="all, delete-orphan"
     )
 
-    resources: Mapped[list["Resource"]] = relationship(
-        "Resource",
-        back_populates="group"
-    )
-
-
+    resources: Mapped[list["Resource"]] = relationship("Resource", back_populates="group")
 
     def __str__(self):
         return self.name

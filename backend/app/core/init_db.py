@@ -1,14 +1,15 @@
-
+import inspect
 import logging
+
+from dependence.role_checker import PermissionRequired
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, text
-from app.modules.role.models.role import Role
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.modules.permission.model import Permission
+from app.modules.role.models.role import Role
 from app.modules.role.models.role_permission import RolePermission
-from dependence.role_checker import PermissionRequired
-import inspect
 
 logger = logging.getLogger(__name__)
 
@@ -66,13 +67,19 @@ async def init_db(app: FastAPI, session: AsyncSession):
         # Use GREATEST(..., 1) because setval cannot accept 0
         # Third arg 'false' means next nextval() returns this value (safe for empty tables)
         await session.execute(
-            text("SELECT setval('permissions_id_seq', GREATEST((SELECT COALESCE(MAX(id), 0) FROM permissions), 1), (SELECT COUNT(*) > 0 FROM permissions))")
+            text(
+                "SELECT setval('permissions_id_seq', GREATEST((SELECT COALESCE(MAX(id), 0) FROM permissions), 1), (SELECT COUNT(*) > 0 FROM permissions))"
+            )
         )
         await session.execute(
-            text("SELECT setval('roles_id_seq', GREATEST((SELECT COALESCE(MAX(id), 0) FROM roles), 1), (SELECT COUNT(*) > 0 FROM roles))")
+            text(
+                "SELECT setval('roles_id_seq', GREATEST((SELECT COALESCE(MAX(id), 0) FROM roles), 1), (SELECT COUNT(*) > 0 FROM roles))"
+            )
         )
         await session.execute(
-            text("SELECT setval('role_permissions_id_seq', GREATEST((SELECT COALESCE(MAX(id), 0) FROM role_permissions), 1), (SELECT COUNT(*) > 0 FROM role_permissions))")
+            text(
+                "SELECT setval('role_permissions_id_seq', GREATEST((SELECT COALESCE(MAX(id), 0) FROM role_permissions), 1), (SELECT COUNT(*) > 0 FROM role_permissions))"
+            )
         )
 
         # 2. Create/Update Permissions
@@ -121,8 +128,22 @@ async def init_db(app: FastAPI, session: AsyncSession):
         # and update:lesson_result so they can record results on existing lessons.
         lesson_admin_only = {"create:lesson", "update:lesson", "delete:lesson"}
         teacher_perms = {
-            p for p in discovered_permissions
-            if any(keyword in p for keyword in ("question", "quiz", "statistics", "result", "teacher", "subject", "resource", "psychology", "lesson"))
+            p
+            for p in discovered_permissions
+            if any(
+                keyword in p
+                for keyword in (
+                    "question",
+                    "quiz",
+                    "statistics",
+                    "result",
+                    "teacher",
+                    "subject",
+                    "resource",
+                    "psychology",
+                    "lesson",
+                )
+            )
             and not p.startswith("delete:result")
             and p not in lesson_admin_only
         }
@@ -134,7 +155,8 @@ async def init_db(app: FastAPI, session: AsyncSession):
 
         # Student gets read-only quiz/result + quiz process + user:me + read:resource + read:psychology
         student_perms = {
-            p for p in discovered_permissions
+            p
+            for p in discovered_permissions
             if (
                 p == "read:quiz"
                 or p == "read:result"
@@ -151,9 +173,7 @@ async def init_db(app: FastAPI, session: AsyncSession):
         user_perms = {"user:me"} if "user:me" in discovered_permissions else set()
 
         # Psixologik: full access only to psychology endpoints + user:me for own profile.
-        psixologik_perms = {
-            p for p in discovered_permissions if "psychology" in p
-        }
+        psixologik_perms = {p for p in discovered_permissions if "psychology" in p}
         if "user:me" in discovered_permissions:
             psixologik_perms.add("user:me")
 

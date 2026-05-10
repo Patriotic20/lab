@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Optional
+
 from pydantic import BaseModel, ConfigDict, field_validator
+
 
 class SubjectCreateRequest(BaseModel):
     name: str
@@ -16,26 +18,28 @@ class SubjectCreateRequest(BaseModel):
 class SubjectCreateResponse(BaseModel):
     id: int
     name: str
-    created_at: datetime  
+    created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(
         from_attributes=True,
     )
 
+
 class SubjectListRequest(BaseModel):
-    name: Optional[str] = None 
-    
-    page: int = 1 
-    
+    name: Optional[str] = None
+
+    page: int = 1
+
     teacher_id: Optional[int] = None
-    limit: int = 10 
+    limit: int = 10
 
     @property
     def offset(self) -> int:
         if self.page < 1:
             return 0
         return (self.page - 1) * self.limit
+
 
 class SubjectListResponse(BaseModel):
     total: int

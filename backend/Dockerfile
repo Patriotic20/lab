@@ -24,9 +24,6 @@ RUN uv sync --no-dev --no-install-project
 COPY . .
 RUN uv sync --no-dev
 
-RUN chmod +x /face/entrypoint.sh
-
 EXPOSE 8000
 
-ENTRYPOINT ["/bin/sh", "/face/entrypoint.sh"]
 CMD ["uv", "run", "app/main.py"]

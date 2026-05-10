@@ -3,9 +3,8 @@ import logging
 from core.db_helper import db_helper
 from dependence.role_checker import PermissionRequired
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
-# from fastapi_cache.decorator import cache
 from fastapi_limiter.depends import RateLimiter
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .repository import get_faculty_repository
 from .schemas import (
@@ -14,7 +13,6 @@ from .schemas import (
     FacultyListRequest,
     FacultyListResponse,
 )
-# from app.core.cache import clear_cache, custom_key_builder
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +23,10 @@ router = APIRouter(
 
 
 @router.post(
-    "/", 
-    response_model=FacultyCreateResponse, 
+    "/",
+    response_model=FacultyCreateResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(RateLimiter(times=5, seconds=60))]
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
 )
 async def create_faculty(
     data: FacultyCreateRequest,
@@ -47,9 +45,7 @@ async def get_faculty(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:faculty")),
 ):
-    return await get_faculty_repository.get_faculty(
-        session=session, faculty_id=faculty_id
-    )
+    return await get_faculty_repository.get_faculty(session=session, faculty_id=faculty_id)
 
 
 @router.get("/", response_model=FacultyListResponse)
@@ -59,35 +55,37 @@ async def list_faculties(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:faculty")),
 ):
-    return await get_faculty_repository.list_faculties(
-        session=session, request=data
-    )
+    return await get_faculty_repository.list_faculties(session=session, request=data)
 
 
-@router.put("/{faculty_id}", response_model=FacultyCreateResponse, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+@router.put(
+    "/{faculty_id}",
+    response_model=FacultyCreateResponse,
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
+)
 async def update_faculty(
     faculty_id: int,
     data: FacultyCreateRequest,
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("update:faculty")),
 ):
-    result = await get_faculty_repository.update_faculty(
-        session=session, faculty_id=faculty_id, data=data
-    )
+    result = await get_faculty_repository.update_faculty(session=session, faculty_id=faculty_id, data=data)
     # await clear_cache(list_faculties)
     # await clear_cache(get_faculty, faculty_id=faculty_id)
     return result
 
 
-@router.delete("/{faculty_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+@router.delete(
+    "/{faculty_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
+)
 async def delete_faculty(
     faculty_id: int,
     force: bool = False,
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("delete:faculty")),
 ):
-    await get_faculty_repository.delete_faculty(
-        session=session, faculty_id=faculty_id, force=force
-    )
+    await get_faculty_repository.delete_faculty(session=session, faculty_id=faculty_id, force=force)
     # await clear_cache(list_faculties)
     # await clear_cache(get_faculty, faculty_id=faculty_id)

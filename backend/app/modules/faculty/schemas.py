@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Optional
+
 from pydantic import BaseModel, ConfigDict, field_validator
+
 
 class FacultyCreateRequest(BaseModel):
     name: str
@@ -16,25 +18,27 @@ class FacultyCreateRequest(BaseModel):
 class FacultyCreateResponse(BaseModel):
     id: int
     name: str
-    created_at: datetime  
+    created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(
         from_attributes=True,
     )
 
+
 class FacultyListRequest(BaseModel):
-    name: Optional[str] = None 
-    
-    page: int = 1 
-    
-    limit: int = 10 
+    name: Optional[str] = None
+
+    page: int = 1
+
+    limit: int = 10
 
     @property
     def offset(self) -> int:
         if self.page < 1:
             return 0
         return (self.page - 1) * self.limit
+
 
 class FacultyListResponse(BaseModel):
     total: int

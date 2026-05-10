@@ -3,16 +3,16 @@ import logging
 from core.db_helper import db_helper
 from dependence.role_checker import PermissionRequired
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_limiter.depends import RateLimiter
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .repository import get_yakuniy_repository
 from .schemas import (
     YakuniyCreateRequest,
-    YakuniyUpdateRequest,
-    YakuniyResponse,
     YakuniyListRequest,
     YakuniyListResponse,
+    YakuniyResponse,
+    YakuniyUpdateRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -66,9 +66,7 @@ async def update_yakuniy(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("update:yakuniy")),
 ):
-    return await get_yakuniy_repository.update_yakuniy(
-        session=session, yakuniy_id=yakuniy_id, data=data
-    )
+    return await get_yakuniy_repository.update_yakuniy(session=session, yakuniy_id=yakuniy_id, data=data)
 
 
 @router.delete(

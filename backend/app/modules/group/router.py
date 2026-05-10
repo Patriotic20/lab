@@ -6,9 +6,8 @@ from typing import TYPE_CHECKING
 from core.db_helper import db_helper
 from dependence.role_checker import PermissionRequired
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
-# from fastapi_cache.decorator import cache
 from fastapi_limiter.depends import RateLimiter
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .repository import get_group_repository
 from .schemas import (
@@ -21,8 +20,7 @@ from .schemas import (
 if TYPE_CHECKING:
     from app.modules.user.models.user import User
 from app.modules.student.repository import student_repository
-from app.modules.student.schemas import StudentListResponse, StudentListRequest
-# from app.core.cache import clear_cache, custom_key_builder
+from app.modules.student.schemas import StudentListRequest, StudentListResponse
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +31,10 @@ router = APIRouter(
 
 
 @router.post(
-    "/", 
-    response_model=GroupCreateResponse, 
+    "/",
+    response_model=GroupCreateResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(RateLimiter(times=5, seconds=60))]
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
 )
 async def create_group(
     data: GroupCreateRequest,
@@ -55,9 +53,7 @@ async def get_group(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:group")),
 ):
-    return await get_group_repository.get_group(
-        session=session, group_id=group_id
-    )
+    return await get_group_repository.get_group(session=session, group_id=group_id)
 
 
 @router.get("/", response_model=GroupListResponse)
@@ -67,9 +63,7 @@ async def list_groups(
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: User = Depends(PermissionRequired("read:group")),
 ):
-    return await get_group_repository.list_groups(
-        session=session, request=data, current_user=current_user
-    )
+    return await get_group_repository.list_groups(session=session, request=data, current_user=current_user)
 
 
 @router.get("/{group_id}/students", response_model=StudentListResponse)
@@ -86,31 +80,35 @@ async def get_group_students(
     return await student_repository.list_students(session=session, request=request)
 
 
-@router.put("/{group_id}", response_model=GroupCreateResponse, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+@router.put(
+    "/{group_id}",
+    response_model=GroupCreateResponse,
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
+)
 async def update_group(
     group_id: int,
     data: GroupCreateRequest,
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("update:group")),
 ):
-    result = await get_group_repository.update_group(
-        session=session, group_id=group_id, data=data
-    )
+    result = await get_group_repository.update_group(session=session, group_id=group_id, data=data)
     # await clear_cache(list_groups)
     # await clear_cache(get_group, group_id=group_id)
     return result
 
 
-@router.delete("/{group_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+@router.delete(
+    "/{group_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
+)
 async def delete_group(
     group_id: int,
     force: bool = False,
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("delete:group")),
 ):
-    await get_group_repository.delete_group(
-        session=session, group_id=group_id, force=force
-    )
+    await get_group_repository.delete_group(session=session, group_id=group_id, force=force)
     # await clear_cache(list_groups)
     # await clear_cache(get_group, group_id=group_id)
 
@@ -123,8 +121,9 @@ async def get_group_delete_info(
 ):
     """Returns counts of related data affected when this group is deleted."""
     from sqlalchemy import func, select
-    from app.modules.student.model import Student
+
     from app.modules.result.model import Result
+    from app.modules.student.model import Student
 
     student_count = (
         await session.execute(select(func.count()).select_from(Student).where(Student.group_id == group_id))
@@ -133,4 +132,3 @@ async def get_group_delete_info(
         await session.execute(select(func.count()).select_from(Result).where(Result.group_id == group_id))
     ).scalar() or 0
     return {"students_count": student_count, "results_count": result_count}
-

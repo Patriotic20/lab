@@ -1,5 +1,6 @@
 import pytest
 
+
 @pytest.mark.asyncio
 async def test_repeat_quiz(auth_client, test_subject, test_group):
     # Setup
@@ -14,7 +15,7 @@ async def test_repeat_quiz(auth_client, test_subject, test_group):
         "user_id": user_id,
         "group_id": test_group["id"],
         "subject_id": test_subject.id,
-        "is_active": True
+        "is_active": True,
     }
     quiz_resp = await auth_client.post("/quiz/", json=quiz_payload)
     quiz_id = quiz_resp.json()["id"]
@@ -23,7 +24,7 @@ async def test_repeat_quiz(auth_client, test_subject, test_group):
     response = await auth_client.post(f"/quiz/{quiz_id}/repeat")
     assert response.status_code == 201
     data = response.json()
-    
+
     assert data["title"] == "Repeat Quiz"
     assert data["attempt"] == 2
     assert data["pin"] != "REPEAT"

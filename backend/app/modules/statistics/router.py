@@ -2,18 +2,17 @@ import logging
 
 from core.db_helper import db_helper
 from dependence.role_checker import PermissionRequired
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-# from fastapi_cache.decorator import cache
 
 from .repository import get_statistics_repository
 from .schemas import (
-    GeneralStatisticsResponse,
-    QuizStatisticsResponse,
-    UserStatisticsResponse,
     FacultyStatisticsResponse,
+    GeneralStatisticsResponse,
     GroupStatisticsResponse,
+    QuizStatisticsResponse,
     TeacherStatisticsResponse,
+    UserStatisticsResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,9 +39,7 @@ async def get_quiz_statistics(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:statistics")),
 ):
-    return await get_statistics_repository.get_quiz_stats(
-        session=session, quiz_id=quiz_id
-    )
+    return await get_statistics_repository.get_quiz_stats(session=session, quiz_id=quiz_id)
 
 
 @router.get("/user/{user_id}", response_model=UserStatisticsResponse)
@@ -52,9 +49,7 @@ async def get_user_statistics(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:statistics")),
 ):
-    return await get_statistics_repository.get_user_stats(
-        session=session, user_id=user_id
-    )
+    return await get_statistics_repository.get_user_stats(session=session, user_id=user_id)
 
 
 @router.get("/faculty/{faculty_id}", response_model=FacultyStatisticsResponse)
@@ -63,9 +58,7 @@ async def get_faculty_statistics(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:statistics")),
 ):
-    return await get_statistics_repository.get_faculty_stats(
-        session=session, faculty_id=faculty_id
-    )
+    return await get_statistics_repository.get_faculty_stats(session=session, faculty_id=faculty_id)
 
 
 @router.get("/group/{group_id}", response_model=GroupStatisticsResponse)
@@ -74,9 +67,7 @@ async def get_group_statistics(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:statistics")),
 ):
-    return await get_statistics_repository.get_group_stats(
-        session=session, group_id=group_id
-    )
+    return await get_statistics_repository.get_group_stats(session=session, group_id=group_id)
 
 
 @router.get("/teacher/{teacher_id}", response_model=TeacherStatisticsResponse)
@@ -85,6 +76,4 @@ async def get_teacher_statistics(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:statistics")),
 ):
-    return await get_statistics_repository.get_teacher_stats(
-        session=session, teacher_id=teacher_id
-    )
+    return await get_statistics_repository.get_teacher_stats(session=session, teacher_id=teacher_id)

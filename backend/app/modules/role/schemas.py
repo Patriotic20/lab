@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 class RoleCreateRequest(BaseModel):
     name: str
 
+
 class RolePermissionAssignRequest(BaseModel):
     role_id: int
     permission_ids: list[int]
@@ -20,6 +21,7 @@ class RolePermissionInfo(BaseModel):
     id: int
     name: str
     model_config = ConfigDict(from_attributes=True)
+
 
 class RoleCreateResponse(BaseModel):
     id: int

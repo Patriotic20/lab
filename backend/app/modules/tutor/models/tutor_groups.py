@@ -14,9 +14,7 @@ if TYPE_CHECKING:
 
 class TutorGroup(Base, IdIntPk, TimestampMixin):
     __tablename__ = "tutor_groups"
-    __table_args__ = (
-        UniqueConstraint("tutor_id", "group_id", name="idx_unique_tutor_group"),
-    )
+    __table_args__ = (UniqueConstraint("tutor_id", "group_id", name="idx_unique_tutor_group"),)
 
     tutor_id: Mapped[int] = mapped_column(ForeignKey("tutors.id"))
     group_id: Mapped[int] = mapped_column(ForeignKey("groups.id"))

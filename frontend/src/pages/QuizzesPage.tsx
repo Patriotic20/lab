@@ -1,47 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Pagination } from '@/components/ui/Pagination';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Plus, Search } from 'lucide-react';
+import { useQuizzes, useUpdateQuiz, useDeleteQuiz, useRepeatQuiz } from '@/hooks/useQuizzes';
+import { useSubjects } from '@/hooks/useSubjects';
+import { useGroups } from '@/hooks/useGroups';
+import { useTeachers } from '@/hooks/useTeachers';
 import type { Quiz, QuizCreateRequest } from '@/services/quizService';
 import type { Subject } from '@/services/subjectService';
 import type { Group } from '@/services/groupService';
-import { Button } from '@/components/ui/Button';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/Table';
-import { Card, CardContent } from '@/components/ui/Card';
-import { Plus, Pencil, Trash2, Loader2, BookOpen, Search, X, RotateCcw, Copy, Check } from 'lucide-react';
-import { Modal } from '@/components/ui/Modal';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Input } from '@/components/ui/Input';
-import { Switch } from '@/components/ui/Switch';
-import { useForm, Controller } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuizzes, useCreateQuiz, useUpdateQuiz, useDeleteQuiz, useRepeatQuiz } from '@/hooks/useQuizzes';
-import { useSubjects } from '@/hooks/useSubjects';
-import { useGroups } from '@/hooks/useGroups';
-import { useTeachers, useTeacherAssignedGroups } from '@/hooks/useTeachers';
-import { useTeacherAssignedSubjects } from '@/hooks/useSubjects';
-import { Combobox } from '@/components/ui/Combobox';
-import type { Teacher } from '@/services/teacherService';
-
-const quizSchema = z.object({
-    title: z.string().min(3, 'Sarlavha kiritilishi shart'),
-    question_number: z.string().min(1, 'Savollar soni kiritilishi shart').refine((val: string) => !isNaN(parseInt(val)) && parseInt(val) > 0, 'Musbat son bo\'lishi kerak'),
-    duration: z.string().min(1, 'Davomiylik kiritilishi shart').refine((val: string) => !isNaN(parseInt(val)) && parseInt(val) > 0, 'Musbat son bo\'lishi kerak'),
-    pin: z.string().min(4, 'PIN kiritilishi shart'),
-    user_id: z.string().optional(),
-    group_id: z.string().optional(),
-    subject_id: z.string().optional(),
-    is_active: z.boolean(),
-});
-
-type QuizFormValues = z.infer<typeof quizSchema>;
+import { QuizFilters } from '@/components/quizzes/QuizFilters';
+import { QuizTable } from '@/components/quizzes/QuizTable';
+import { QuizModal } from '@/components/quizzes/QuizModal';
+import { RepeatedQuizSuccessModal } from '@/components/quizzes/RepeatedQuizSuccessModal';
 
 const QuizzesPage = () => {
     const { user } = useAuth();
@@ -56,15 +30,12 @@ const QuizzesPage = () => {
     const pageSize = 10;
     const [isUpdatingStatus, setIsUpdatingStatus] = useState<number | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
 
-    // Repeat quiz state
     const [isRepeatConfirmOpen, setIsRepeatConfirmOpen] = useState(false);
     const [quizToRepeat, setQuizToRepeat] = useState<Quiz | null>(null);
     const [repeatedQuiz, setRepeatedQuiz] = useState<Quiz | null>(null);
-    const [isPinCopied, setIsPinCopied] = useState(false);
-    const [debouncedSearch, setDebouncedSearch] = useState('');
 
-    // Filter states
     const [filterSubjectId, setFilterSubjectId] = useState<number | undefined>(undefined);
     const [filterGroupId, setFilterGroupId] = useState<number | undefined>(undefined);
     const [filterUserId, setFilterUserId] = useState<number | undefined>(undefined);
@@ -87,13 +58,12 @@ const QuizzesPage = () => {
         filterUserId,
         filterGroupId,
         filterSubjectId,
-        sortDir
+        sortDir,
     );
 
-    // Fetch data for filters (all items)
     const { data: allSubjectsData } = useSubjects(1, 1000);
     const { data: allGroupsData } = useGroups(1, 1000, '');
-    const { data: allTeachersData } = useTeachers(1, 1000); // Increased limit to fetch more teachers
+    const { data: allTeachersData } = useTeachers(1, 1000);
 
     const updateQuizMutation = useUpdateQuiz();
     const deleteQuizMutation = useDeleteQuiz();
@@ -123,7 +93,6 @@ const QuizzesPage = () => {
 
     const handleConfirmDelete = async () => {
         if (!quizToDelete) return;
-
         deleteQuizMutation.mutate({ id: quizToDelete.id, force: cascadeWarnings.length > 0 }, {
             onSuccess: () => {
                 setIsDeleteModalOpen(false);
@@ -139,7 +108,7 @@ const QuizzesPage = () => {
                     setQuizToDelete(null);
                     setCascadeWarnings([]);
                 }
-            }
+            },
         });
     };
 
@@ -158,20 +127,11 @@ const QuizzesPage = () => {
             onSuccess: (newQuiz) => {
                 setIsRepeatConfirmOpen(false);
                 setRepeatedQuiz(newQuiz);
-                setIsPinCopied(false);
             },
             onError: () => {
                 alert('Testni qayta yaratishda xatolik yuz berdi');
             },
         });
-    };
-
-    const handleCopyPin = () => {
-        if (repeatedQuiz?.pin) {
-            navigator.clipboard.writeText(repeatedQuiz.pin);
-            setIsPinCopied(true);
-            setTimeout(() => setIsPinCopied(false), 2000);
-        }
     };
 
     const handleToggleStatus = (quiz: Quiz) => {
@@ -194,7 +154,7 @@ const QuizzesPage = () => {
             onError: (error: unknown) => {
                 console.error('Failed to update quiz status', error);
                 alert('Test holatini yangilashda xatolik yuz berdi');
-            }
+            },
         });
     };
 
@@ -210,11 +170,16 @@ const QuizzesPage = () => {
         setSortDir('desc');
     };
 
-    const hasActiveFilters = filterSubjectId !== undefined || filterGroupId !== undefined || filterUserId !== undefined || filterIsActive !== undefined || searchTerm !== '' || sortDir !== 'desc';
+    const hasActiveFilters =
+        filterSubjectId !== undefined ||
+        filterGroupId !== undefined ||
+        filterUserId !== undefined ||
+        filterIsActive !== undefined ||
+        searchTerm !== '' ||
+        sortDir !== 'desc';
 
     return (
         <div className="space-y-6">
-            {/* Page header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-xl font-semibold tracking-tight">Testlar</h1>
@@ -239,166 +204,39 @@ const QuizzesPage = () => {
                 </div>
             </div>
 
-            {/* Filters */}
-            <Card>
-                <CardContent className="p-4">
-                    <div className="flex flex-wrap gap-4 items-end">
-                        <div className="flex flex-col gap-2 min-w-[200px] flex-1">
-                            <label className="text-sm font-medium">Fan bo'yicha filtri</label>
-                            <Combobox
-                                options={allSubjects.map(s => ({ value: s.id.toString(), label: s.name }))}
-                                value={filterSubjectId?.toString()}
-                                onChange={(val) => setFilterSubjectId(val ? parseInt(val) : undefined)}
-                                placeholder="Barcha fanlar"
-                                searchPlaceholder="Fanni qidirish..."
-                            />
-                        </div>
-                        <div className="flex flex-col gap-2 min-w-[200px] flex-1">
-                            <label className="text-sm font-medium">Guruh bo'yicha filtri</label>
-                            <Combobox
-                                options={allGroups.map(g => ({ value: g.id.toString(), label: g.name }))}
-                                value={filterGroupId?.toString()}
-                                onChange={(val) => setFilterGroupId(val ? parseInt(val) : undefined)}
-                                placeholder="Barcha guruhlar"
-                                searchPlaceholder="Guruhni qidirish..."
-                            />
-                        </div>
-                        <div className="flex flex-col gap-2 min-w-[200px] flex-1">
-                            <label className="text-sm font-medium">O'qituvchi bo'yicha filtri</label>
-                            <Combobox
-                                options={allTeachers.map(t => ({ value: t.user_id.toString(), label: t.full_name }))}
-                                value={filterUserId?.toString()}
-                                onChange={(val) => setFilterUserId(val ? parseInt(val) : undefined)}
-                                placeholder="Barcha o'qituvchilar"
-                                searchPlaceholder="O'qituvchini qidirish..."
-                            />
-                        </div>
-                        <div className="flex flex-col gap-2 w-[150px]">
-                            <label className="text-sm font-medium">Holat</label>
-                            <select
-                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                value={filterIsActive === undefined ? 'all' : filterIsActive.toString()}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    setFilterIsActive(val === 'all' ? undefined : val === 'true');
-                                }}
-                            >
-                                <option value="all">Barchasi</option>
-                                <option value="true">Faol</option>
-                                <option value="false">Faol emas</option>
-                            </select>
-                        </div>
-                        <div className="flex flex-col gap-2 w-[150px]">
-                            <label className="text-sm font-medium">Sana bo'yicha</label>
-                            <select
-                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                value={sortDir}
-                                onChange={(e) => setSortDir(e.target.value as 'desc' | 'asc')}
-                            >
-                                <option value="desc">Eng yangilari</option>
-                                <option value="asc">Eng eskilari</option>
-                            </select>
-                        </div>
-                        {hasActiveFilters && (
-                            <Button variant="ghost" onClick={clearFilters} className="mb-0.5">
-                                <X className="mr-2 h-4 w-4" />
-                                Tozalash
-                            </Button>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
+            <QuizFilters
+                subjects={allSubjects}
+                groups={allGroups}
+                teachers={allTeachers}
+                filterSubjectId={filterSubjectId}
+                onSubjectChange={setFilterSubjectId}
+                filterGroupId={filterGroupId}
+                onGroupChange={setFilterGroupId}
+                filterUserId={filterUserId}
+                onUserChange={setFilterUserId}
+                filterIsActive={filterIsActive}
+                onIsActiveChange={setFilterIsActive}
+                sortDir={sortDir}
+                onSortDirChange={setSortDir}
+                hasActiveFilters={hasActiveFilters}
+                onClearFilters={clearFilters}
+            />
 
-
-            <Card>
-                <CardContent>
-                    {isQuizzesLoading ? (
-                        <div className="flex justify-center p-8">
-                            <Loader2 className="h-8 w-8 animate-spin" />
-                        </div>
-                    ) : quizzes.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                            <BookOpen className="h-12 w-12 mb-4 opacity-20" />
-                            <p>Testlar topilmadi. {hasActiveFilters ? 'Filtrlarni o\'zgartirib ko\'ring.' : 'Boshlash uchun yangi test yarating.'}</p>
-                        </div>
-                    ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Sarlavha</TableHead>
-                                    <TableHead>S/S</TableHead>
-                                    <TableHead>Davomiyligi</TableHead>
-                                    <TableHead>PIN</TableHead>
-                                    <TableHead>Faol</TableHead>
-                                    <TableHead>Fan</TableHead>
-                                    <TableHead>Guruh</TableHead>
-                                    {!isTeacher && <TableHead className="text-right">Amallar</TableHead>}
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {quizzes.map((quiz) => (
-                                    <TableRow key={quiz.id}>
-                                        <TableCell className="font-medium capitalize">{quiz.title}</TableCell>
-                                        <TableCell>{quiz.question_number}</TableCell>
-                                        <TableCell>{quiz.duration} daq</TableCell>
-                                        <TableCell><span className="font-mono bg-muted px-2 py-1 rounded">{quiz.pin}</span></TableCell>
-                                        <TableCell>
-                                            {isTeacher ? (
-                                                <span className={`text-xs font-medium ${quiz.is_active ? 'text-green-600' : 'text-muted-foreground'}`}>
-                                                    {quiz.is_active ? 'Faol' : 'Faol emas'}
-                                                </span>
-                                            ) : (
-                                                <div className="flex items-center space-x-2">
-                                                    <Switch
-                                                        checked={quiz.is_active}
-                                                        onCheckedChange={() => handleToggleStatus(quiz)}
-                                                        disabled={isUpdatingStatus === quiz.id || updateQuizMutation.isPending}
-                                                    />
-                                                    <span className={`text-xs ${quiz.is_active ? 'text-green-600 font-medium' : 'text-muted-foreground'}`}>
-                                                        {quiz.is_active ? 'Faol' : 'Faol emas'}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="capitalize">{getSubjectName(quiz.subject_id)}</TableCell>
-                                        <TableCell className="capitalize">{getGroupName(quiz.group_id)}</TableCell>
-                                        {!isTeacher && (
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        title="Testni qayta yaratish (2-urinish)"
-                                                        onClick={() => handleRepeatClick(quiz)}
-                                                        disabled={repeatQuizMutation.isPending}
-                                                    >
-                                                        <RotateCcw className="h-4 w-4 text-blue-500" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleEditQuiz(quiz)}
-                                                    >
-                                                        <Pencil className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-destructive hover:text-destructive"
-                                                        onClick={() => handleDeleteClick(quiz)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        )}
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    )}
-                </CardContent>
-            </Card>
+            <QuizTable
+                quizzes={quizzes}
+                isLoading={isQuizzesLoading}
+                isTeacher={isTeacher}
+                hasActiveFilters={hasActiveFilters}
+                isUpdatingStatusId={isUpdatingStatus}
+                isUpdatePending={updateQuizMutation.isPending}
+                isRepeatPending={repeatQuizMutation.isPending}
+                getSubjectName={getSubjectName}
+                getGroupName={getGroupName}
+                onToggleStatus={handleToggleStatus}
+                onEdit={handleEditQuiz}
+                onDelete={handleDeleteClick}
+                onRepeat={handleRepeatClick}
+            />
 
             <Pagination
                 currentPage={currentPage}
@@ -414,6 +252,7 @@ const QuizzesPage = () => {
                 teachers={allTeachers}
                 onSuccess={handleSuccess}
             />
+
             <ConfirmDialog
                 isOpen={isDeleteModalOpen}
                 onClose={() => { setIsDeleteModalOpen(false); setCascadeWarnings([]); setQuizToDelete(null); }}
@@ -434,7 +273,6 @@ const QuizzesPage = () => {
                 cancelText="Bekor qilish"
             />
 
-            {/* Repeat confirmation dialog */}
             <ConfirmDialog
                 isOpen={isRepeatConfirmOpen}
                 onClose={() => setIsRepeatConfirmOpen(false)}
@@ -445,332 +283,8 @@ const QuizzesPage = () => {
                 cancelText="Bekor qilish"
             />
 
-            {/* Repeated quiz success modal — shows new PIN */}
-            {repeatedQuiz && (
-                <Modal
-                    isOpen={!!repeatedQuiz}
-                    onClose={() => setRepeatedQuiz(null)}
-                    title="2-urinish muvaffaqiyatli yaratildi ✅"
-                >
-                    <div className="space-y-4">
-                        <p className="text-sm text-muted-foreground">
-                            <span className="font-medium text-foreground">{repeatedQuiz.title}</span> testi uchun yangi 2-urinish yaratildi.
-                            Quyidagi PIN kodni muvaffaqiyatsiz o'tgan talabalar bilan ulashing:
-                        </p>
-                        <div className="flex items-center gap-3 p-4 bg-muted rounded-lg border">
-                            <span className="text-2xl font-mono font-bold tracking-widest flex-1 text-center">
-                                {repeatedQuiz.pin}
-                            </span>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleCopyPin}
-                                title="PIN nusxalash"
-                            >
-                                {isPinCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                            </Button>
-                        </div>
-                        <div className="text-xs text-muted-foreground space-y-1">
-                            <p>📋 Savollar soni: {repeatedQuiz.question_number}</p>
-                            <p>⏱ Davomiyligi: {repeatedQuiz.duration} daqiqa</p>
-                            <p>🔁 Urinish: {repeatedQuiz.attempt}</p>
-                        </div>
-                        <div className="flex justify-end pt-2">
-                            <Button onClick={() => setRepeatedQuiz(null)}>Yopish</Button>
-                        </div>
-                    </div>
-                </Modal>
-            )}
+            <RepeatedQuizSuccessModal quiz={repeatedQuiz} onClose={() => setRepeatedQuiz(null)} />
         </div>
-    );
-};
-
-const QuizModal = ({
-    isOpen,
-    onClose,
-    quiz,
-    teachers,
-    onSuccess,
-}: {
-    isOpen: boolean;
-    onClose: () => void;
-    quiz: Quiz | null;
-    teachers: Teacher[];
-    onSuccess: () => void;
-}) => {
-    const { user } = useAuth();
-    const isTeacher = user?.roles?.some(r => r.name.toLowerCase() === 'teacher');
-
-    const [teacherSearch, setTeacherSearch] = useState('');
-    const [debouncedTeacherSearch, setDebouncedTeacherSearch] = useState('');
-
-    // Debounce teacher search
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedTeacherSearch(teacherSearch);
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [teacherSearch]);
-
-    const {
-        register,
-        handleSubmit,
-        reset,
-        setValue,
-        watch,
-        control,
-        formState: { errors },
-    } = useForm<QuizFormValues>({
-        resolver: zodResolver(quizSchema),
-        defaultValues: {
-            title: '',
-            is_active: false,
-        }
-    });
-
-    const createMutation = useCreateQuiz();
-    const updateMutation = useUpdateQuiz();
-    const isSubmitting = createMutation.isPending || updateMutation.isPending;
-
-    const isActive = watch('is_active');
-    const selectedUserId = watch('user_id');
-
-    // For the teacher role: always use their own user_id
-    // For admin: use the selected teacher's user_id
-    const effectiveUserId = isTeacher ? user?.id?.toString() : selectedUserId;
-
-    // Fetch ALL subjects and groups for admin/fallback
-    // Bug#17 fix: increased limit from 200 to 1000 to avoid missing groups/subjects
-    const { data: allSubjectsData } = useSubjects(1, 1000);
-    const { data: allGroupsData } = useGroups(1, 1000, '');
-
-    // Fetch teachers with search capability
-    const { data: searchTeachersData } = useTeachers(1, 100, debouncedTeacherSearch);
-
-    // Fetch the selected teacher's assigned subjects and groups
-    const { data: assignedSubjectsData } = useTeacherAssignedSubjects(
-        effectiveUserId ? parseInt(effectiveUserId) : undefined
-    );
-    const { data: assignedGroupsData } = useTeacherAssignedGroups(
-        effectiveUserId ? parseInt(effectiveUserId) : undefined
-    );
-
-    const allSubjects = allSubjectsData?.subjects || [];
-    const allGroups = allGroupsData?.groups || [];
-
-    // When a teacher (or selected user) is known, filter to their assigned subjects/groups
-    // Otherwise show everything
-    const subjectOptions = (isTeacher && effectiveUserId && assignedSubjectsData)
-        ? assignedSubjectsData.subject_teachers.map(st => ({ value: st.subject_id.toString(), label: st.subject.name }))
-        : allSubjects.map(s => ({ value: s.id.toString(), label: s.name }));
-
-    const groupOptions = (isTeacher && effectiveUserId && assignedGroupsData)
-        ? assignedGroupsData.group_teachers.map(gt => ({ value: gt.group_id.toString(), label: gt.group.name }))
-        : allGroups.map(g => ({ value: g.id.toString(), label: g.name }));
-
-    // Use searched teachers if available, fallback to static teachers list
-    const teacherOptions = (searchTeachersData?.teachers || teachers).map(t => ({
-        value: t.user_id.toString(),
-        label: t.full_name
-    }));
-
-    useEffect(() => {
-        if (!isOpen) return;
-        if (quiz) {
-            reset({
-                title: quiz.title,
-                question_number: quiz.question_number.toString(),
-                duration: quiz.duration.toString(),
-                pin: quiz.pin,
-                user_id: quiz.user_id ? quiz.user_id.toString() : '',
-                group_id: quiz.group_id ? quiz.group_id.toString() : '',
-                subject_id: quiz.subject_id ? quiz.subject_id.toString() : '',
-                is_active: quiz.is_active,
-            });
-        } else {
-            reset({
-                title: '',
-                question_number: '10',
-                duration: '30',
-                pin: Math.random().toString().slice(2, 6),
-                // Auto-set teacher's own user_id if teacher role
-                user_id: isTeacher && user?.id ? user.id.toString() : '',
-                group_id: '',
-                subject_id: '',
-                is_active: false,
-            });
-        }
-    }, [quiz, reset, isOpen, isTeacher, user]);
-
-    // When the selected teacher changes (admin only), reset subject/group
-    useEffect(() => {
-        if (isOpen && !quiz && !isTeacher) {
-            setValue('subject_id', '');
-            setValue('group_id', '');
-        }
-    }, [selectedUserId, isOpen, quiz, isTeacher]);
-
-    const onSubmit = (data: QuizFormValues) => {
-        // For teacher role, always use their own id
-        const resolvedUserId = isTeacher && user?.id
-            ? user.id
-            : (data.user_id && data.user_id !== '' ? parseInt(data.user_id, 10) : null);
-
-        const payload: QuizCreateRequest = {
-            title: data.title,
-            question_number: parseInt(data.question_number, 10),
-            duration: parseInt(data.duration, 10),
-            pin: data.pin,
-            user_id: resolvedUserId,
-            group_id: data.group_id && data.group_id !== '' ? parseInt(data.group_id, 10) : null,
-            subject_id: data.subject_id && data.subject_id !== '' ? parseInt(data.subject_id, 10) : null,
-            is_active: data.is_active,
-        };
-
-        if (quiz) {
-            updateMutation.mutate({ id: quiz.id, data: payload }, {
-                onSuccess: () => onSuccess(),
-                onError: (error: unknown) => {
-                    console.error('Failed to update quiz', error);
-                    alert('Testni yangilashda xatolik yuz berdi');
-                }
-            });
-        } else {
-            createMutation.mutate(payload, {
-                onSuccess: () => onSuccess(),
-                onError: (error: unknown) => {
-                    console.error('Failed to create quiz', error);
-                    alert('Testni yaratishda xatolik yuz berdi');
-                }
-            });
-        }
-    };
-
-    return (
-        <Modal
-            isOpen={isOpen}
-            onClose={onClose}
-            title={quiz ? 'Testni tahrirlash' : 'Test yaratish'}
-        >
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <Input
-                    label="Sarlavha"
-                    {...register('title')}
-                    error={errors.title?.message}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
-                    <Input
-                        label="Savollar soni"
-                        type="number"
-                        {...register('question_number')}
-                        error={errors.question_number?.message}
-                    />
-                    <Input
-                        label="Davomiyligi (daq)"
-                        type="number"
-                        {...register('duration')}
-                        error={errors.duration?.message}
-                    />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <Input
-                        label="PIN kod"
-                        {...register('pin')}
-                        error={errors.pin?.message}
-                    />
-                    <div className="flex items-center space-x-2 pt-8">
-                        <Switch
-                            id="modal-is-active"
-                            checked={isActive}
-                            onCheckedChange={(checked) => setValue('is_active', checked)}
-                        />
-                        <label htmlFor="modal-is-active" className="text-sm font-medium leading-none cursor-pointer">
-                            Faol
-                        </label>
-                    </div>
-                </div>
-
-                {/* Teacher selector: show for admins only. Teachers see their own name as read-only. */}
-                {isTeacher ? (
-                    <div className="space-y-1">
-                        <label className="text-sm font-medium">O'qituvchi</label>
-                        <p className="text-sm bg-muted rounded px-3 py-2">
-                            {teachers.find(t => t.user_id === user?.id)?.full_name || user?.username || '-'}
-                        </p>
-                    </div>
-                ) : (
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">O'qituvchi</label>
-                        <Controller
-                            name="user_id"
-                            control={control}
-                            render={({ field }) => (
-                                <Combobox
-                                    options={teacherOptions}
-                                    value={field.value}
-                                    onChange={(val) => {
-                                        field.onChange(val);
-                                        setValue('subject_id', '');
-                                        setValue('group_id', '');
-                                    }}
-                                    placeholder="O'qituvchini tanlang"
-                                    searchPlaceholder="Qidirish..."
-                                    onSearchChange={setTeacherSearch}
-                                />
-                            )}
-                        />
-                        {errors.user_id && <p className="text-sm text-red-500">{errors.user_id.message}</p>}
-                    </div>
-                )}
-
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Fan</label>
-                    <Controller
-                        name="subject_id"
-                        control={control}
-                        render={({ field }) => (
-                            <Combobox
-                                options={subjectOptions}
-                                value={field.value}
-                                onChange={field.onChange}
-                                placeholder="Fanni tanlang"
-                                searchPlaceholder="Qidirish..."
-                            />
-                        )}
-                    />
-                    {errors.subject_id && <p className="text-sm text-red-500">{errors.subject_id.message}</p>}
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Guruh</label>
-                    <Controller
-                        name="group_id"
-                        control={control}
-                        render={({ field }) => (
-                            <Combobox
-                                options={groupOptions}
-                                value={field.value}
-                                onChange={field.onChange}
-                                placeholder="Guruhni tanlang"
-                                searchPlaceholder="Qidirish..."
-                            />
-                        )}
-                    />
-                    {errors.group_id && <p className="text-sm text-red-500">{errors.group_id.message}</p>}
-                </div>
-
-                <div className="flex justify-end gap-2 pt-4">
-                    <Button type="button" variant="outline" onClick={onClose}>
-                        Bekor qilish
-                    </Button>
-                    <Button type="submit" isLoading={isSubmitting}>
-                        {quiz ? 'Yangilash' : 'Yaratish'}
-                    </Button>
-                </div>
-            </form>
-        </Modal>
     );
 };
 

@@ -1,14 +1,17 @@
-from sqlalchemy import Integer, ForeignKey, String, Boolean
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Boolean, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.core.base import Base
 from app.core.mixins.id_int_pk import IdIntPk
 from app.core.mixins.time_stamp_mixin import TimestampMixin
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.modules.user.models.user import User
-    from app.modules.quiz.models.quiz import Quiz
     from app.modules.question.model import Question
+    from app.modules.quiz.models.quiz import Quiz
+    from app.modules.user.models.user import User
+
 
 class UserAnswers(Base, IdIntPk, TimestampMixin):
     __tablename__ = "user_answers"

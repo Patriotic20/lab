@@ -61,7 +61,7 @@ export function ImageUploadField({
             const { url } = await uploadService.uploadImage(file);
             onChange(url);
             // Keep localPreview until next render — server URL may still be loading
-        } catch (err) {
+        } catch {
             setError('Rasm yuklashda xatolik');
         } finally {
             setIsUploading(false);

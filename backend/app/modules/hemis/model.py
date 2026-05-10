@@ -1,25 +1,22 @@
 from typing import TYPE_CHECKING
 
+from sqlalchemy import ForeignKey, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.core.base import Base
 from app.core.mixins.id_int_pk import IdIntPk
 from app.core.mixins.time_stamp_mixin import TimestampMixin
-from sqlalchemy import Integer, String, ForeignKey, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
-    from app.modules.user.models.user import User
     from app.modules.student.model import Student
+    from app.modules.user.models.user import User
 
 
 class HemisTransaction(Base, IdIntPk, TimestampMixin):
     __tablename__ = "hemis_transactions"
 
-    user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
-    )
-    student_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("students.id", ondelete="SET NULL"), nullable=True
-    )
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    student_id: Mapped[int] = mapped_column(Integer, ForeignKey("students.id", ondelete="SET NULL"), nullable=True)
 
     login: Mapped[str] = mapped_column(String(100), nullable=False)
     login_type: Mapped[str] = mapped_column(String(20), nullable=False)  # "local" | "hemis_api"

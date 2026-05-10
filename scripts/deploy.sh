@@ -18,7 +18,42 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 COMPOSE="docker compose -f $PROJECT_DIR/docker-compose.yml"
 
-# ─── On failure: dump logs so the real error is visible ─────────────────────
+ROLLBACK_SERVICES=(nusmt-backend nusmt-frontend)
+ROLLBACK_PERFORMED=0
+
+# ─── Rollback: restore previous :latest images and recreate services ────────
+rollback() {
+    if [ "$ROLLBACK_PERFORMED" -eq 1 ]; then
+        return
+    fi
+    ROLLBACK_PERFORMED=1
+    echo ""
+    echo "🔄 ROLLING BACK to previous images..."
+    local reverted=0
+    for service in "${ROLLBACK_SERVICES[@]}"; do
+        if docker image inspect "${service}:rollback" >/dev/null 2>&1; then
+            docker tag "${service}:rollback" "${service}:latest"
+            echo "  ✓ ${service} reverted to previous version"
+            reverted=$((reverted + 1))
+        else
+            echo "  ⚠ ${service}:rollback tag not found — skipping (first deploy?)"
+        fi
+    done
+    if [ "$reverted" -eq 0 ]; then
+        echo "🔄 Nothing to roll back."
+        return
+    fi
+    $COMPOSE up -d --no-build backend frontend
+    echo "🔄 Rollback complete. Verifying health..."
+    sleep 10
+    if curl -fsS http://localhost:8000/health > /dev/null 2>&1; then
+        echo "✅ Rollback successful — service is healthy"
+    else
+        echo "⚠️  Rollback completed but health check still fails — manual intervention required"
+    fi
+}
+
+# ─── On failure: dump logs and roll back ────────────────────────────────────
 on_error() {
     local exit_code=$?
     echo ""
@@ -30,12 +65,25 @@ on_error() {
             docker logs --tail 40 "$c" 2>&1 || true
         fi
     done
+    rollback
     exit $exit_code
 }
 trap on_error ERR
 
 cd "$PROJECT_DIR"
 
+# ─── Snapshot current :latest images as :rollback before rebuilding ────────
+echo "📸 Tagging current images for rollback..."
+for service in "${ROLLBACK_SERVICES[@]}"; do
+    if docker image inspect "${service}:latest" >/dev/null 2>&1; then
+        docker tag "${service}:latest" "${service}:rollback"
+        echo "  ✓ ${service}:rollback tagged"
+    else
+        echo "  ⚠ ${service}:latest not found — first deploy, no rollback target"
+    fi
+done
+
+echo ""
 echo "🔨 [1/3] Building images..."
 
 # face-detection is the expensive image (compiles dlib, downloads model weights).
@@ -77,6 +125,23 @@ $COMPOSE up -d --no-build --remove-orphans
 echo ""
 echo "🧹 Pruning dangling images..."
 docker image prune -f > /dev/null
+
+echo ""
+echo "🔬 Verifying backend health..."
+HEALTH_OK=0
+for i in $(seq 1 30); do
+    if curl -fsS http://localhost:8000/health > /dev/null 2>&1; then
+        echo "✅ Backend healthy after ${i} attempt(s)"
+        HEALTH_OK=1
+        break
+    fi
+    sleep 2
+done
+
+if [ "$HEALTH_OK" -ne 1 ]; then
+    echo "❌ Backend health check failed after 60s"
+    exit 1   # → trap → rollback
+fi
 
 echo ""
 echo "✅ Deployment complete!"

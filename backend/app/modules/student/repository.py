@@ -1,11 +1,12 @@
 import logging
-from datetime import datetime, date
+from datetime import date, datetime
 
 from fastapi import HTTPException, status
-from app.modules.student.model import Student
-from sqlalchemy import func, select, desc
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
+from app.modules.student.model import Student
 
 from .schemas import (
     StudentCreateRequest,
@@ -19,9 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class StudentRepository:
-    async def create_student(
-        self, session: AsyncSession, data: StudentCreateRequest
-    ) -> Student:
+    async def create_student(self, session: AsyncSession, data: StudentCreateRequest) -> Student:
         stmt = select(Student).where(Student.student_id_number == data.student_id_number)
         result = await session.execute(stmt)
         if result.scalar_one_or_none():
@@ -46,19 +45,12 @@ class StudentRepository:
         student = result.scalar_one_or_none()
 
         if not student:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Student not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
 
         return student
 
-    async def list_students(
-        self, session: AsyncSession, request: StudentListRequest
-    ) -> StudentListResponse:
-        stmt = (
-            select(Student)
-            .options(selectinload(Student.user), selectinload(Student.group))
-        )
+    async def list_students(self, session: AsyncSession, request: StudentListRequest) -> StudentListResponse:
+        stmt = select(Student).options(selectinload(Student.user), selectinload(Student.group))
 
         if request.search:
             stmt = stmt.where(
@@ -69,7 +61,7 @@ class StudentRepository:
 
         if request.user_id is not None:
             stmt = stmt.where(Student.user_id == request.user_id)
-        
+
         if request.group_id is not None:
             stmt = stmt.where(Student.group_id == request.group_id)
 
@@ -89,7 +81,7 @@ class StudentRepository:
 
         if request.user_id is not None:
             count_stmt = count_stmt.where(Student.user_id == request.user_id)
-        
+
         if request.group_id is not None:
             count_stmt = count_stmt.where(Student.group_id == request.group_id)
 
@@ -107,8 +99,6 @@ class StudentRepository:
         self, session: AsyncSession, request: StudentListRequest
     ) -> StudentWithUserListResponse:
         from app.modules.user.models.user import User
-        from app.modules.user.models.user_role import UserRole
-        from app.modules.role.models.role import Role
 
         # Query students that have a user_id and filter by student role
         stmt = (
@@ -139,31 +129,34 @@ class StudentRepository:
         # Convert to response format
         students_with_users = []
         for student in students:
-            students_with_users.append({
-                "student_id": student.id,
-                "user_id": student.user_id,
-                "username": student.user.username if student.user else None,
-                "is_active": student.user.is_active if student.user else None,
-                "first_name": student.first_name,
-                "last_name": student.last_name,
-                "full_name": student.full_name,
-                "student_id_number": student.student_id_number,
-                "phone": student.phone,
-                "gender": student.gender,
-                "faculty": student.faculty,
-                "level": student.level,
-                "semester": student.semester,
-                "specialty": student.specialty,
-                "student_status": student.student_status,
-                "avg_gpa": student.avg_gpa,
-                "group_id": student.group_id,
-                "created_at": student.created_at,
-                "updated_at": student.updated_at,
-            })
+            students_with_users.append(
+                {
+                    "student_id": student.id,
+                    "user_id": student.user_id,
+                    "username": student.user.username if student.user else None,
+                    "is_active": student.user.is_active if student.user else None,
+                    "first_name": student.first_name,
+                    "last_name": student.last_name,
+                    "full_name": student.full_name,
+                    "student_id_number": student.student_id_number,
+                    "phone": student.phone,
+                    "gender": student.gender,
+                    "faculty": student.faculty,
+                    "level": student.level,
+                    "semester": student.semester,
+                    "specialty": student.specialty,
+                    "student_status": student.student_status,
+                    "avg_gpa": student.avg_gpa,
+                    "group_id": student.group_id,
+                    "created_at": student.created_at,
+                    "updated_at": student.updated_at,
+                }
+            )
 
         # Count total students with users matching filters
         count_stmt = (
-            select(func.count()).select_from(Student)
+            select(func.count())
+            .select_from(Student)
             .join(User, Student.user_id == User.id)
             .where(Student.user_id.isnot(None))
         )
@@ -189,9 +182,7 @@ class StudentRepository:
             students=students_with_users,
         )
 
-    async def update_student(
-        self, session: AsyncSession, student_id: int, data: StudentUpdateRequest
-    ) -> Student:
+    async def update_student(self, session: AsyncSession, student_id: int, data: StudentUpdateRequest) -> Student:
         student = await self.get_student(session, student_id)
 
         update_data = data.model_dump(exclude_unset=True)
@@ -203,33 +194,33 @@ class StudentRepository:
         return student
 
     async def delete_student(self, session: AsyncSession, student_id: int, force: bool = False) -> None:
-        from app.modules.result.model import Result
         from sqlalchemy import delete
+
+        from app.modules.result.model import Result
 
         student = await self.get_student(session, student_id)
 
         if not force:
-            result_count = (await session.execute(select(func.count(Result.id)).where(Result.user_id == student.user_id))).scalar() or 0
+            result_count = (
+                await session.execute(select(func.count(Result.id)).where(Result.user_id == student.user_id))
+            ).scalar() or 0
             if result_count > 0:
                 raise HTTPException(
                     status_code=409,
                     detail={
                         "requires_confirmation": True,
                         "message": "Ushbu talabani o'chirish quyidagi bog'langan ma'lumotlarga ta'sir qiladi:",
-                        "warnings": [f"{result_count} ta talaba natijalari (ballari) o'chadi"]
-                    }
+                        "warnings": [f"{result_count} ta talaba natijalari (ballari) o'chadi"],
+                    },
                 )
 
         # Aggressive delete results
         await session.execute(delete(Result).where(Result.user_id == student.user_id))
-        
+
         await session.delete(student)
         await session.commit()
 
-
-    async def get_id_by_user_id(
-        self, session: AsyncSession, user_id: int
-    ) -> int | None:
+    async def get_id_by_user_id(self, session: AsyncSession, user_id: int) -> int | None:
         stmt = select(Student.id).where(Student.user_id == user_id)
         return (await session.execute(stmt)).scalar_one_or_none()
 

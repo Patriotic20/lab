@@ -29,15 +29,11 @@ class TutorRepository:
         ]
 
     async def create_tutor(self, session: AsyncSession, data: TutorCreateRequest) -> Tutor:
-        user = (
-            await session.execute(select(User).where(User.id == data.user_id))
-        ).scalar_one_or_none()
+        user = (await session.execute(select(User).where(User.id == data.user_id))).scalar_one_or_none()
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-        existing = (
-            await session.execute(select(Tutor).where(Tutor.user_id == data.user_id))
-        ).scalar_one_or_none()
+        existing = (await session.execute(select(Tutor).where(Tutor.user_id == data.user_id))).scalar_one_or_none()
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -72,9 +68,7 @@ class TutorRepository:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tutor not found")
         return tutor
 
-    async def list_tutors(
-        self, session: AsyncSession, request: TutorListRequest
-    ) -> TutorListResponse:
+    async def list_tutors(self, session: AsyncSession, request: TutorListRequest) -> TutorListResponse:
         stmt = select(Tutor).options(*self._eager_options())
 
         if request.search:
@@ -102,19 +96,21 @@ class TutorRepository:
             )
         total = (await session.execute(count_stmt)).scalar() or 0
 
-        return TutorListResponse(
-            total=total, page=request.page, limit=request.limit, tutors=tutors
-        )
+        return TutorListResponse(total=total, page=request.page, limit=request.limit, tutors=tutors)
 
-    async def update_tutor(
-        self, session: AsyncSession, tutor_id: int, data: TutorUpdateRequest
-    ) -> Tutor:
+    async def update_tutor(self, session: AsyncSession, tutor_id: int, data: TutorUpdateRequest) -> Tutor:
         stmt = select(Tutor).options(*self._eager_options()).where(Tutor.id == tutor_id)
         tutor = (await session.execute(stmt)).scalar_one_or_none()
         if not tutor:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tutor not found")
 
-        for field in ("first_name", "last_name", "third_name", "image_url", "phone_number"):
+        for field in (
+            "first_name",
+            "last_name",
+            "third_name",
+            "image_url",
+            "phone_number",
+        ):
             value = getattr(data, field)
             if value is not None:
                 setattr(tutor, field, value)
@@ -124,23 +120,15 @@ class TutorRepository:
         return tutor
 
     async def delete_tutor(self, session: AsyncSession, tutor_id: int) -> None:
-        tutor = (
-            await session.execute(select(Tutor).where(Tutor.id == tutor_id))
-        ).scalar_one_or_none()
+        tutor = (await session.execute(select(Tutor).where(Tutor.id == tutor_id))).scalar_one_or_none()
         if not tutor:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tutor not found")
 
         await session.delete(tutor)
         await session.commit()
 
-    async def assign_groups(
-        self, session: AsyncSession, data: TutorAssignGroupsRequest
-    ) -> None:
-        stmt = (
-            select(Tutor)
-            .options(selectinload(Tutor.tutor_groups))
-            .where(Tutor.id == data.tutor_id)
-        )
+    async def assign_groups(self, session: AsyncSession, data: TutorAssignGroupsRequest) -> None:
+        stmt = select(Tutor).options(selectinload(Tutor.tutor_groups)).where(Tutor.id == data.tutor_id)
         tutor = (await session.execute(stmt)).scalar_one_or_none()
         if not tutor:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tutor not found")
@@ -150,9 +138,7 @@ class TutorRepository:
         await session.flush()
 
         if data.group_ids:
-            groups = (
-                await session.execute(select(Group).where(Group.id.in_(data.group_ids)))
-            ).scalars().all()
+            groups = (await session.execute(select(Group).where(Group.id.in_(data.group_ids)))).scalars().all()
             if len(groups) != len(set(data.group_ids)):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,

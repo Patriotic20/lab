@@ -1,15 +1,17 @@
 from typing import TYPE_CHECKING
-from sqlalchemy import Integer, Text, ForeignKey
+
+from sqlalchemy import ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.core.base import Base
 from app.core.mixins.id_int_pk import IdIntPk
 from app.core.mixins.time_stamp_mixin import TimestampMixin
 
 if TYPE_CHECKING:
-    from app.modules.subject.models.subject_teacher import SubjectTeacher
     from app.modules.group.models.group import Group
     from app.modules.lesson.model import Lesson
+    from app.modules.subject.models.subject_teacher import SubjectTeacher
 
 
 class Resource(Base, IdIntPk, TimestampMixin):
@@ -19,7 +21,7 @@ class Resource(Base, IdIntPk, TimestampMixin):
         Integer,
         ForeignKey("subject_teachers.id", ondelete="CASCADE"),
         nullable=False,
-        index=True
+        index=True,
     )
 
     group_id: Mapped[int | None] = mapped_column(
@@ -42,13 +44,9 @@ class Resource(Base, IdIntPk, TimestampMixin):
 
     files: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
 
-    subject_teacher: Mapped["SubjectTeacher"] = relationship(
-        "SubjectTeacher", back_populates="resources"
-    )
+    subject_teacher: Mapped["SubjectTeacher"] = relationship("SubjectTeacher", back_populates="resources")
 
-    group: Mapped["Group | None"] = relationship(
-        "Group", back_populates="resources"
-    )
+    group: Mapped["Group | None"] = relationship("Group", back_populates="resources")
 
     lesson: Mapped["Lesson | None"] = relationship("Lesson")
 
