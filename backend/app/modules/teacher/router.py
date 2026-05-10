@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from core.db_helper import db_helper
 from dependence.role_checker import PermissionRequired
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi_limiter.depends import RateLimiter
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -139,8 +139,11 @@ async def assign_subjects(
 async def get_teacher_assigned_subjects(
     user_id: int,
     session: AsyncSession = Depends(db_helper.session_getter),
-    current_user: User = Depends(PermissionRequired("read:teacher")),
+    current_user: User = Depends(PermissionRequired("user:me")),
 ):
+    is_admin = any(r.name.lower() == "admin" for r in current_user.roles)
+    if not is_admin and user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     return await get_teacher_repository.get_assigned_subjects_by_user(session=session, user_id=user_id)
 
 
@@ -148,8 +151,11 @@ async def get_teacher_assigned_subjects(
 async def get_teacher_assigned_groups(
     user_id: int,
     session: AsyncSession = Depends(db_helper.session_getter),
-    current_user: User = Depends(PermissionRequired("read:teacher")),
+    current_user: User = Depends(PermissionRequired("user:me")),
 ):
+    is_admin = any(r.name.lower() == "admin" for r in current_user.roles)
+    if not is_admin and user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     return await get_teacher_repository.get_assigned_groups_by_user(session=session, user_id=user_id)
 
 

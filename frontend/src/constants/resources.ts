@@ -135,7 +135,8 @@ export const buildSidebar = (
         });
     }
 
-    const sections: SidebarSection[] = [ALWAYS_VISIBLE];
+    const isAdmin = roleNames.some((r) => r.toLowerCase() === 'admin');
+    const sections: SidebarSection[] = isAdmin ? [ALWAYS_VISIBLE] : [];
     for (const sectionLabel of SIDEBAR_SECTION_ORDER) {
         if (sectionLabel === 'Umumiy') continue;
         const items = grouped[sectionLabel];
