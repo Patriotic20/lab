@@ -14,7 +14,6 @@ import {
     X,
     Trophy,
     ClipboardList,
-    LogIn,
     Brain,
     UserCog,
     Shield,
@@ -64,9 +63,6 @@ const adminSections: NavSection[] = [
             { name: "O'qituvchilar", href: '/teachers', icon: GraduationCap },
             { name: 'Tyutorlar', href: '/tutors', icon: UserCog },
             { name: 'Talabalar', href: '/students', icon: GraduationCap },
-            { name: 'Talabalar (login)', href: '/student-users', icon: Users },
-            { name: 'Rollar', href: '/roles', icon: Shield },
-            { name: 'Ruxsatlar', href: '/permissions', icon: Key },
         ],
     },
     {
@@ -83,9 +79,10 @@ const adminSections: NavSection[] = [
         ],
     },
     {
-        label: 'Xavfsizlik',
+        label: 'Ruxsatlar tizimi',
         items: [
-            { name: 'HEMIS Kirish', href: '/hemis-transactions', icon: LogIn },
+            { name: 'Rollar', href: '/roles', icon: Shield },
+            { name: 'Ruxsatlar', href: '/permissions', icon: Key },
         ],
     },
 ];

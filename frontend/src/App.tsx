@@ -10,8 +10,6 @@ import QuizzesPage from '@/pages/QuizzesPage';
 import ResultsPage from '@/pages/ResultsPage';
 import TeachersPage from '@/pages/TeachersPage';
 import TutorsPage from '@/pages/TutorsPage';
-import HemisTransactionsPage from '@/pages/HemisTransactionsPage';
-import StudentUsersPage from '@/pages/StudentUsersPage';
 import HemisSyncPage from '@/pages/HemisSyncPage';
 import FacultyPage from '@/pages/FacultyPage';
 import KafedraPage from '@/pages/KafedraPage';
@@ -112,10 +110,8 @@ function App() {
                 <Route path="/kafedras" element={<RoleRoute allowedRoles={['admin']}><KafedraPage /></RoleRoute>} />
                 <Route path="/groups" element={<RoleRoute allowedRoles={['admin']}><GroupsPage /></RoleRoute>} />
                 <Route path="/students" element={<RoleRoute allowedRoles={['admin']}><StudentsPage /></RoleRoute>} />
-                <Route path="/student-users" element={<RoleRoute allowedRoles={['admin']}><StudentUsersPage /></RoleRoute>} />
                 <Route path="/admin/hemis-sync" element={<RoleRoute allowedRoles={['admin']}><HemisSyncPage /></RoleRoute>} />
                 <Route path="/yakuniy" element={<RoleRoute allowedRoles={['admin']}><YakuniyPage /></RoleRoute>} />
-                <Route path="/hemis-transactions" element={<RoleRoute allowedRoles={['admin']}><HemisTransactionsPage /></RoleRoute>} />
 
                 {/* Admin + Teacher routes */}
                 <Route path="/resources" element={<RoleRoute allowedRoles={['admin', 'teacher', 'student']}><ResourcesPage /></RoleRoute>} />
