@@ -11,11 +11,11 @@ from .schemas import (
     UserChangeCredentialsRequest,
     UserCreateRequest,
     UserCreateResponse,
-    UserDetailResponse,
     UserListRequest,
     UserListResponse,
     UserLoginRequest,
     UserLoginResponse,
+    UserMeResponse,
     UserRoleAssignRequest,
     UserUpdateRequest,
 )
@@ -50,7 +50,7 @@ async def refresh(
     return await auth_service.refresh(session=session, refresh_token=authorization)
 
 
-@router.get("/me", response_model=UserDetailResponse)
+@router.get("/me", response_model=UserMeResponse)
 # @cache(expire=60, key_builder=custom_key_builder)
 async def get_me(
     authorization: str = Header(...),

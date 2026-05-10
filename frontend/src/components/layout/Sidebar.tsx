@@ -1,26 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import {
-    BarChart2,
-    Users,
-    GraduationCap,
-    BookOpen,
-    FileText,
-    Building2,
-    Layers,
-    UsersRound,
-    FileQuestion,
-    PlayCircle,
-    X,
-    Trophy,
-    ClipboardList,
-    Brain,
-    UserCog,
-    Shield,
-    Key,
-} from 'lucide-react';
+import { X } from 'lucide-react';
 import { cn } from '@/utils/utils';
 import { useAuth } from '@/context/AuthContext';
+import { buildSidebar } from '@/constants/resources';
 import logo from '@/assets/logo.png';
 
 interface SidebarProps {
@@ -28,121 +11,15 @@ interface SidebarProps {
     setMobileOpen: (open: boolean) => void;
 }
 
-interface NavItem {
-    name: string;
-    href: string;
-    icon: React.ElementType;
-}
-
-interface NavSection {
-    label: string;
-    items: NavItem[];
-}
-
-const adminSections: NavSection[] = [
-    {
-        label: 'Umumiy',
-        items: [
-            { name: 'Dashboard', href: '/', icon: BarChart2 },
-            { name: 'Reyting', href: '/teacher-ranking', icon: Trophy },
-        ],
-    },
-    {
-        label: 'Boshqaruv',
-        items: [
-            { name: 'Fakultetlar', href: '/faculties', icon: Building2 },
-            { name: 'Kafedralar', href: '/kafedras', icon: Layers },
-            { name: 'Guruhlar', href: '/groups', icon: UsersRound },
-            { name: 'Fanlar', href: '/subjects', icon: BookOpen },
-        ],
-    },
-    {
-        label: 'Foydalanuvchilar',
-        items: [
-            { name: 'Foydalanuvchilar', href: '/users', icon: Users },
-            { name: "O'qituvchilar", href: '/teachers', icon: GraduationCap },
-            { name: 'Tyutorlar', href: '/tutors', icon: UserCog },
-            { name: 'Talabalar', href: '/students', icon: GraduationCap },
-        ],
-    },
-    {
-        label: 'Testlar',
-        items: [
-            { name: 'Savollar', href: '/questions', icon: FileQuestion },
-            { name: 'Testlar', href: '/quizzes', icon: BookOpen },
-            { name: 'Test ishlash', href: '/quiz-test', icon: PlayCircle },
-            { name: 'Natijalar', href: '/results', icon: FileText },
-            { name: 'Yakuniy', href: '/yakuniy', icon: ClipboardList },
-            { name: 'Darslar', href: '/lessons', icon: BookOpen },
-            { name: 'Psixologiya', href: '/psychology', icon: Brain },
-            { name: 'Psixologiya natijalar', href: '/psychology/results', icon: ClipboardList },
-        ],
-    },
-    {
-        label: 'Ruxsatlar tizimi',
-        items: [
-            { name: 'Rollar', href: '/roles', icon: Shield },
-            { name: 'Ruxsatlar', href: '/permissions', icon: Key },
-        ],
-    },
-];
-
-const teacherSections: NavSection[] = [
-    {
-        label: 'Fanlar',
-        items: [
-            { name: 'Mening fanlarim', href: '/teacher-subjects', icon: BookOpen },
-            { name: 'Reyting', href: '/teacher-ranking', icon: Trophy },
-        ],
-    },
-    {
-        label: 'Testlar',
-        items: [
-            { name: 'Savollar', href: '/questions', icon: FileQuestion },
-            { name: 'Natijalar', href: '/results', icon: FileText },
-            { name: 'Darslar', href: '/lessons', icon: BookOpen },
-            { name: 'Psixologiya', href: '/psychology', icon: Brain },
-        ],
-    },
-];
-
-const studentSections: NavSection[] = [
-    {
-        label: 'Test',
-        items: [
-            { name: 'Test ishlash', href: '/quiz-test', icon: PlayCircle },
-            { name: 'Natijalar', href: '/results', icon: FileText },
-            { name: 'Darslar', href: '/lessons', icon: BookOpen },
-            { name: 'Psixologiya', href: '/psychology/student', icon: Brain },
-        ],
-    },
-];
-
-const psixologikSections: NavSection[] = [
-    {
-        label: 'Psixologiya',
-        items: [
-            { name: 'Psixologiya', href: '/psychology', icon: Brain },
-            { name: 'Psixologiya natijalar', href: '/psychology/results', icon: ClipboardList },
-        ],
-    },
-];
-
 const Sidebar = ({ mobileOpen, setMobileOpen }: SidebarProps) => {
     const location = useLocation();
-    const { user } = useAuth();
+    const { user, permissions } = useAuth();
     const [isCollapsed, setIsCollapsed] = useState(true);
 
-    const isStudent = user?.roles?.some(r => r.name.toLowerCase() === 'student');
-    const isTeacher = user?.roles?.some(r => r.name.toLowerCase() === 'teacher');
-    const isPsixologik = user?.roles?.some(r => r.name.toLowerCase() === 'psixologik');
-    const sections = isPsixologik
-        ? psixologikSections
-        : isStudent
-            ? studentSections
-            : isTeacher
-                ? teacherSections
-                : adminSections;
+    const sections = useMemo(() => {
+        const roleNames = (user?.roles ?? []).map((r) => r.name);
+        return buildSidebar(permissions, roleNames);
+    }, [user, permissions]);
 
     return (
         <>
@@ -161,7 +38,6 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: SidebarProps) => {
                     isCollapsed ? 'w-14' : 'w-60'
                 )}
             >
-                {/* Brand */}
                 <div
                     onClick={() => setIsCollapsed(!isCollapsed)}
                     className={cn(
@@ -186,7 +62,6 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: SidebarProps) => {
                     </button>
                 )}
 
-                {/* Nav */}
                 <div className="flex-1 overflow-y-auto py-3">
                     <nav className="flex flex-col gap-5 px-2">
                         {sections.map((section) => (
@@ -231,7 +106,6 @@ const Sidebar = ({ mobileOpen, setMobileOpen }: SidebarProps) => {
                     </nav>
                 </div>
 
-                {/* Footer hint */}
                 {!isCollapsed && (
                     <div className="shrink-0 border-t border-border px-4 py-3">
                         <p className="text-[10px] font-display italic text-muted-foreground/50 text-center">NDKTU © 2025</p>

@@ -50,15 +50,28 @@ const ProtectedRoute = () => {
   return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
-const RoleRoute = ({ allowedRoles, children }: { allowedRoles: string[]; children: React.ReactElement }) => {
-  const { user } = useAuth();
-  const userRoles = user?.roles?.map(r => r.name.toLowerCase()) || [];
-  const hasAccess = allowedRoles.some(role => userRoles.includes(role));
+const PermissionRoute = ({ permission, children }: { permission: string | string[]; children: React.ReactElement }) => {
+  const { hasAnyPermission, isLoading } = useAuth();
 
-  if (!hasAccess) {
-    return <Navigate to="/" replace />;
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
   }
 
+  const required = Array.isArray(permission) ? permission : [permission];
+  if (!hasAnyPermission(...required)) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
+
+const StudentRoute = ({ children }: { children: React.ReactElement }) => {
+  const { user } = useAuth();
+  const isStudent = (user?.roles ?? []).some((r) => r.name.toLowerCase() === 'student');
+  if (!isStudent) return <Navigate to="/" replace />;
   return children;
 };
 
@@ -96,45 +109,41 @@ function App() {
                 <Route path="/" element={<DashboardRedirect />} />
                 <Route path="/profile" element={<ProfilePage />} />
 
-                {/* Admin-only routes */}
-                <Route path="/dashboard" element={<RoleRoute allowedRoles={['admin']}><Dashboard /></RoleRoute>} />
-                <Route path="/users" element={<RoleRoute allowedRoles={['admin']}><UsersPage /></RoleRoute>} />
-                <Route path="/roles" element={<RoleRoute allowedRoles={['admin']}><RolesPage /></RoleRoute>} />
-                <Route path="/roles/:id/permissions" element={<RoleRoute allowedRoles={['admin']}><RolePermissionsPage /></RoleRoute>} />
-                <Route path="/permissions" element={<RoleRoute allowedRoles={['admin']}><PermissionsPage /></RoleRoute>} />
-                <Route path="/teachers" element={<RoleRoute allowedRoles={['admin']}><TeachersPage /></RoleRoute>} />
-                <Route path="/tutors" element={<RoleRoute allowedRoles={['admin']}><TutorsPage /></RoleRoute>} />
-                <Route path="/teacher-ranking" element={<RoleRoute allowedRoles={['admin', 'teacher']}><TeacherRankingPage /></RoleRoute>} />
+                <Route path="/dashboard" element={<PermissionRoute permission="read:statistics"><Dashboard /></PermissionRoute>} />
+                <Route path="/users" element={<PermissionRoute permission="read:user"><UsersPage /></PermissionRoute>} />
+                <Route path="/roles" element={<PermissionRoute permission="read:role"><RolesPage /></PermissionRoute>} />
+                <Route path="/roles/:id/permissions" element={<PermissionRoute permission="read:role"><RolePermissionsPage /></PermissionRoute>} />
+                <Route path="/permissions" element={<PermissionRoute permission="read:permission"><PermissionsPage /></PermissionRoute>} />
+                <Route path="/teachers" element={<PermissionRoute permission="read:teacher"><TeachersPage /></PermissionRoute>} />
+                <Route path="/tutors" element={<PermissionRoute permission="read:tutor"><TutorsPage /></PermissionRoute>} />
+                <Route path="/teacher-ranking" element={<PermissionRoute permission={['read:statistics', 'read:teacher']}><TeacherRankingPage /></PermissionRoute>} />
 
-                <Route path="/faculties" element={<RoleRoute allowedRoles={['admin']}><FacultyPage /></RoleRoute>} />
-                <Route path="/kafedras" element={<RoleRoute allowedRoles={['admin']}><KafedraPage /></RoleRoute>} />
-                <Route path="/groups" element={<RoleRoute allowedRoles={['admin']}><GroupsPage /></RoleRoute>} />
-                <Route path="/students" element={<RoleRoute allowedRoles={['admin']}><StudentsPage /></RoleRoute>} />
-                <Route path="/admin/hemis-sync" element={<RoleRoute allowedRoles={['admin']}><HemisSyncPage /></RoleRoute>} />
-                <Route path="/yakuniy" element={<RoleRoute allowedRoles={['admin']}><YakuniyPage /></RoleRoute>} />
+                <Route path="/faculties" element={<PermissionRoute permission="read:faculty"><FacultyPage /></PermissionRoute>} />
+                <Route path="/kafedras" element={<PermissionRoute permission="read:kafedra"><KafedraPage /></PermissionRoute>} />
+                <Route path="/groups" element={<PermissionRoute permission="read:group"><GroupsPage /></PermissionRoute>} />
+                <Route path="/students" element={<PermissionRoute permission="read:student"><StudentsPage /></PermissionRoute>} />
+                <Route path="/admin/hemis-sync" element={<PermissionRoute permission="hemis_admin_sync"><HemisSyncPage /></PermissionRoute>} />
+                <Route path="/yakuniy" element={<PermissionRoute permission="read:yakuniy"><YakuniyPage /></PermissionRoute>} />
 
-                {/* Admin + Teacher routes */}
-                <Route path="/resources" element={<RoleRoute allowedRoles={['admin', 'teacher', 'student']}><ResourcesPage /></RoleRoute>} />
-                <Route path="/lessons" element={<RoleRoute allowedRoles={['admin', 'teacher', 'student']}><LessonsPage /></RoleRoute>} />
-                <Route path="/lessons/:id" element={<RoleRoute allowedRoles={['admin', 'teacher', 'student']}><LessonDetailPage /></RoleRoute>} />
-                <Route path="/psychology" element={<RoleRoute allowedRoles={['admin', 'teacher', 'psixologik']}><PsychologyPage /></RoleRoute>} />
-                <Route path="/psychology/test/:methodId" element={<RoleRoute allowedRoles={['admin', 'teacher', 'student', 'psixologik']}><PsychologyTestPage /></RoleRoute>} />
-                <Route path="/psychology/results" element={<RoleRoute allowedRoles={['admin', 'psixologik']}><PsychologyResultsPage /></RoleRoute>} />
-                <Route path="/psychology/student" element={<RoleRoute allowedRoles={['student']}><StudentPsychologyPage /></RoleRoute>} />
+                <Route path="/resources" element={<PermissionRoute permission="read:resource"><ResourcesPage /></PermissionRoute>} />
+                <Route path="/lessons" element={<PermissionRoute permission="read:lesson"><LessonsPage /></PermissionRoute>} />
+                <Route path="/lessons/:id" element={<PermissionRoute permission="read:lesson"><LessonDetailPage /></PermissionRoute>} />
+                <Route path="/psychology" element={<PermissionRoute permission="read:psychology"><PsychologyPage /></PermissionRoute>} />
+                <Route path="/psychology/test/:methodId" element={<PermissionRoute permission="read:psychology"><PsychologyTestPage /></PermissionRoute>} />
+                <Route path="/psychology/results" element={<PermissionRoute permission="read:psychology"><PsychologyResultsPage /></PermissionRoute>} />
+                <Route path="/psychology/student" element={<StudentRoute><StudentPsychologyPage /></StudentRoute>} />
 
-                {/* Admin + Teacher routes */}
-                <Route path="/subjects" element={<RoleRoute allowedRoles={['admin', 'teacher']}><SubjectsPage /></RoleRoute>} />
-                <Route path="/teacher-groups" element={<RoleRoute allowedRoles={['admin', 'teacher']}><TeacherGroupsPage /></RoleRoute>} />
-                <Route path="/teacher-subjects" element={<RoleRoute allowedRoles={['admin', 'teacher']}><TeacherSubjectsPage /></RoleRoute>} />
-                <Route path="/questions" element={<RoleRoute allowedRoles={['admin', 'teacher']}><QuestionsPage /></RoleRoute>} />
-                <Route path="/questions/create" element={<RoleRoute allowedRoles={['admin', 'teacher']}><QuestionFormPage /></RoleRoute>} />
-                <Route path="/questions/:id/edit" element={<RoleRoute allowedRoles={['admin', 'teacher']}><QuestionFormPage /></RoleRoute>} />
-                <Route path="/quizzes" element={<RoleRoute allowedRoles={['admin', 'teacher']}><QuizzesPage /></RoleRoute>} />
+                <Route path="/subjects" element={<PermissionRoute permission="read:subject"><SubjectsPage /></PermissionRoute>} />
+                <Route path="/teacher-groups" element={<PermissionRoute permission="read:group"><TeacherGroupsPage /></PermissionRoute>} />
+                <Route path="/teacher-subjects" element={<PermissionRoute permission="read:subject"><TeacherSubjectsPage /></PermissionRoute>} />
+                <Route path="/questions" element={<PermissionRoute permission="read:question"><QuestionsPage /></PermissionRoute>} />
+                <Route path="/questions/create" element={<PermissionRoute permission="create:question"><QuestionFormPage /></PermissionRoute>} />
+                <Route path="/questions/:id/edit" element={<PermissionRoute permission="update:question"><QuestionFormPage /></PermissionRoute>} />
+                <Route path="/quizzes" element={<PermissionRoute permission="read:quiz"><QuizzesPage /></PermissionRoute>} />
 
-                {/* Admin + Student routes */}
-                <Route path="/quiz-test" element={<RoleRoute allowedRoles={['admin', 'student']}><QuizTestPage /></RoleRoute>} />
-                <Route path="/results" element={<RoleRoute allowedRoles={['admin', 'student', 'teacher']}><ResultsPage /></RoleRoute>} />
-                <Route path="/results/answers" element={<RoleRoute allowedRoles={['admin', 'student', 'teacher']}><UserAnswersPage /></RoleRoute>} />
+                <Route path="/quiz-test" element={<PermissionRoute permission="quiz_process:start_quiz"><QuizTestPage /></PermissionRoute>} />
+                <Route path="/results" element={<PermissionRoute permission="read:result"><ResultsPage /></PermissionRoute>} />
+                <Route path="/results/answers" element={<PermissionRoute permission="user_answers:read"><UserAnswersPage /></PermissionRoute>} />
               </Route>
             </Route>
 

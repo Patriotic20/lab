@@ -1,11 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Pagination } from '@/components/ui/Pagination';
 import { permissionService, type Permission } from '@/services/permissionService';
 import { Button } from '@/components/ui/Button';
-import {
-    Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/Table';
-import { Card, CardContent } from '@/components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Plus, Pencil, Trash2, Loader2, Search } from 'lucide-react';
 
 import { Modal } from '@/components/ui/Modal';
@@ -14,6 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { labelFor, parsePermission } from '@/constants/resources';
 
 const permissionSchema = z.object({
     name: z.string().min(1, 'Permission name is required'),
@@ -28,18 +25,14 @@ const PermissionsPage = () => {
     const [selectedPermission, setSelectedPermission] = useState<Permission | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [permissionToDelete, setPermissionToDelete] = useState<Permission | null>(null);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
-    const pageSize = 10;
 
     const fetchData = async () => {
         try {
             setIsLoading(true);
-            const data = await permissionService.getPermissions(currentPage, pageSize, debouncedSearch);
+            const data = await permissionService.getPermissions(1, 1000, debouncedSearch);
             setPermissions(data.permissions);
-            setTotalPages(Math.ceil(data.total / pageSize));
         } catch (error) {
             console.error('Failed to fetch permissions', error);
         } finally {
@@ -50,12 +43,11 @@ const PermissionsPage = () => {
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearch(searchTerm);
-            setCurrentPage(1);
         }, 500);
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    useEffect(() => { fetchData(); }, [currentPage, debouncedSearch]);
+    useEffect(() => { fetchData(); }, [debouncedSearch]);
 
     const handleDeleteClick = (permission: Permission) => {
         setPermissionToDelete(permission);
@@ -87,9 +79,18 @@ const PermissionsPage = () => {
         }
     };
 
+    const grouped = permissions.reduce<Record<string, Permission[]>>((acc, perm) => {
+        const { resource } = parsePermission(perm.name);
+        (acc[resource] ??= []).push(perm);
+        return acc;
+    }, {});
+
+    const sortedGroups = Object.entries(grouped).sort(([a], [b]) =>
+        labelFor(a).localeCompare(labelFor(b))
+    );
+
     return (
         <div className="space-y-6">
-            {/* Page header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-xl font-semibold tracking-tight">Ruxsatlar</h1>
@@ -112,57 +113,56 @@ const PermissionsPage = () => {
                 </div>
             </div>
 
-            <Card>
-                <CardContent className="pt-6">
-                    {isLoading ? (
+            {isLoading ? (
+                <Card>
+                    <CardContent className="pt-6">
                         <div className="flex justify-center p-8">
                             <Loader2 className="h-8 w-8 animate-spin" />
                         </div>
-                    ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[80px]">ID</TableHead>
-                                    <TableHead>Nomi</TableHead>
-                                    <TableHead>Yaratilgan sana</TableHead>
-                                    <TableHead className="text-right">Amallar</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {permissions.map((perm) => (
-                                    <TableRow key={perm.id}>
-                                        <TableCell>{perm.id}</TableCell>
-                                        <TableCell className="font-medium">{perm.name}</TableCell>
-                                        <TableCell>{new Date(perm.created_at).toLocaleDateString()}</TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Button variant="ghost" size="sm" onClick={() => { setSelectedPermission(perm); setIsModalOpen(true); }}>
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteClick(perm)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                    </CardContent>
+                </Card>
+            ) : permissions.length === 0 ? (
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="text-center text-muted-foreground py-8">Ruxsatlar topilmadi.</div>
+                    </CardContent>
+                </Card>
+            ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                    {sortedGroups.map(([resource, perms]) => (
+                        <Card key={resource}>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="flex items-center justify-between text-base">
+                                    <span>{labelFor(resource)}</span>
+                                    <span className="inline-flex items-center rounded-full bg-secondary/60 px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground">
+                                        {perms.length} ta
+                                    </span>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                                <div className="divide-y divide-border/60">
+                                    {perms
+                                        .slice()
+                                        .sort((a, b) => a.name.localeCompare(b.name))
+                                        .map((perm) => (
+                                            <div key={perm.id} className="flex items-center justify-between py-2">
+                                                <span className="font-mono text-sm">{perm.name}</span>
+                                                <div className="flex gap-1">
+                                                    <Button variant="ghost" size="sm" onClick={() => { setSelectedPermission(perm); setIsModalOpen(true); }}>
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteClick(perm)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                                {permissions.length === 0 && (
-                                    <TableRow>
-                                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">No permissions found.</TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    )}
-                </CardContent>
-            </Card>
-
-            <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-                isLoading={isLoading}
-            />
+                                        ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            )}
 
             <PermissionModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} permission={selectedPermission}
                 onSuccess={handleSuccess} />
@@ -170,10 +170,10 @@ const PermissionsPage = () => {
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={handleConfirmDelete}
-                title="Delete Permission"
-                description={`Are you sure you want to delete the permission "${permissionToDelete?.name}"? This action cannot be undone.`}
-                confirmText="Delete"
-                cancelText="Cancel"
+                title="Ruxsatni o'chirish"
+                description={`Haqiqatan ham "${permissionToDelete?.name}" ruxsatini o'chirmoqchimisiz? Bu amalni qaytarib bo'lmaydi.`}
+                confirmText="O'chirish"
+                cancelText="Bekor qilish"
             />
         </div>
     );

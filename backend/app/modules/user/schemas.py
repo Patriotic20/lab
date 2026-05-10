@@ -10,6 +10,21 @@ class RoleResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PermissionInfo(BaseModel):
+    id: int
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RoleWithPermissionsResponse(BaseModel):
+    id: int
+    name: str
+    permissions: list[PermissionInfo] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class RoleRequest(BaseModel):
     name: str
 
@@ -143,6 +158,18 @@ class StudentDetailResponse(BaseModel):
 class UserDetailResponse(UserCreateResponse):
     teacher: TeacherDetailResponse | None = None
     student: StudentDetailResponse | None = None
+
+
+class UserMeResponse(BaseModel):
+    id: int
+    username: str
+    roles: list[RoleWithPermissionsResponse]
+    teacher: TeacherDetailResponse | None = None
+    student: StudentDetailResponse | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserListResponse(BaseModel):

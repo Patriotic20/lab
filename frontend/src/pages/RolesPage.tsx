@@ -14,13 +14,11 @@ import { Input } from '@/components/ui/Input';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { usePermissions, useAssignPermissions } from '@/hooks/useReferenceData';
 import { useNavigate } from 'react-router-dom';
 
 
 const roleSchema = z.object({
     name: z.string().min(1, 'Role name is required'),
-    permission_ids: z.array(z.number()).optional(),
 });
 
 type RoleFormValues = z.infer<typeof roleSchema>;
@@ -213,71 +211,45 @@ const RolesPage = () => {
 const RoleModal = ({ isOpen, onClose, role, onSuccess }: {
     isOpen: boolean; onClose: () => void; role: Role | null; onSuccess: (role?: Role) => void;
 }) => {
-    const { data: permissionsData } = usePermissions();
-    const permissions = permissionsData?.permissions || [];
-    const assignPermissionsMutation = useAssignPermissions();
-
+    const navigate = useNavigate();
     const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<RoleFormValues>({
         resolver: zodResolver(roleSchema),
-        defaultValues: { name: '', permission_ids: [] },
+        defaultValues: { name: '' },
     });
 
     useEffect(() => {
-        reset({
-            name: role?.name || '',
-            permission_ids: role?.permissions?.map(p => p.id) || []
-        });
+        reset({ name: role?.name || '' });
     }, [role, reset]);
 
     const onSubmit = async (data: RoleFormValues) => {
         try {
-            let result;
-            if (role) {
-                result = await roleService.updateRole(role.id, { name: data.name });
-            } else {
-                result = await roleService.createRole({ name: data.name });
+            const result = role
+                ? await roleService.updateRole(role.id, { name: data.name })
+                : await roleService.createRole({ name: data.name });
+
+            // For new roles, jump straight into the access editor.
+            if (!role && result?.id) {
+                onSuccess(result);
+                navigate(`/roles/${result.id}/permissions`);
+                return;
             }
-
-            // Assign permissions
-            const roleId = role ? role.id : result.id;
-            await assignPermissionsMutation.mutateAsync({ role_id: roleId, permission_ids: data.permission_ids || [] });
-
-            // Assuming successful
-            onSuccess();
+            onSuccess(result);
         } catch (error) {
             console.error('Failed to save role', error);
-            alert('Failed to save role or assign permissions');
+            alert('Rolni saqlashda xatolik');
         }
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={role ? 'Edit Role' : 'Create Role'}>
+        <Modal isOpen={isOpen} onClose={onClose} title={role ? "Rolni tahrirlash" : "Yangi rol"}>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <Input label="Role Name" {...register('name')} error={errors.name?.message} placeholder="e.g. admin, teacher, student" />
-
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Permissions</label>
-                    <div className="grid grid-cols-2 gap-2 max-h-[250px] overflow-y-auto p-2 border rounded-md">
-                        {permissions.map((perm) => (
-                            <div key={perm.id} className="flex items-center space-x-2">
-                                <input
-                                    type="checkbox"
-                                    id={`perm-${perm.id}`}
-                                    value={perm.id}
-                                    {...register('permission_ids', { valueAsNumber: true })}
-                                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                                />
-                                <label htmlFor={`perm-${perm.id}`} className="text-sm cursor-pointer whitespace-nowrap overflow-hidden text-ellipsis">
-                                    {perm.name}
-                                </label>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
+                <Input label="Rol nomi" {...register('name')} error={errors.name?.message} placeholder="masalan: teacher, student" />
+                <p className="text-xs text-muted-foreground">
+                    Saqlagandan so'ng ruxsatlarni rolning sahifasida tahrirlang.
+                </p>
                 <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-                    <Button type="submit" isLoading={isSubmitting || assignPermissionsMutation.isPending}>{role ? 'Update' : 'Create'}</Button>
+                    <Button type="button" variant="outline" onClick={onClose}>Bekor qilish</Button>
+                    <Button type="submit" isLoading={isSubmitting}>{role ? "Saqlash" : "Yaratish"}</Button>
                 </div>
             </form>
         </Modal>

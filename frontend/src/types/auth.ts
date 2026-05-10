@@ -43,11 +43,22 @@ export interface Student {
     avg_gpa: number | null;
 }
 
+export interface UserPermission {
+    id: number;
+    name: string;
+}
+
+export interface UserRole {
+    id: number;
+    name: string;
+    permissions?: UserPermission[];
+}
+
 export interface User {
     id: number;
     username: string;
     is_active: boolean;
-    roles: Role[];
+    roles: UserRole[];
     teacher?: Teacher;
     student?: Student;
     created_at: string;
