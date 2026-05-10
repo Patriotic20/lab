@@ -112,8 +112,10 @@ class RoleRepository:
             role.name = data.name
 
         await session.commit()
-        await session.refresh(role, attribute_names=["permissions"])
-        return role
+        result = await session.execute(
+            select(Role).options(selectinload(Role.permissions)).where(Role.id == role_id)
+        )
+        return result.scalar_one()
 
     async def delete_role(self, session: AsyncSession, role_id: int) -> None:
         stmt = select(Role).where(Role.id == role_id)
