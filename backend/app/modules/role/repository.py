@@ -112,7 +112,7 @@ class RoleRepository:
             role.name = data.name
 
         await session.commit()
-        await session.refresh(role)
+        await session.refresh(role, attribute_names=["permissions"])
         return role
 
     async def delete_role(self, session: AsyncSession, role_id: int) -> None:
