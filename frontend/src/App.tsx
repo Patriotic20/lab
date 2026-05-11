@@ -23,6 +23,7 @@ import UserAnswersPage from '@/pages/UserAnswersPage';
 import TeacherGroupsPage from '@/pages/TeacherGroupsPage';
 import TeacherSubjectsPage from '@/pages/TeacherSubjectsPage';
 import TeacherRankingPage from '@/pages/TeacherRankingPage';
+import StatisticsPage from '@/pages/StatisticsPage';
 import YakuniyPage from '@/pages/YakuniyPage';
 import ResourcesPage from '@/pages/ResourcesPage';
 import PsychologyPage from '@/pages/PsychologyPage';
@@ -120,6 +121,7 @@ function App() {
                 <Route path="/teachers" element={<PermissionRoute permission="read:teacher"><TeachersPage /></PermissionRoute>} />
                 <Route path="/tutors" element={<PermissionRoute permission="read:tutor"><TutorsPage /></PermissionRoute>} />
                 <Route path="/teacher-ranking" element={<PermissionRoute permission={['read:statistics', 'read:teacher']}><TeacherRankingPage /></PermissionRoute>} />
+                <Route path="/statistics" element={<PermissionRoute permission="read:statistics"><StatisticsPage /></PermissionRoute>} />
 
                 <Route path="/faculties" element={<PermissionRoute permission="read:faculty"><FacultyPage /></PermissionRoute>} />
                 <Route path="/kafedras" element={<PermissionRoute permission="read:kafedra"><KafedraPage /></PermissionRoute>} />
