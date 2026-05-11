@@ -33,6 +33,19 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def _to_naive_utc(dt: datetime | None) -> datetime | None:
+    """Convert a timezone-aware datetime to naive UTC.
+
+    Required because the DB columns use ``TIMESTAMP WITHOUT TIME ZONE`` and
+    asyncpg refuses to bind tz-aware datetimes to them.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt
+    return dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+
 class AssignmentRepository:
     async def _is_admin(self, user: User) -> bool:
         return any(r.name.lower() == "admin" for r in (user.roles or []))
@@ -113,7 +126,7 @@ class AssignmentRepository:
             created_by_user_id=current_user.id,
             title=data.title,
             description=data.description,
-            deadline=data.deadline,
+            deadline=_to_naive_utc(data.deadline),
             max_grade=data.max_grade,
             allow_file=data.allow_file,
             allow_text=data.allow_text,
@@ -145,6 +158,8 @@ class AssignmentRepository:
         ):
             val = getattr(data, field)
             if val is not None:
+                if field == "deadline":
+                    val = _to_naive_utc(val)
                 setattr(a, field, val)
         await session.commit()
         await session.refresh(a)
