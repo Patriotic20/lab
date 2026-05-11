@@ -53,6 +53,7 @@ export const RESOURCES: Record<string, ResourceMeta> = {
     yakuniy:       { label: 'Yakuniy',          href: '/yakuniy',     icon: ClipboardList, section: 'Testlar' },
     lesson:        { label: 'Darslar',          href: '/lessons',     icon: BookOpen,      section: 'Testlar' },
     psychology:    { label: 'Psixologiya',      href: '/psychology',  icon: Brain,         section: 'Testlar' },
+    psychology_results: { label: 'Psixologiya natijalari', href: '/psychology/results', icon: ClipboardList, section: 'Testlar' },
     resource:      { label: 'Resurslar',        href: '/resources',   icon: BookOpen,      section: 'Testlar' },
 
     me:            { label: 'Profil' },
@@ -133,6 +134,17 @@ export const buildSidebar = (
             href: meta.href,
             icon: meta.icon,
         });
+
+        if (resource === 'psychology') {
+            const extra = RESOURCES.psychology_results;
+            if (extra?.href && extra.icon && extra.section) {
+                (grouped[extra.section] ??= []).push({
+                    name: extra.label,
+                    href: extra.href,
+                    icon: extra.icon,
+                });
+            }
+        }
     }
 
     const isAdmin = roleNames.some((r) => r.toLowerCase() === 'admin');
