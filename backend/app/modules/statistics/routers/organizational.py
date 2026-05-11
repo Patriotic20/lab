@@ -36,9 +36,7 @@ async def subject_stats(
         group_id=group_id,
         kafedra_id=kafedra_id,
     )
-    return await get_statistics_repository.get_subject_stats(
-        session=session, subject_id=subject_id, filters=filters
-    )
+    return await get_statistics_repository.get_subject_stats(session=session, subject_id=subject_id, filters=filters)
 
 
 @router.get("/kafedra/{kafedra_id}", response_model=KafedraStatsResponse)
@@ -59,9 +57,7 @@ async def kafedra_stats(
         group_id=group_id,
         subject_id=subject_id,
     )
-    return await get_statistics_repository.get_kafedra_stats(
-        session=session, kafedra_id=kafedra_id, filters=filters
-    )
+    return await get_statistics_repository.get_kafedra_stats(session=session, kafedra_id=kafedra_id, filters=filters)
 
 
 @router.get("/sinf/{sinf_id}", response_model=SinfStatsResponse)
@@ -71,9 +67,7 @@ async def sinf_stats(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:statistics")),
 ):
-    return await get_statistics_repository.get_sinf_stats(
-        session=session, sinf_id=sinf_id, filters=filters
-    )
+    return await get_statistics_repository.get_sinf_stats(session=session, sinf_id=sinf_id, filters=filters)
 
 
 @router.get("/leaderboard", response_model=LeaderboardResponse)

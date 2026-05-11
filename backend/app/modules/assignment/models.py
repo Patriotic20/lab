@@ -28,9 +28,7 @@ class Assignment(Base, IdIntPk, TimestampMixin):
     lesson_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("lessons.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    created_by_user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
-    )
+    created_by_user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)

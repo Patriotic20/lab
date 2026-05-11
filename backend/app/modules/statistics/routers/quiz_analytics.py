@@ -42,9 +42,7 @@ async def grade_trend(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:statistics")),
 ):
-    return await get_statistics_repository.get_grade_trend(
-        session=session, filters=filters, granularity=granularity
-    )
+    return await get_statistics_repository.get_grade_trend(session=session, filters=filters, granularity=granularity)
 
 
 @router.get("/difficulty-ranking", response_model=QuizDifficultyResponse)

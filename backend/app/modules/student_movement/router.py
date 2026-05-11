@@ -36,9 +36,7 @@ async def create_movement(
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: "User" = Depends(PermissionRequired("create:student_movement")),
 ):
-    return await get_student_movement_repository.create_movement(
-        session=session, data=data, current_user=current_user
-    )
+    return await get_student_movement_repository.create_movement(session=session, data=data, current_user=current_user)
 
 
 @router.get("/student/{student_id}", response_model=StudentMovementListResponse)
@@ -57,9 +55,7 @@ async def update_movement(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: "User" = Depends(PermissionRequired("update:student_movement")),
 ):
-    return await get_student_movement_repository.update_movement(
-        session=session, movement_id=movement_id, data=data
-    )
+    return await get_student_movement_repository.update_movement(session=session, movement_id=movement_id, data=data)
 
 
 @router.delete("/{movement_id}", status_code=status.HTTP_204_NO_CONTENT)

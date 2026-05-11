@@ -89,9 +89,7 @@ class AcademicYearRepository:
         year = await self._load(session, year_id)
 
         if data.is_active is True and not year.is_active:
-            await session.execute(
-                update(AcademicYear).where(AcademicYear.id != year_id).values(is_active=False)
-            )
+            await session.execute(update(AcademicYear).where(AcademicYear.id != year_id).values(is_active=False))
 
         for field in ("name", "start_date", "end_date", "is_active"):
             val = getattr(data, field)

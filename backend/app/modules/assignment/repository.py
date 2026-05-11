@@ -69,9 +69,11 @@ class AssignmentRepository:
         )
         total_students = (await session.execute(total_students_stmt)).scalar() or 0
 
-        sub_counts_stmt = select(AssignmentSubmission.status, func.count(AssignmentSubmission.id)).where(
-            AssignmentSubmission.assignment_id == a.id
-        ).group_by(AssignmentSubmission.status)
+        sub_counts_stmt = (
+            select(AssignmentSubmission.status, func.count(AssignmentSubmission.id))
+            .where(AssignmentSubmission.assignment_id == a.id)
+            .group_by(AssignmentSubmission.status)
+        )
         counts = {row[0]: row[1] for row in (await session.execute(sub_counts_stmt)).all()}
 
         return AssignmentResponse(
@@ -156,9 +158,7 @@ class AssignmentRepository:
         await session.delete(a)
         await session.commit()
 
-    async def get_assignment(
-        self, session: AsyncSession, assignment_id: int, current_user: User
-    ) -> AssignmentResponse:
+    async def get_assignment(self, session: AsyncSession, assignment_id: int, current_user: User) -> AssignmentResponse:
         a = (await session.execute(select(Assignment).where(Assignment.id == assignment_id))).scalar_one_or_none()
         if not a:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
@@ -237,9 +237,7 @@ class AssignmentRepository:
     async def submit(
         self, session: AsyncSession, assignment_id: int, data: SubmissionSubmitRequest, current_user: User
     ) -> SubmissionResponse:
-        a = (
-            await session.execute(select(Assignment).where(Assignment.id == assignment_id))
-        ).scalar_one_or_none()
+        a = (await session.execute(select(Assignment).where(Assignment.id == assignment_id))).scalar_one_or_none()
         if not a:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
 
@@ -310,9 +308,7 @@ class AssignmentRepository:
     async def list_submissions(
         self, session: AsyncSession, assignment_id: int, current_user: User
     ) -> SubmissionListResponse:
-        a = (
-            await session.execute(select(Assignment).where(Assignment.id == assignment_id))
-        ).scalar_one_or_none()
+        a = (await session.execute(select(Assignment).where(Assignment.id == assignment_id))).scalar_one_or_none()
         if not a:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
         await self._check_sinf_owner(session, a.sinf_id, current_user)
@@ -333,9 +329,11 @@ class AssignmentRepository:
                 t_stmt = select(Teacher.full_name).where(Teacher.user_id == sub.user.id)
                 full = (await session.execute(t_stmt)).scalar_one_or_none()
                 if full:
-                    resp = resp.model_copy(update={"user": SubmissionUserInfo(
-                        id=resp.user.id, username=resp.user.username, full_name=full
-                    )})
+                    resp = resp.model_copy(
+                        update={
+                            "user": SubmissionUserInfo(id=resp.user.id, username=resp.user.username, full_name=full)
+                        }
+                    )
             responses.append(resp)
         return SubmissionListResponse(submissions=responses)
 
@@ -347,9 +345,7 @@ class AssignmentRepository:
         data: SubmissionGradeRequest,
         current_user: User,
     ) -> SubmissionResponse:
-        a = (
-            await session.execute(select(Assignment).where(Assignment.id == assignment_id))
-        ).scalar_one_or_none()
+        a = (await session.execute(select(Assignment).where(Assignment.id == assignment_id))).scalar_one_or_none()
         if not a:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
         await self._check_sinf_owner(session, a.sinf_id, current_user)

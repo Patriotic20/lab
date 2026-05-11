@@ -236,9 +236,7 @@ class StatisticsRepository:
             count = count or 0
             avg = float(avg or 0.0)
             groups_data.append(
-                FacultyGroupStat(
-                    group_id=g_id, name=g_name, total_quizzes_taken=count, average_grade=avg
-                )
+                FacultyGroupStat(group_id=g_id, name=g_name, total_quizzes_taken=count, average_grade=avg)
             )
             total_quizzes += count
 
@@ -436,9 +434,7 @@ class StatisticsRepository:
 
         return QuestionDifficultyResponse(quiz_id=quiz_id, rows=result_rows)
 
-    async def get_question_discrimination(
-        self, session: AsyncSession, quiz_id: int
-    ) -> QuestionDiscriminationResponse:
+    async def get_question_discrimination(self, session: AsyncSession, quiz_id: int) -> QuestionDiscriminationResponse:
         # 1. Rank results for this quiz, take top 27% and bottom 27% by grade.
         result_rows = (
             await session.execute(
@@ -569,9 +565,7 @@ class StatisticsRepository:
     # C. Proctoring / cheating
     # ============================================================
 
-    async def get_cheating_overview(
-        self, session: AsyncSession, filters: StatsFilters
-    ) -> CheatingOverviewResponse:
+    async def get_cheating_overview(self, session: AsyncSession, filters: StatsFilters) -> CheatingOverviewResponse:
         cheat_expr = func.sum(case((Result.cheating_detected.is_(True), 1), else_=0))
         stmt = select(func.count(Result.id), cheat_expr).select_from(Result)
         stmt = apply_result_filters(stmt, filters)
@@ -584,9 +578,7 @@ class StatisticsRepository:
             cheating_rate_pct=100.0 * _safe_div(cheating, total),
         )
 
-    async def get_cheating_by_reason(
-        self, session: AsyncSession, filters: StatsFilters
-    ) -> CheatingByReasonResponse:
+    async def get_cheating_by_reason(self, session: AsyncSession, filters: StatsFilters) -> CheatingByReasonResponse:
         stmt = (
             select(Result.reason_for_stop, func.count(Result.id))
             .select_from(Result)
@@ -600,8 +592,7 @@ class StatisticsRepository:
         return CheatingByReasonResponse(
             total_cheating=total,
             rows=[
-                CheatingReasonRow(reason=r, count=int(c or 0), pct=100.0 * _safe_div(c or 0, total))
-                for r, c in rows
+                CheatingReasonRow(reason=r, count=int(c or 0), pct=100.0 * _safe_div(c or 0, total)) for r, c in rows
             ],
         )
 
@@ -723,9 +714,7 @@ class StatisticsRepository:
         out_rows.sort(key=lambda r: r.cheating_rate_pct, reverse=True)
         return SuspectQuizzesResponse(threshold_pct=threshold_pct, rows=out_rows)
 
-    async def get_proctoring_evidence(
-        self, session: AsyncSession, user_id: int
-    ) -> ProctoringEvidenceResponse:
+    async def get_proctoring_evidence(self, session: AsyncSession, user_id: int) -> ProctoringEvidenceResponse:
         stmt = (
             select(
                 Result.id,
@@ -852,18 +841,14 @@ class StatisticsRepository:
             average_grade=float(avg or 0.0),
         )
 
-    async def get_sinf_stats(
-        self, session: AsyncSession, sinf_id: int, filters: StatsFilters
-    ) -> SinfStatsResponse:
+    async def get_sinf_stats(self, session: AsyncSession, sinf_id: int, filters: StatsFilters) -> SinfStatsResponse:
         sinf = (await session.execute(select(Sinf).where(Sinf.id == sinf_id))).scalar_one_or_none()
         if not sinf:
             raise HTTPException(status_code=404, detail="Sinf not found")
 
         group_ids = [
             gid
-            for (gid,) in (
-                await session.execute(select(SinfGroup.group_id).where(SinfGroup.sinf_id == sinf_id))
-            ).all()
+            for (gid,) in (await session.execute(select(SinfGroup.group_id).where(SinfGroup.sinf_id == sinf_id))).all()
         ]
 
         attempts = 0
@@ -1054,9 +1039,7 @@ class StatisticsRepository:
             b.count = counts.get(b.bucket, 0)
         return YakuniyDistributionResponse(total=sum(b.count for b in buckets), buckets=buckets)
 
-    async def get_yakuniy_by_subject(
-        self, session: AsyncSession, filters: StatsFilters
-    ) -> YakuniyBySubjectResponse:
+    async def get_yakuniy_by_subject(self, session: AsyncSession, filters: StatsFilters) -> YakuniyBySubjectResponse:
         stmt = (
             select(Subject.id, Subject.name, func.count(Yakuniy.id), func.avg(Yakuniy.grade))
             .select_from(Yakuniy)
@@ -1112,9 +1095,7 @@ class StatisticsRepository:
     # G. Psychology
     # ============================================================
 
-    async def get_psychology_coverage(
-        self, session: AsyncSession, filters: StatsFilters
-    ) -> PsychologyCoverageResponse:
+    async def get_psychology_coverage(self, session: AsyncSession, filters: StatsFilters) -> PsychologyCoverageResponse:
         # Total student count for the filter scope (students belong to a group; filter by faculty if provided)
         student_stmt = select(func.count(Student.id))
         if filters.faculty_id is not None:
@@ -1183,8 +1164,7 @@ class StatisticsRepository:
         rows = (await session.execute(stmt)).all()
         return PsychologyMethodPopularityResponse(
             rows=[
-                PsychologyMethodPopularityRow(method_id=m_id, name=name, attempts=int(c or 0))
-                for m_id, name, c in rows
+                PsychologyMethodPopularityRow(method_id=m_id, name=name, attempts=int(c or 0)) for m_id, name, c in rows
             ]
         )
 
@@ -1192,9 +1172,8 @@ class StatisticsRepository:
         self, session: AsyncSession, method_id: int, filters: StatsFilters
     ) -> PsychologyVsAcademicResponse:
         # 1. For this method, group users by diagnosis label.
-        psy_stmt = (
-            select(PsychologyResult.user_id, PsychologyResult.diagnosis)
-            .where(PsychologyResult.method_id == method_id)
+        psy_stmt = select(PsychologyResult.user_id, PsychologyResult.diagnosis).where(
+            PsychologyResult.method_id == method_id
         )
         psy_stmt = apply_date_filters(psy_stmt, filters, PsychologyResult.created_at)
         psy_rows = (await session.execute(psy_stmt)).all()
@@ -1245,11 +1224,7 @@ class StatisticsRepository:
         containing 'risk' / 'риск' / 'high' / 'низк' / 'low' so common risk
         markers across languages still surface.
         """
-        markers = (
-            [label_substring.lower()]
-            if label_substring
-            else ["risk", "риск", "high", "низк", "low"]
-        )
+        markers = [label_substring.lower()] if label_substring else ["risk", "риск", "high", "низк", "low"]
         stmt = (
             select(PsychologyResult.user_id, User.username, PsychologyResult.diagnosis)
             .select_from(PsychologyResult)
@@ -1332,9 +1307,7 @@ class StatisticsRepository:
             ],
         )
 
-    async def get_teacher_proctoring_summary(
-        self, session: AsyncSession, teacher_id: int
-    ) -> TeacherProctoringResponse:
+    async def get_teacher_proctoring_summary(self, session: AsyncSession, teacher_id: int) -> TeacherProctoringResponse:
         teacher = (await session.execute(select(Teacher).where(Teacher.id == teacher_id))).scalar_one_or_none()
         if not teacher:
             raise HTTPException(status_code=404, detail="Teacher not found")

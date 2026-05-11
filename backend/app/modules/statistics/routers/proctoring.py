@@ -42,9 +42,7 @@ async def cheating_by_scope(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:statistics:proctoring")),
 ):
-    return await get_statistics_repository.get_cheating_by_scope(
-        session=session, filters=filters, scope=scope
-    )
+    return await get_statistics_repository.get_cheating_by_scope(session=session, filters=filters, scope=scope)
 
 
 @router.get("/repeat-offenders", response_model=RepeatOffendersResponse)
@@ -54,9 +52,7 @@ async def repeat_offenders(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:statistics:proctoring")),
 ):
-    return await get_statistics_repository.get_repeat_offenders(
-        session=session, filters=filters, min_count=min_count
-    )
+    return await get_statistics_repository.get_repeat_offenders(session=session, filters=filters, min_count=min_count)
 
 
 @router.get("/suspect-quizzes", response_model=SuspectQuizzesResponse)

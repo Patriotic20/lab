@@ -73,9 +73,7 @@ def upgrade() -> None:
         ["assignment_id"],
         unique=False,
     )
-    op.create_index(
-        op.f("ix_assignment_submissions_user_id"), "assignment_submissions", ["user_id"], unique=False
-    )
+    op.create_index(op.f("ix_assignment_submissions_user_id"), "assignment_submissions", ["user_id"], unique=False)
 
 
 def downgrade() -> None:

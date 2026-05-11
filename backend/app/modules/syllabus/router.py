@@ -43,9 +43,7 @@ async def upsert_syllabus(
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: "User" = Depends(PermissionRequired("update:syllabus")),
 ):
-    return await get_syllabus_repository.upsert(
-        session=session, sinf_id=sinf_id, data=data, current_user=current_user
-    )
+    return await get_syllabus_repository.upsert(session=session, sinf_id=sinf_id, data=data, current_user=current_user)
 
 
 @router.delete("/{sinf_id}", status_code=status.HTTP_204_NO_CONTENT)

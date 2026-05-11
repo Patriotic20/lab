@@ -19,9 +19,7 @@ async def teacher_question_quality(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:statistics")),
 ):
-    return await get_statistics_repository.get_teacher_question_quality(
-        session=session, teacher_id=teacher_id
-    )
+    return await get_statistics_repository.get_teacher_question_quality(session=session, teacher_id=teacher_id)
 
 
 @router.get("/{teacher_id}/timeline", response_model=TeacherActivityResponse)
@@ -42,6 +40,4 @@ async def teacher_proctoring(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:statistics")),
 ):
-    return await get_statistics_repository.get_teacher_proctoring_summary(
-        session=session, teacher_id=teacher_id
-    )
+    return await get_statistics_repository.get_teacher_proctoring_summary(session=session, teacher_id=teacher_id)

@@ -55,9 +55,7 @@ async def create_module(
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: "User" = Depends(PermissionRequired("create:module")),
 ):
-    return await get_course_structure_repository.create_module(
-        session=session, data=data, current_user=current_user
-    )
+    return await get_course_structure_repository.create_module(session=session, data=data, current_user=current_user)
 
 
 @module_router.put("/{module_id}", response_model=ModuleResponse)
@@ -78,9 +76,7 @@ async def delete_module(
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: "User" = Depends(PermissionRequired("delete:module")),
 ):
-    await get_course_structure_repository.delete_module(
-        session=session, module_id=module_id, current_user=current_user
-    )
+    await get_course_structure_repository.delete_module(session=session, module_id=module_id, current_user=current_user)
 
 
 @module_router.put("/reorder/{sinf_id}", response_model=ModuleListResponse)
@@ -109,9 +105,7 @@ async def create_topic(
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: "User" = Depends(PermissionRequired("create:topic")),
 ):
-    return await get_course_structure_repository.create_topic(
-        session=session, data=data, current_user=current_user
-    )
+    return await get_course_structure_repository.create_topic(session=session, data=data, current_user=current_user)
 
 
 @topic_router.put("/{topic_id}", response_model=TopicResponse)
@@ -132,9 +126,7 @@ async def delete_topic(
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: "User" = Depends(PermissionRequired("delete:topic")),
 ):
-    await get_course_structure_repository.delete_topic(
-        session=session, topic_id=topic_id, current_user=current_user
-    )
+    await get_course_structure_repository.delete_topic(session=session, topic_id=topic_id, current_user=current_user)
 
 
 @topic_router.put("/reorder/{module_id}", response_model=List[TopicResponse])

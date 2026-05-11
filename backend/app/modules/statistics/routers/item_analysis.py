@@ -39,9 +39,7 @@ async def top_distractors(
     session: AsyncSession = Depends(db_helper.session_getter),
     _: PermissionRequired = Depends(PermissionRequired("read:statistics:items")),
 ):
-    return await get_statistics_repository.get_top_distractors(
-        session=session, question_id=question_id, limit=limit
-    )
+    return await get_statistics_repository.get_top_distractors(session=session, question_id=question_id, limit=limit)
 
 
 @router.get("/quiz/{quiz_id}/flagged", response_model=FlaggedQuestionsResponse)

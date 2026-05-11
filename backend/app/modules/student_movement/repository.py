@@ -33,9 +33,7 @@ def _default_to_status_for_type(movement_type: str) -> str | None:
 
 class StudentMovementRepository:
     async def _load_student(self, session: AsyncSession, student_id: int) -> Student:
-        student = (
-            await session.execute(select(Student).where(Student.id == student_id))
-        ).scalar_one_or_none()
+        student = (await session.execute(select(Student).where(Student.id == student_id))).scalar_one_or_none()
         if not student:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found")
         return student
@@ -82,9 +80,7 @@ class StudentMovementRepository:
         except Exception as e:
             await session.rollback()
             logger.error(f"Error creating movement: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Database error: {e}"
-            )
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Database error: {e}")
 
         loaded = (
             await session.execute(
@@ -103,9 +99,7 @@ class StudentMovementRepository:
             .order_by(desc(StudentMovement.effective_date), desc(StudentMovement.id))
         )
         items = (await session.execute(stmt)).scalars().all()
-        return StudentMovementListResponse(
-            movements=[StudentMovementResponse.model_validate(m) for m in items]
-        )
+        return StudentMovementListResponse(movements=[StudentMovementResponse.model_validate(m) for m in items])
 
     async def update_movement(
         self, session: AsyncSession, movement_id: int, data: StudentMovementUpdateRequest

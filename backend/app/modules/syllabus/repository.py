@@ -69,9 +69,7 @@ class SyllabusRepository:
         except Exception as e:
             await session.rollback()
             logger.error(f"Error upserting syllabus: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Database error: {e}"
-            )
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Database error: {e}")
 
         return SyllabusResponse.model_validate(existing)
 

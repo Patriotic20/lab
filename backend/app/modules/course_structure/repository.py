@@ -81,9 +81,7 @@ class CourseStructureRepository:
         await session.commit()
         await session.refresh(module)
         loaded = (
-            await session.execute(
-                select(Module).options(selectinload(Module.topics)).where(Module.id == module.id)
-            )
+            await session.execute(select(Module).options(selectinload(Module.topics)).where(Module.id == module.id))
         ).scalar_one()
         return ModuleResponse.model_validate(loaded)
 
@@ -99,9 +97,7 @@ class CourseStructureRepository:
             module.order_index = data.order_index
         await session.commit()
         loaded = (
-            await session.execute(
-                select(Module).options(selectinload(Module.topics)).where(Module.id == module_id)
-            )
+            await session.execute(select(Module).options(selectinload(Module.topics)).where(Module.id == module_id))
         ).scalar_one()
         return ModuleResponse.model_validate(loaded)
 
@@ -126,9 +122,7 @@ class CourseStructureRepository:
 
     # ── Topics ──────────────────────────────────────────────────────────────
 
-    async def create_topic(
-        self, session: AsyncSession, data: TopicCreateRequest, current_user: User
-    ) -> TopicResponse:
+    async def create_topic(self, session: AsyncSession, data: TopicCreateRequest, current_user: User) -> TopicResponse:
         await self._check_module_access(session, data.module_id, current_user)
         topic = Topic(
             module_id=data.module_id,
@@ -174,8 +168,10 @@ class CourseStructureRepository:
         await session.commit()
 
         result = (
-            await session.execute(select(Topic).where(Topic.module_id == module_id).order_by(Topic.order_index))
-        ).scalars().all()
+            (await session.execute(select(Topic).where(Topic.module_id == module_id).order_by(Topic.order_index)))
+            .scalars()
+            .all()
+        )
         return [TopicResponse.model_validate(t) for t in result]
 
 

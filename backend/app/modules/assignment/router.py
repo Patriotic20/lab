@@ -41,9 +41,7 @@ async def create_assignment(
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: "User" = Depends(PermissionRequired("create:assignment")),
 ):
-    return await get_assignment_repository.create_assignment(
-        session=session, data=data, current_user=current_user
-    )
+    return await get_assignment_repository.create_assignment(session=session, data=data, current_user=current_user)
 
 
 @router.get("/", response_model=AssignmentListResponse)
@@ -52,9 +50,7 @@ async def list_assignments(
     session: AsyncSession = Depends(db_helper.session_getter),
     current_user: "User" = Depends(PermissionRequired("read:assignment")),
 ):
-    return await get_assignment_repository.list_assignments(
-        session=session, request=data, current_user=current_user
-    )
+    return await get_assignment_repository.list_assignments(session=session, request=data, current_user=current_user)
 
 
 @router.get("/{assignment_id}", response_model=AssignmentResponse)
