@@ -1,11 +1,12 @@
 import logging
-from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.datetime_utils import to_naive_utc as _to_naive_utc
+from app.core.datetime_utils import utcnow_naive as _utcnow
 from app.modules.assignment.models import Assignment, AssignmentSubmission
 from app.modules.sinf.model import Sinf, SinfGroup
 from app.modules.student.model import Student
@@ -27,23 +28,6 @@ from .schemas import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
-
-
-def _to_naive_utc(dt: datetime | None) -> datetime | None:
-    """Convert a timezone-aware datetime to naive UTC.
-
-    Required because the DB columns use ``TIMESTAMP WITHOUT TIME ZONE`` and
-    asyncpg refuses to bind tz-aware datetimes to them.
-    """
-    if dt is None:
-        return None
-    if dt.tzinfo is None:
-        return dt
-    return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 class AssignmentRepository:
