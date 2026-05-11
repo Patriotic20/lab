@@ -41,7 +41,10 @@ async def login(data: UserLoginRequest, session: AsyncSession = Depends(db_helpe
 @router.post(
     "/refresh",
     response_model=UserLoginResponse,
-    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
+    # Refresh is hit by every browser tab after the access-token TTL expires;
+    # 30/min is still safe against brute-force but doesn't kick out users
+    # that simply reload the page a few times.
+    dependencies=[Depends(RateLimiter(times=30, seconds=60))],
 )
 async def refresh(
     authorization: str = Header(...),

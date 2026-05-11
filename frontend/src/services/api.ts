@@ -9,6 +9,19 @@ const api = axios.create({
     },
 });
 
+// Bare axios instance used ONLY for the token-refresh call. It must NOT pass
+// through the auth interceptor, otherwise a 401 on /user/refresh would
+// recursively trigger another refresh, push the refresh into failedQueue, and
+// deadlock forever (symptom: infinite spinner on protected pages when both
+// tokens have expired).
+const refreshClient = axios.create({
+    baseURL: API_BASE_URL,
+    timeout: 10000,
+    headers: {
+        'Content-Type': 'application/json',
+    },
+});
+
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -67,7 +80,7 @@ api.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                const response = await api.post('/user/refresh', null, {
+                const response = await refreshClient.post('/user/refresh', null, {
                     headers: { Authorization: `Bearer ${refreshToken}` },
                 });
                 const newToken = response.data.access_token;

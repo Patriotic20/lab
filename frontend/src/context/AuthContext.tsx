@@ -24,9 +24,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
             const response = await api.get<User>('/user/me');
             setUser(response.data);
-        } catch (error) {
-            console.error('Failed to fetch user', error);
-            logout();
+        } catch (error: unknown) {
+            const status = (error as { response?: { status?: number } } | null)?.response?.status;
+            if (status === 401) {
+                // Token is truly invalid — log the user out.
+                logout();
+            } else {
+                // 429 / 5xx / network error: don't kick the user out, leave
+                // user=null so route guards may show a spinner or render fallback.
+                console.error('Failed to fetch user (non-auth error)', status, error);
+                setUser(null);
+            }
         } finally {
             setIsLoading(false);
         }
