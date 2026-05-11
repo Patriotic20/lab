@@ -130,7 +130,7 @@ function App() {
                 <Route path="/lessons/:id" element={<PermissionRoute permission="read:lesson"><LessonDetailPage /></PermissionRoute>} />
                 <Route path="/psychology" element={<PermissionRoute permission="read:psychology"><PsychologyPage /></PermissionRoute>} />
                 <Route path="/psychology/test/:methodId" element={<PermissionRoute permission="read:psychology"><PsychologyTestPage /></PermissionRoute>} />
-                <Route path="/psychology/results" element={<PermissionRoute permission="read:psychology"><PsychologyResultsPage /></PermissionRoute>} />
+                <Route path="/psychology/results" element={<PermissionRoute permission="read:psychology_results"><PsychologyResultsPage /></PermissionRoute>} />
                 <Route path="/psychology/student" element={<StudentRoute><StudentPsychologyPage /></StudentRoute>} />
 
                 <Route path="/subjects" element={<PermissionRoute permission="read:subject"><SubjectsPage /></PermissionRoute>} />

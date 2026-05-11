@@ -134,17 +134,6 @@ export const buildSidebar = (
             href: meta.href,
             icon: meta.icon,
         });
-
-        if (resource === 'psychology') {
-            const extra = RESOURCES.psychology_results;
-            if (extra?.href && extra.icon && extra.section) {
-                (grouped[extra.section] ??= []).push({
-                    name: extra.label,
-                    href: extra.href,
-                    icon: extra.icon,
-                });
-            }
-        }
     }
 
     const isAdmin = roleNames.some((r) => r.toLowerCase() === 'admin');

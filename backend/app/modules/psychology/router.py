@@ -172,11 +172,9 @@ async def submit_test(
 async def list_results(
     request: TestResultListRequest = Depends(),
     session: AsyncSession = Depends(db_helper.session_getter),
-    current_user: User = Depends(PermissionRequired("read:psychology")),
+    _: User = Depends(PermissionRequired("read:psychology_results")),
 ):
-    is_admin = any(r.name == "Admin" for r in (current_user.roles or []))
-    user_filter = None if is_admin else current_user.id
-    return await get_psychology_service.list_results(session=session, request=request, user_id=user_filter)
+    return await get_psychology_service.list_results(session=session, request=request, user_id=None)
 
 
 @router.delete(
@@ -187,7 +185,7 @@ async def list_results(
 async def delete_result(
     result_id: int,
     session: AsyncSession = Depends(db_helper.session_getter),
-    _: PermissionRequired = Depends(PermissionRequired("delete:psychology")),
+    _: PermissionRequired = Depends(PermissionRequired("delete:psychology_results")),
 ):
     await get_psychology_service.delete_result(session=session, result_id=result_id)
 
@@ -196,6 +194,6 @@ async def delete_result(
 async def get_result(
     result_id: int,
     session: AsyncSession = Depends(db_helper.session_getter),
-    _: User = Depends(PermissionRequired("read:psychology")),
+    _: User = Depends(PermissionRequired("read:psychology_results")),
 ):
     return await get_psychology_service.get_result(session=session, result_id=result_id)
