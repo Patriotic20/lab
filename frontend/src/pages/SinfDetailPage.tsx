@@ -1487,6 +1487,7 @@ function AssignmentsTab({ sinfId, canManage }: { sinfId: number; canManage: bool
     const deleteMut = useDeleteAssignment();
 
     const [activeAssignment, setActiveAssignment] = useState<Assignment | null>(null);
+    const [nowSnapshot] = useState(() => Date.now());
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<Assignment | null>(null);
     const [title, setTitle] = useState('');
@@ -1589,7 +1590,7 @@ function AssignmentsTab({ sinfId, canManage }: { sinfId: number; canManage: bool
                 <div className="space-y-2">
                     {data.assignments.map((a) => {
                         const dlDate = new Date(a.deadline);
-                        const overdue = dlDate.getTime() < Date.now();
+                        const overdue = dlDate.getTime() < nowSnapshot;
                         const stats = a.stats;
                         return (
                             <Card

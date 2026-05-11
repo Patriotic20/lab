@@ -235,7 +235,11 @@ class StatisticsRepository:
         for g_id, g_name, count, avg in rows:
             count = count or 0
             avg = float(avg or 0.0)
-            groups_data.append(FacultyGroupStat(group_id=g_id, name=g_name, total_quizzes_taken=count, average_grade=avg))
+            groups_data.append(
+                FacultyGroupStat(
+                    group_id=g_id, name=g_name, total_quizzes_taken=count, average_grade=avg
+                )
+            )
             total_quizzes += count
 
         weighted_sum = sum(g.average_grade * g.total_quizzes_taken for g in groups_data)
@@ -723,7 +727,14 @@ class StatisticsRepository:
         self, session: AsyncSession, user_id: int
     ) -> ProctoringEvidenceResponse:
         stmt = (
-            select(Result.id, Result.quiz_id, Quiz.title, Result.cheating_image_url, Result.reason_for_stop, Result.created_at)
+            select(
+                Result.id,
+                Result.quiz_id,
+                Quiz.title,
+                Result.cheating_image_url,
+                Result.reason_for_stop,
+                Result.created_at,
+            )
             .select_from(Result)
             .outerjoin(Quiz, Quiz.id == Result.quiz_id)
             .where(and_(Result.user_id == user_id, Result.cheating_detected.is_(True)))

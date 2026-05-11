@@ -5,7 +5,6 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.modules.academic_year.model import AcademicYear
 from app.modules.sinf.model import Sinf, SinfGroup
 from app.modules.subject.models.subject import Subject
 from app.modules.subject.models.subject_teacher import SubjectTeacher
