@@ -125,10 +125,21 @@ async def init_db(app: FastAPI, session: AsyncSession):
         # Admin gets ALL permissions
         admin_perms = discovered_permissions
 
-        # Teacher gets questions, quizzes, statistics, results, subjects, resources, lesson results.
-        # NOTE: lesson CRUD (create/update/delete:lesson) is admin-only — teacher only gets read:lesson
-        # and update:lesson_result so they can record results on existing lessons.
-        lesson_admin_only = {"create:lesson", "update:lesson", "delete:lesson"}
+        # Teacher gets questions, quizzes, statistics, results, subjects, resources, lessons, sinf (read only),
+        # academic_year (read only), lesson results. Lesson and Resource ownership is enforced inside their
+        # repositories (teachers can only CRUD lessons/resources for groups/sinfs they own).
+        admin_only_perms = {
+            "create:sinf",
+            "update:sinf",
+            "delete:sinf",
+            "create:academic_year",
+            "update:academic_year",
+            "delete:academic_year",
+            "create:submission",  # submissions are created by students, not teachers
+            "create:student_movement",
+            "update:student_movement",
+            "delete:student_movement",
+        }
         teacher_perms = {
             p
             for p in discovered_permissions
@@ -144,10 +155,18 @@ async def init_db(app: FastAPI, session: AsyncSession):
                     "resource",
                     "psychology",
                     "lesson",
+                    "sinf",
+                    "academic_year",
+                    "module",
+                    "topic",
+                    "syllabus",
+                    "assignment",
+                    "submission",
+                    "student_movement",
                 )
             )
             and not p.startswith("delete:result")
-            and p not in lesson_admin_only
+            and p not in admin_only_perms
         }
 
         if "read:role" in discovered_permissions:
@@ -156,6 +175,8 @@ async def init_db(app: FastAPI, session: AsyncSession):
             teacher_perms.add("user:me")
 
         # Student gets read-only quiz/result + quiz process + user:me + read:resource + read:psychology
+        # + read:assignment / create+read:submission for homework workflow
+        # + read:module / read:topic / read:syllabus for course structure visibility
         student_perms = {
             p
             for p in discovered_permissions
@@ -167,6 +188,13 @@ async def init_db(app: FastAPI, session: AsyncSession):
                 or p == "read:resource"
                 or p == "read:psychology"
                 or p == "read:lesson"
+                or p == "read:assignment"
+                or p == "create:submission"
+                or p == "read:submission"
+                or p == "read:module"
+                or p == "read:topic"
+                or p == "read:syllabus"
+                or p == "read:sinf"
             )
         }
         if "user:me" in discovered_permissions:

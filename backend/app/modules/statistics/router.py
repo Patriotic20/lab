@@ -6,6 +6,16 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .repository import get_statistics_repository
+from .routers import (
+    demographics_router,
+    item_analysis_router,
+    organizational_router,
+    proctoring_router,
+    psychology_router,
+    quiz_analytics_router,
+    teacher_activity_router,
+    yakuniy_router,
+)
 from .schemas import (
     FacultyStatisticsResponse,
     GeneralStatisticsResponse,
@@ -21,6 +31,15 @@ router = APIRouter(
     tags=["Statistics"],
     prefix="/statistics",
 )
+
+router.include_router(quiz_analytics_router)
+router.include_router(item_analysis_router)
+router.include_router(proctoring_router)
+router.include_router(organizational_router)
+router.include_router(demographics_router)
+router.include_router(yakuniy_router)
+router.include_router(psychology_router)
+router.include_router(teacher_activity_router)
 
 
 @router.get("/general", response_model=GeneralStatisticsResponse)

@@ -11,6 +11,7 @@ from app.core.mixins.time_stamp_mixin import TimestampMixin
 if TYPE_CHECKING:
     from app.modules.group.models.group import Group
     from app.modules.lesson.model import Lesson
+    from app.modules.sinf.model import Sinf
     from app.modules.subject.models.subject_teacher import SubjectTeacher
 
 
@@ -38,6 +39,13 @@ class Resource(Base, IdIntPk, TimestampMixin):
         index=True,
     )
 
+    sinf_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("sinfs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     main_text: Mapped[str] = mapped_column(Text, nullable=False)
 
     links: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
@@ -49,6 +57,8 @@ class Resource(Base, IdIntPk, TimestampMixin):
     group: Mapped["Group | None"] = relationship("Group", back_populates="resources")
 
     lesson: Mapped["Lesson | None"] = relationship("Lesson")
+
+    sinf: Mapped["Sinf | None"] = relationship("Sinf", back_populates="resources")
 
     def __str__(self):
         return f"Resource {self.id} (subject_teacher_id={self.subject_teacher_id}, group_id={self.group_id})"

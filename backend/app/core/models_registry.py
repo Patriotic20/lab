@@ -30,8 +30,21 @@ __all__ = [
     "TutorGroup",
     "Lesson",
     "LessonResult",
+    "Sinf",
+    "SinfGroup",
+    "AcademicYear",
+    "Semester",
+    "Module",
+    "Topic",
+    "Syllabus",
+    "Assignment",
+    "AssignmentSubmission",
+    "StudentMovement",
 ]
 
+from app.modules.academic_year.model import AcademicYear, Semester
+from app.modules.assignment.models import Assignment, AssignmentSubmission
+from app.modules.course_structure.models import Module, Topic
 from app.modules.faculty.model import Faculty
 from app.modules.group.models.group import Group
 from app.modules.group.models.group_teachers import GroupTeacher
@@ -49,9 +62,12 @@ from app.modules.resource.model import Resource
 from app.modules.result.model import Result
 from app.modules.role.models.role import Role
 from app.modules.role.models.role_permission import RolePermission
+from app.modules.sinf.model import Sinf, SinfGroup
 from app.modules.student.model import Student
+from app.modules.student_movement.model import StudentMovement
 from app.modules.subject.models.subject import Subject
 from app.modules.subject.models.subject_teacher import SubjectTeacher
+from app.modules.syllabus.model import Syllabus
 from app.modules.teacher.model import Teacher
 from app.modules.tutor.models.tutor import Tutor
 from app.modules.tutor.models.tutor_groups import TutorGroup

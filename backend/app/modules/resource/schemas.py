@@ -38,9 +38,10 @@ class ResourceGroupInfo(BaseModel):
 
 
 class ResourceCreateRequest(BaseModel):
-    subject_teacher_id: int
+    subject_teacher_id: Optional[int] = None
     group_id: Optional[int] = None
     lesson_id: Optional[int] = None
+    sinf_id: Optional[int] = None
     main_text: str
     links: List[ResourceLink] = []
     files: List[ResourceFile] = []
@@ -53,6 +54,7 @@ class ResourceUpdateRequest(BaseModel):
     group_id: Optional[int] = None
     subject_teacher_id: Optional[int] = None
     lesson_id: Optional[int] = None
+    sinf_id: Optional[int] = None
 
 
 class ResourceResponse(BaseModel):
@@ -60,6 +62,7 @@ class ResourceResponse(BaseModel):
     subject_teacher_id: int
     group_id: Optional[int] = None
     lesson_id: Optional[int] = None
+    sinf_id: Optional[int] = None
     main_text: str
     links: List[ResourceLink]
     files: List[ResourceFile] = []
@@ -75,6 +78,7 @@ class ResourceListRequest(BaseModel):
     subject_teacher_id: Optional[int] = None
     group_id: Optional[int] = None
     lesson_id: Optional[int] = None
+    sinf_id: Optional[int] = None
 
     page: int = 1
     limit: int = 20

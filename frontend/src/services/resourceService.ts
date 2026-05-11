@@ -27,6 +27,7 @@ export interface ResourceResponse {
     subject_teacher_id: number;
     group_id?: number | null;
     lesson_id?: number | null;
+    sinf_id?: number | null;
     main_text: string;
     links: ResourceLink[];
     files: ResourceFile[];
@@ -44,9 +45,10 @@ export interface ResourceListResponse {
 }
 
 export interface ResourceCreateRequest {
-    subject_teacher_id: number;
+    subject_teacher_id?: number;
     group_id?: number | null;
     lesson_id?: number | null;
+    sinf_id?: number | null;
     main_text: string;
     links: ResourceLink[];
     files: ResourceFile[];
@@ -59,10 +61,11 @@ export interface ResourceUpdateRequest {
     group_id?: number | null;
     subject_teacher_id?: number;
     lesson_id?: number | null;
+    sinf_id?: number | null;
 }
 
 export const resourceService = {
-    list: async (params: { page?: number; limit?: number; subject_teacher_id?: number; group_id?: number; lesson_id?: number }) => {
+    list: async (params: { page?: number; limit?: number; subject_teacher_id?: number; group_id?: number; lesson_id?: number; sinf_id?: number }) => {
         const response = await api.get<ResourceListResponse>('/resource/', { params });
         return response.data;
     },

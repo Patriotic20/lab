@@ -7,6 +7,8 @@ from sqlalchemy.orm import selectinload
 
 from app.modules.group.models.group_teachers import GroupTeacher
 from app.modules.lesson.model import Lesson, LessonResult
+from app.modules.sinf.model import Sinf, SinfGroup
+from app.modules.sinf.repository import get_sinf_repository
 from app.modules.student.model import Student
 from app.modules.subject.models.subject_teacher import SubjectTeacher
 from app.modules.teacher.model import Teacher
@@ -67,6 +69,37 @@ class LessonRepository:
                 detail="Teacher is not assigned to this group",
             )
 
+    async def _resolve_sinf_context(
+        self,
+        session: AsyncSession,
+        sinf_id: int,
+        current_user: User,
+        group_id: int | None,
+        is_admin: bool,
+    ) -> tuple[Sinf, SubjectTeacher, int]:
+        sinf = await get_sinf_repository.get_sinf_orm(session, sinf_id)
+        if not is_admin and sinf.teacher_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Teacher is not the owner of this Sinf",
+            )
+
+        sinf_group_stmt = select(SinfGroup.group_id).where(SinfGroup.sinf_id == sinf.id)
+        sinf_group_ids = set((await session.execute(sinf_group_stmt)).scalars().all())
+        if group_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="group_id is required when creating a lesson in a Sinf",
+            )
+        if group_id not in sinf_group_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="group_id does not belong to this Sinf",
+            )
+
+        subject_teacher = await get_sinf_repository.get_or_create_subject_teacher_for_sinf(session, sinf)
+        return sinf, subject_teacher, group_id
+
     # ── Lessons ──────────────────────────────────────────────────────────────
 
     async def create_lesson(
@@ -78,12 +111,29 @@ class LessonRepository:
         is_admin = await self._is_role(current_user, "admin")
         is_teacher = await self._is_role(current_user, "teacher")
 
-        if not is_admin and is_teacher:
-            await self._check_teacher_access(session, current_user, data.subject_teacher_id, data.group_id)
+        subject_teacher_id = data.subject_teacher_id
+        sinf_id = data.sinf_id
+
+        if sinf_id is not None:
+            _, subject_teacher, _ = await self._resolve_sinf_context(
+                session, sinf_id, current_user, data.group_id, is_admin
+            )
+            subject_teacher_id = subject_teacher.id
+        else:
+            if subject_teacher_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="subject_teacher_id is required when sinf_id is not provided",
+                )
+            if not is_admin and is_teacher:
+                await self._check_teacher_access(session, current_user, subject_teacher_id, data.group_id)
 
         new_lesson = Lesson(
-            subject_teacher_id=data.subject_teacher_id,
+            subject_teacher_id=subject_teacher_id,
             group_id=data.group_id,
+            sinf_id=sinf_id,
+            topic_id=data.topic_id,
+            lesson_type=data.lesson_type,
             topic=data.topic,
             date=data.date,
             description=data.description,
@@ -170,6 +220,10 @@ class LessonRepository:
             stmt = stmt.where(Lesson.subject_teacher_id == request.subject_teacher_id)
         if request.group_id:
             stmt = stmt.where(Lesson.group_id == request.group_id)
+        if request.sinf_id is not None:
+            stmt = stmt.where(Lesson.sinf_id == request.sinf_id)
+        if request.topic_id is not None:
+            stmt = stmt.where(Lesson.topic_id == request.topic_id)
         if request.date_from:
             stmt = stmt.where(Lesson.date >= request.date_from)
         if request.date_to:
@@ -188,6 +242,10 @@ class LessonRepository:
             count_stmt = count_stmt.where(Lesson.subject_teacher_id == request.subject_teacher_id)
         if request.group_id:
             count_stmt = count_stmt.where(Lesson.group_id == request.group_id)
+        if request.sinf_id is not None:
+            count_stmt = count_stmt.where(Lesson.sinf_id == request.sinf_id)
+        if request.topic_id is not None:
+            count_stmt = count_stmt.where(Lesson.topic_id == request.topic_id)
         if request.date_from:
             count_stmt = count_stmt.where(Lesson.date >= request.date_from)
         if request.date_to:
@@ -210,17 +268,28 @@ class LessonRepository:
         is_teacher = await self._is_role(current_user, "teacher")
 
         if not is_admin and is_teacher:
-            await self._check_teacher_access(
-                session,
-                current_user,
-                data.subject_teacher_id or lesson.subject_teacher_id,
-                data.group_id or lesson.group_id,
-            )
+            if lesson.sinf_id is not None:
+                if not await get_sinf_repository.user_owns_sinf(session, lesson.sinf_id, current_user.id):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Teacher is not the owner of this Sinf",
+                    )
+            else:
+                await self._check_teacher_access(
+                    session,
+                    current_user,
+                    data.subject_teacher_id or lesson.subject_teacher_id,
+                    data.group_id or lesson.group_id,
+                )
 
         if data.subject_teacher_id is not None:
             lesson.subject_teacher_id = data.subject_teacher_id
         if data.group_id is not None:
             lesson.group_id = data.group_id
+        if data.topic_id is not None:
+            lesson.topic_id = data.topic_id
+        if data.lesson_type is not None:
+            lesson.lesson_type = data.lesson_type
         if data.topic is not None:
             lesson.topic = data.topic
         if data.date is not None:
@@ -253,7 +322,14 @@ class LessonRepository:
         is_teacher = await self._is_role(current_user, "teacher")
 
         if not is_admin and is_teacher:
-            await self._check_teacher_access(session, current_user, lesson.subject_teacher_id, lesson.group_id)
+            if lesson.sinf_id is not None:
+                if not await get_sinf_repository.user_owns_sinf(session, lesson.sinf_id, current_user.id):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Teacher is not the owner of this Sinf",
+                    )
+            else:
+                await self._check_teacher_access(session, current_user, lesson.subject_teacher_id, lesson.group_id)
 
         await session.delete(lesson)
         await session.commit()

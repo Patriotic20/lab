@@ -15,6 +15,7 @@ import {
     PlayCircle,
     Trophy,
     BarChart2,
+    Calendar,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -46,6 +47,8 @@ export const RESOURCES: Record<string, ResourceMeta> = {
     kafedra:       { label: 'Kafedralar',       href: '/kafedras',    icon: Layers,        section: 'Boshqaruv' },
     group:         { label: 'Guruhlar',         href: '/groups',      icon: UsersRound,    section: 'Boshqaruv' },
     subject:       { label: 'Fanlar',           href: '/subjects',    icon: BookOpen,      section: 'Boshqaruv' },
+    sinf:          { label: 'Sinflar',          href: '/sinfs',       icon: GraduationCap, section: 'Boshqaruv' },
+    academic_year: { label: "O'quv yili",       href: '/academic-years', icon: Calendar,   section: 'Boshqaruv' },
 
     quiz:          { label: 'Testlar',          href: '/quizzes',     icon: BookOpen,      section: 'Testlar' },
     question:      { label: 'Savollar',         href: '/questions',   icon: FileQuestion,  section: 'Testlar' },

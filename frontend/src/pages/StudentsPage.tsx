@@ -12,7 +12,7 @@ import {
     TableRow,
 } from '@/components/ui/Table';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { Loader2, Search, ArrowLeft, CheckCircle2, XCircle, Pencil, Trash2, FilterX, Download, FolderEdit } from 'lucide-react';
+import { Loader2, Search, ArrowLeft, CheckCircle2, XCircle, Pencil, Trash2, FilterX, Download, FolderEdit, History } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Combobox } from '@/components/ui/Combobox';
 import { useStudents, useDeleteStudent } from '@/hooks/useStudents';
@@ -21,11 +21,13 @@ import { useGroups } from '@/hooks/useGroups';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { HemisImportModal } from '@/components/HemisImportModal';
 import { ChangeGroupModal } from '@/components/ChangeGroupModal';
+import { StudentMovementsModal } from '@/components/StudentMovementsModal';
 
 const StudentsPage = () => {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [studentToChangeGroup, setStudentToChangeGroup] = useState<Student | null>(null);
+    const [studentMovementsTarget, setStudentMovementsTarget] = useState<Student | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
     const [currentPage, setCurrentPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
@@ -173,6 +175,17 @@ const StudentsPage = () => {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
+                                                    title="Harakatlar tarixi"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setStudentMovementsTarget(student);
+                                                    }}
+                                                >
+                                                    <History className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         alert('Tahrirlash funksiyasi tez orada qo`shiladi');
@@ -244,6 +257,11 @@ const StudentsPage = () => {
                 isOpen={!!studentToChangeGroup}
                 onClose={() => setStudentToChangeGroup(null)}
                 student={studentToChangeGroup}
+            />
+
+            <StudentMovementsModal
+                student={studentMovementsTarget}
+                onClose={() => setStudentMovementsTarget(null)}
             />
         </div>
     );

@@ -17,10 +17,15 @@ export interface LessonGroupInfo {
     name: string;
 }
 
+export type LessonType = 'lecture' | 'seminar' | 'independent' | 'lab';
+
 export interface Lesson {
     id: number;
     subject_teacher_id: number;
     group_id: number;
+    sinf_id?: number | null;
+    topic_id?: number | null;
+    lesson_type?: LessonType | null;
     topic: string;
     date: string;
     description?: string | null;
@@ -38,8 +43,11 @@ export interface LessonListResponse {
 }
 
 export interface LessonCreateRequest {
-    subject_teacher_id: number;
+    subject_teacher_id?: number;
     group_id: number;
+    sinf_id?: number | null;
+    topic_id?: number | null;
+    lesson_type?: LessonType | null;
     topic: string;
     date: string;
     description?: string | null;
@@ -48,6 +56,9 @@ export interface LessonCreateRequest {
 export interface LessonUpdateRequest {
     subject_teacher_id?: number;
     group_id?: number;
+    sinf_id?: number | null;
+    topic_id?: number | null;
+    lesson_type?: LessonType | null;
     topic?: string;
     date?: string;
     description?: string | null;
@@ -56,6 +67,7 @@ export interface LessonUpdateRequest {
 export interface LessonListParams {
     subject_teacher_id?: number;
     group_id?: number;
+    sinf_id?: number;
     date_from?: string;
     date_to?: string;
     page?: number;

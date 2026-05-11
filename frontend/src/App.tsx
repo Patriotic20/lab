@@ -31,6 +31,9 @@ import PsychologyResultsPage from '@/pages/PsychologyResultsPage';
 import StudentPsychologyPage from '@/pages/StudentPsychologyPage';
 import LessonsPage from '@/pages/LessonsPage';
 import LessonDetailPage from '@/pages/LessonDetailPage';
+import SinfsPage from '@/pages/SinfsPage';
+import SinfDetailPage from '@/pages/SinfDetailPage';
+import AcademicYearsPage from '@/pages/AcademicYearsPage';
 import RolesPage from '@/pages/RolesPage';
 import RolePermissionsPage from '@/pages/RolePermissionsPage';
 import PermissionsPage from '@/pages/PermissionsPage';
@@ -132,6 +135,10 @@ function App() {
                 <Route path="/psychology/test/:methodId" element={<PermissionRoute permission="read:psychology"><PsychologyTestPage /></PermissionRoute>} />
                 <Route path="/psychology/results" element={<PermissionRoute permission="read:psychology_results"><PsychologyResultsPage /></PermissionRoute>} />
                 <Route path="/psychology/student" element={<StudentRoute><StudentPsychologyPage /></StudentRoute>} />
+
+                <Route path="/sinfs" element={<PermissionRoute permission="read:sinf"><SinfsPage /></PermissionRoute>} />
+                <Route path="/sinfs/:id" element={<PermissionRoute permission="read:sinf"><SinfDetailPage /></PermissionRoute>} />
+                <Route path="/academic-years" element={<PermissionRoute permission="read:academic_year"><AcademicYearsPage /></PermissionRoute>} />
 
                 <Route path="/subjects" element={<PermissionRoute permission="read:subject"><SubjectsPage /></PermissionRoute>} />
                 <Route path="/teacher-groups" element={<PermissionRoute permission="read:group"><TeacherGroupsPage /></PermissionRoute>} />

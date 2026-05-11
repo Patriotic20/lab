@@ -1,5 +1,10 @@
 from fastapi import APIRouter
 
+from .academic_year.router import router as academic_year_router
+from .assignment.router import router as assignment_router
+from .course_structure.router import router as course_structure_router
+from .student_movement.router import router as student_movement_router
+from .syllabus.router import router as syllabus_router
 from .faculty.router import router as faculty_router
 from .group.router import router as group_router
 from .hemis.router import router as hemis_router
@@ -13,6 +18,7 @@ from .quiz_process.router import router as quiz_process_router
 from .resource.router import router as resource_router
 from .result.router import router as result_router
 from .role.router import router as role_router
+from .sinf.router import router as sinf_router
 from .statistics.router import router as statistics_router
 from .student.router import router as student_router
 from .subject.router import router as subject_router
@@ -45,3 +51,9 @@ router.include_router(resource_router)
 router.include_router(psychology_router)
 router.include_router(tutor_router)
 router.include_router(lesson_router)
+router.include_router(sinf_router)
+router.include_router(academic_year_router)
+router.include_router(course_structure_router)
+router.include_router(syllabus_router)
+router.include_router(assignment_router)
+router.include_router(student_movement_router)

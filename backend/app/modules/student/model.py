@@ -42,6 +42,9 @@ class Student(Base, TimestampMixin, IdIntPk):
     address: Mapped[str] = mapped_column(String)
     avg_gpa: Mapped[float] = mapped_column(Float)
 
+    enrollment_date: Mapped[Date | None] = mapped_column(Date, nullable=True)
+    graduation_date: Mapped[Date | None] = mapped_column(Date, nullable=True)
+
     group: Mapped["Group"] = relationship("Group", back_populates="students")
     user: Mapped["User"] = relationship("User", back_populates="student")
     hemis_transactions: Mapped[list["HemisTransaction"]] = relationship("HemisTransaction", back_populates="student")

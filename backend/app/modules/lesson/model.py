@@ -9,7 +9,9 @@ from app.core.mixins.id_int_pk import IdIntPk
 from app.core.mixins.time_stamp_mixin import TimestampMixin
 
 if TYPE_CHECKING:
+    from app.modules.course_structure.models import Topic
     from app.modules.group.models.group import Group
+    from app.modules.sinf.model import Sinf
     from app.modules.subject.models.subject_teacher import SubjectTeacher
     from app.modules.user.models.user import User
 
@@ -31,12 +33,30 @@ class Lesson(Base, IdIntPk, TimestampMixin):
         index=True,
     )
 
+    sinf_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("sinfs.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    topic_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("course_topics.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    lesson_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
     topic: Mapped[str] = mapped_column(String(255), nullable=False)
     date: Mapped[date_type] = mapped_column(Date, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     subject_teacher: Mapped["SubjectTeacher"] = relationship("SubjectTeacher")
     group: Mapped["Group"] = relationship("Group")
+    sinf: Mapped["Sinf | None"] = relationship("Sinf", back_populates="lessons")
+    course_topic: Mapped["Topic | None"] = relationship("Topic")
     results: Mapped[list["LessonResult"]] = relationship(
         "LessonResult", back_populates="lesson", cascade="all, delete-orphan"
     )
