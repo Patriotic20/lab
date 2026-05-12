@@ -62,6 +62,7 @@ export default function LessonDetailPage() {
     const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
     const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
     const [assignmentToDelete, setAssignmentToDelete] = useState<Assignment | null>(null);
+    const [nowSnapshot] = useState(() => Date.now());
 
     const studentList = useMemo(() => studentsData?.students ?? [], [studentsData]);
     const resultByUserId = useMemo(() => {
@@ -254,7 +255,7 @@ export default function LessonDetailPage() {
                             <div className="space-y-2">
                                 {lessonAssignments.map((a) => {
                                     const dlDate = new Date(a.deadline);
-                                    const overdue = dlDate.getTime() < Date.now();
+                                    const overdue = dlDate.getTime() < nowSnapshot;
                                     return (
                                         <div
                                             key={a.id}

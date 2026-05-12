@@ -54,13 +54,14 @@ export default function MavzuDetailPage() {
     const { data: sinf, isLoading: isSinfLoading } = useSinf(sinfIdNum);
     const { data: modulesData, isLoading: isStructureLoading } = useModules(sinfIdNum ?? 0);
 
-    const { topic, parentModule } = useMemo(() => {
-        for (const m of modulesData?.modules ?? []) {
-            const t = m.topics.find((tp) => tp.id === topicIdNum);
-            if (t) return { topic: t, parentModule: m };
-        }
-        return { topic: null, parentModule: null };
-    }, [modulesData, topicIdNum]);
+    const parentModule = useMemo(
+        () => (modulesData?.modules ?? []).find((m) => m.topics.some((tp) => tp.id === topicIdNum)) ?? null,
+        [modulesData, topicIdNum],
+    );
+    const topic = useMemo(
+        () => parentModule?.topics.find((tp) => tp.id === topicIdNum) ?? null,
+        [parentModule, topicIdNum],
+    );
 
     const sinfGroupOptions = useMemo(
         () => (sinf?.groups ?? []).map((g) => ({ value: g.id.toString(), label: g.name })),
