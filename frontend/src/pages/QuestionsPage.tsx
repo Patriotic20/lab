@@ -22,6 +22,7 @@ import { useUsers } from '@/hooks/useUsers';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/context/AuthContext';
 import { Combobox } from '@/components/ui/Combobox';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 
 // ─── Teacher Subject Picker ──────────────────────────────────────────────────
 
@@ -214,14 +215,18 @@ const QuestionsTable = ({ subjectId, subjects, onBack, selectedSubjectName }: Qu
                         <Upload className="mr-2 h-4 w-4" />
                         Excel import
                     </Button>
-                    <Button variant="outline" className="text-destructive border-destructive hover:bg-destructive/10" onClick={() => setIsBulkDeleteModalOpen(true)}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Ommaviy o'chirish
-                    </Button>
-                    <Button onClick={handleCreateQuestion}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Qo'shish
-                    </Button>
+                    <PermissionGate permission="delete:question">
+                        <Button variant="outline" className="text-destructive border-destructive hover:bg-destructive/10" onClick={() => setIsBulkDeleteModalOpen(true)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Ommaviy o'chirish
+                        </Button>
+                    </PermissionGate>
+                    <PermissionGate permission="create:question">
+                        <Button onClick={handleCreateQuestion}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Qo'shish
+                        </Button>
+                    </PermissionGate>
                 </div>
             </div>
 
@@ -264,21 +269,25 @@ const QuestionsTable = ({ subjectId, subjects, onBack, selectedSubjectName }: Qu
                                             <TableCell>{question.username || '-'}</TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-2">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={(e) => handleEditQuestion(question, e)}
-                                                    >
-                                                        <Pencil className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-destructive hover:text-destructive"
-                                                        onClick={(e) => handleDeleteClick(question, e)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
+                                                    <PermissionGate permission="update:question">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => handleEditQuestion(question, e)}
+                                                        >
+                                                            <Pencil className="h-4 w-4" />
+                                                        </Button>
+                                                    </PermissionGate>
+                                                    <PermissionGate permission="delete:question">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-destructive hover:text-destructive"
+                                                            onClick={(e) => handleDeleteClick(question, e)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </PermissionGate>
                                                 </div>
                                             </TableCell>
                                         </TableRow>

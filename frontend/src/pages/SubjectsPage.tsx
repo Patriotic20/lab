@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/Input';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 import { useSubjects, useCreateSubject, useUpdateSubject, useDeleteSubject } from '@/hooks/useSubjects';
 
 const subjectSchema = z.object({
@@ -100,10 +101,12 @@ const SubjectsPage = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <Button onClick={() => { setSelectedSubject(null); setIsModalOpen(true); }}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Qo'shish
-                    </Button>
+                    <PermissionGate permission="create:subject">
+                        <Button onClick={() => { setSelectedSubject(null); setIsModalOpen(true); }}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Qo'shish
+                        </Button>
+                    </PermissionGate>
                 </div>
             </div>
 
@@ -131,21 +134,25 @@ const SubjectsPage = () => {
                                         <TableCell>{new Date(subject.created_at).toLocaleDateString()}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => { setSelectedSubject(subject); setIsModalOpen(true); }}
-                                                >
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="text-destructive hover:text-destructive"
-                                                    onClick={() => handleDeleteClick(subject)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <PermissionGate permission="update:subject">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => { setSelectedSubject(subject); setIsModalOpen(true); }}
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
+                                                <PermissionGate permission="delete:subject">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-destructive hover:text-destructive"
+                                                        onClick={() => handleDeleteClick(subject)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
                                             </div>
                                         </TableCell>
                                     </TableRow>

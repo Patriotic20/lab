@@ -17,6 +17,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useGroups, useCreateGroup, useUpdateGroup, useDeleteGroup } from '@/hooks/useGroups';
 import { useFaculties } from '@/hooks/useReferenceData';
 import { Combobox } from '@/components/ui/Combobox';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 
 const groupSchema = z.object({
     name: z.string().min(1, 'Group name is required'),
@@ -108,10 +109,12 @@ const GroupsPage = () => {
                         <h1 className="text-xl font-semibold tracking-tight">Guruhlar</h1>
                         <p className="mt-0.5 text-sm text-muted-foreground">Universitet o'quv guruhlarini boshqarish</p>
                     </div>
-                    <Button onClick={() => { setSelectedGroup(null); setIsModalOpen(true); }}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Qo'shish
-                    </Button>
+                    <PermissionGate permission="create:group">
+                        <Button onClick={() => { setSelectedGroup(null); setIsModalOpen(true); }}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Qo'shish
+                        </Button>
+                    </PermissionGate>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
@@ -169,12 +172,16 @@ const GroupsPage = () => {
                                         <TableCell>{new Date(group.created_at).toLocaleDateString()}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
-                                                <Button variant="ghost" size="sm" onClick={() => { setSelectedGroup(group); setIsModalOpen(true); }}>
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteClick(group)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <PermissionGate permission="update:group">
+                                                    <Button variant="ghost" size="sm" onClick={() => { setSelectedGroup(group); setIsModalOpen(true); }}>
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
+                                                <PermissionGate permission="delete:group">
+                                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteClick(group)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
                                             </div>
                                         </TableCell>
                                     </TableRow>

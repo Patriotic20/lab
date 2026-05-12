@@ -22,6 +22,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useAssignRoles } from '@/hooks/useUsers';
 import { useRoles } from '@/hooks/useReferenceData';
 import { ExpandableTags } from '@/components/ui/ExpandableTags';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 
 const userSchema = z.object({
     username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -119,10 +120,12 @@ const UsersPage = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <Button onClick={() => { setSelectedUser(null); setIsModalOpen(true); }}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Qo'shish
-                    </Button>
+                    <PermissionGate permission="create:user">
+                        <Button onClick={() => { setSelectedUser(null); setIsModalOpen(true); }}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Qo'shish
+                        </Button>
+                    </PermissionGate>
                 </div>
             </div>
 
@@ -162,21 +165,25 @@ const UsersPage = () => {
                                         <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => { setSelectedUser(user); setIsModalOpen(true); }}
-                                                >
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="text-destructive hover:text-destructive"
-                                                    onClick={() => handleDeleteClick(user)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <PermissionGate permission="update:user">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => { setSelectedUser(user); setIsModalOpen(true); }}
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
+                                                <PermissionGate permission="delete:user">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-destructive hover:text-destructive"
+                                                        onClick={() => handleDeleteClick(user)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
                                             </div>
                                         </TableCell>
                                     </TableRow>

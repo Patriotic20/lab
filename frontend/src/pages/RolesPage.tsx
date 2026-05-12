@@ -15,6 +15,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 
 
 const roleSchema = z.object({
@@ -108,10 +109,12 @@ const RolesPage = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <Button onClick={() => { setSelectedRole(null); setIsModalOpen(true); }}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Qo'shish
-                    </Button>
+                    <PermissionGate permission="create:role">
+                        <Button onClick={() => { setSelectedRole(null); setIsModalOpen(true); }}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Qo'shish
+                        </Button>
+                    </PermissionGate>
                 </div>
             </div>
 
@@ -165,12 +168,16 @@ const RolesPage = () => {
                                         <TableCell>{role.created_at ? new Date(role.created_at).toLocaleDateString() : '-'}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
-                                                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedRole(role); setIsModalOpen(true); }}>
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteClick(role); }}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <PermissionGate permission="update:role">
+                                                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedRole(role); setIsModalOpen(true); }}>
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
+                                                <PermissionGate permission="delete:role">
+                                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteClick(role); }}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
                                             </div>
                                         </TableCell>
                                     </TableRow>

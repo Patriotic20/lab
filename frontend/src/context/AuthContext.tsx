@@ -49,6 +49,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, []);
 
+    // Refresh /user/me when a 403 surfaces (permissions may have changed server-side)
+    // and on a 60s interval so that admin updates propagate without re-login.
+    useEffect(() => {
+        const onForbidden = () => {
+            if (localStorage.getItem('token')) fetchUser();
+        };
+        window.addEventListener('app:refresh-me', onForbidden);
+
+        const interval = setInterval(() => {
+            if (localStorage.getItem('token')) fetchUser();
+        }, 60_000);
+
+        const onForbiddenToast = () => {
+            // Lightweight visible feedback; replaces silent console.error on 403
+            alert("Sizda bu amalni bajarish uchun ruxsat yo'q");
+        };
+        window.addEventListener('app:forbidden', onForbiddenToast);
+
+        return () => {
+            window.removeEventListener('app:refresh-me', onForbidden);
+            window.removeEventListener('app:forbidden', onForbiddenToast);
+            clearInterval(interval);
+        };
+    }, []);
+
     const login = async (token: string, refreshToken: string) => {
         localStorage.setItem('token', token);
         localStorage.setItem('refresh_token', refreshToken);

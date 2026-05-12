@@ -52,10 +52,26 @@ const processQueue = (error: unknown, token: string | null = null) => {
     failedQueue = [];
 };
 
+let lastForbiddenAlert = 0;
+const notifyForbidden = () => {
+    const now = Date.now();
+    // Throttle alerts so a single 403 doesn't spam the user
+    if (now - lastForbiddenAlert < 3000) return;
+    lastForbiddenAlert = now;
+    window.dispatchEvent(new CustomEvent('app:forbidden'));
+};
+
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
+
+        if (error.response?.status === 403) {
+            notifyForbidden();
+            // Re-fetch /user/me so stale frontend permissions get refreshed
+            window.dispatchEvent(new CustomEvent('app:refresh-me'));
+            return Promise.reject(error);
+        }
 
         if (error.response?.status === 401 && !originalRequest._retry) {
             const refreshToken = localStorage.getItem('refresh_token');

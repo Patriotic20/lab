@@ -9,6 +9,7 @@ import { Plus, Pencil, Trash2, Loader2, Search } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Input } from '@/components/ui/Input';
 import { facultyService, type Faculty } from '@/services/facultyService';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 import type { Group } from '@/services/groupService';
 import type { Student } from '@/services/studentService';
 import { FacultyModal } from '@/components/faculty/FacultyModal';
@@ -149,10 +150,12 @@ const FacultyPage = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <Button onClick={() => { setSelectedFaculty(null); setIsModalOpen(true); }}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Qo'shish
-                    </Button>
+                    <PermissionGate permission="create:faculty">
+                        <Button onClick={() => { setSelectedFaculty(null); setIsModalOpen(true); }}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Qo'shish
+                        </Button>
+                    </PermissionGate>
                 </div>
             </div>
 
@@ -184,12 +187,16 @@ const FacultyPage = () => {
                                         <TableCell>{new Date(faculty.created_at).toLocaleDateString()}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
-                                                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedFaculty(faculty); setIsModalOpen(true); }}>
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteClick(faculty); }}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <PermissionGate permission="update:faculty">
+                                                    <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedFaculty(faculty); setIsModalOpen(true); }}>
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
+                                                <PermissionGate permission="delete:faculty">
+                                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDeleteClick(faculty); }}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
                                             </div>
                                         </TableCell>
                                     </TableRow>

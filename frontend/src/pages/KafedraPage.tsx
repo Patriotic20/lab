@@ -16,6 +16,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useKafedras, useCreateKafedra, useUpdateKafedra, useDeleteKafedra, useFaculties } from '@/hooks/useReferenceData';
 import { Combobox } from '@/components/ui/Combobox';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 
 const kafedraSchema = z.object({
     name: z.string().min(1, 'Kafedra nomi kiritilishi shart'),
@@ -107,10 +108,12 @@ const KafedraPage = () => {
                         <h1 className="text-xl font-semibold tracking-tight">Kafedralar</h1>
                         <p className="mt-0.5 text-sm text-muted-foreground">Universitet kafedralarini boshqarish</p>
                     </div>
-                    <Button onClick={() => { setSelectedKafedra(null); setIsModalOpen(true); }}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Qo'shish
-                    </Button>
+                    <PermissionGate permission="create:kafedra">
+                        <Button onClick={() => { setSelectedKafedra(null); setIsModalOpen(true); }}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Qo'shish
+                        </Button>
+                    </PermissionGate>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
@@ -168,12 +171,16 @@ const KafedraPage = () => {
                                         <TableCell>{new Date(kafedra.created_at).toLocaleDateString()}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
-                                                <Button variant="ghost" size="sm" onClick={() => { setSelectedKafedra(kafedra); setIsModalOpen(true); }}>
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteClick(kafedra)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <PermissionGate permission="update:kafedra">
+                                                    <Button variant="ghost" size="sm" onClick={() => { setSelectedKafedra(kafedra); setIsModalOpen(true); }}>
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
+                                                <PermissionGate permission="delete:kafedra">
+                                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteClick(kafedra)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
                                             </div>
                                         </TableCell>
                                     </TableRow>

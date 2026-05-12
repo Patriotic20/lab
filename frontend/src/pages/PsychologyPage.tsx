@@ -9,6 +9,7 @@ import { MethodBuilderModal } from '@/components/psychology/MethodBuilderModal';
 import { MethodList } from '@/components/psychology/MethodList';
 import { QuestionsPanel } from '@/components/psychology/QuestionsPanel';
 import type { MethodResponse } from '@/services/psychologyService';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 
 export default function PsychologyPage() {
     const navigate = useNavigate();
@@ -56,9 +57,11 @@ export default function PsychologyPage() {
                         <p className="text-xs text-muted-foreground">Test metodlarini boshqarish</p>
                     </div>
                 </div>
-                <Button onClick={() => setMethodModal({ open: true, editing: null })}>
-                    <Plus className="mr-2 h-4 w-4" /> Yangi metod
-                </Button>
+                <PermissionGate permission="create:psychology">
+                    <Button onClick={() => setMethodModal({ open: true, editing: null })}>
+                        <Plus className="mr-2 h-4 w-4" /> Yangi metod
+                    </Button>
+                </PermissionGate>
             </div>
 
             <Card>

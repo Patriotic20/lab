@@ -33,6 +33,7 @@ import type {
     TutorFullCreateRequest,
     TutorUpdateRequest,
 } from '@/services/tutorService';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -146,10 +147,12 @@ const TutorsPage = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <Button onClick={() => { setSelectedTutor(null); setIsModalOpen(true); }}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Qo'shish
-                    </Button>
+                    <PermissionGate permission="create:tutor">
+                        <Button onClick={() => { setSelectedTutor(null); setIsModalOpen(true); }}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Qo'shish
+                        </Button>
+                    </PermissionGate>
                 </div>
             </div>
 
@@ -202,22 +205,26 @@ const TutorsPage = () => {
                                                     >
                                                         <UsersIcon className="h-4 w-4" />
                                                     </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={(e) => handleEditClick(tutor, e)}
-                                                        title="Tahrirlash"
-                                                    >
-                                                        <Pencil className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={(e) => handleDeleteClick(tutor, e)}
-                                                        title="O'chirish"
-                                                    >
-                                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                                    </Button>
+                                                    <PermissionGate permission="update:tutor">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => handleEditClick(tutor, e)}
+                                                            title="Tahrirlash"
+                                                        >
+                                                            <Pencil className="h-4 w-4" />
+                                                        </Button>
+                                                    </PermissionGate>
+                                                    <PermissionGate permission="delete:tutor">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => handleDeleteClick(tutor, e)}
+                                                            title="O'chirish"
+                                                        >
+                                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                                        </Button>
+                                                    </PermissionGate>
                                                 </div>
                                             </TableCell>
                                         </TableRow>

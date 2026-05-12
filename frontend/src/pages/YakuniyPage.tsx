@@ -19,6 +19,7 @@ import { useSubjects } from '@/hooks/useSubjects';
 import { useStudents } from '@/hooks/useStudents';
 import { Input } from '@/components/ui/Input';
 import { Combobox } from '@/components/ui/Combobox';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 
 const gradeOptions = [
     { value: 2, label: '2', color: 'border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-700 dark:bg-red-950 dark:text-red-300 dark:hover:bg-red-900', activeColor: 'border-red-500 bg-red-500 text-white ring-2 ring-red-300 dark:ring-red-700' },
@@ -183,10 +184,12 @@ const YakuniyPage = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <Button onClick={handleOpenCreate}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Qo'shish
-                    </Button>
+                    <PermissionGate permission="create:yakuniy">
+                        <Button onClick={handleOpenCreate}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Qo'shish
+                        </Button>
+                    </PermissionGate>
                 </div>
             </div>
 
@@ -237,21 +240,25 @@ const YakuniyPage = () => {
                                         <TableCell>{new Date(item.created_at).toLocaleDateString()}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={(e) => handleOpenEdit(item, e)}
-                                                >
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="text-destructive hover:text-destructive"
-                                                    onClick={(e) => handleDeleteClick(item, e)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <PermissionGate permission="update:yakuniy">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={(e) => handleOpenEdit(item, e)}
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
+                                                <PermissionGate permission="delete:yakuniy">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-destructive hover:text-destructive"
+                                                        onClick={(e) => handleDeleteClick(item, e)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
                                             </div>
                                         </TableCell>
                                     </TableRow>

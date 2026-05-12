@@ -22,6 +22,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { HemisImportModal } from '@/components/HemisImportModal';
 import { ChangeGroupModal } from '@/components/ChangeGroupModal';
 import { StudentMovementsModal } from '@/components/StudentMovementsModal';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 
 const StudentsPage = () => {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -183,28 +184,32 @@ const StudentsPage = () => {
                                                 >
                                                     <History className="h-4 w-4" />
                                                 </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        alert('Tahrirlash funksiyasi tez orada qo`shiladi');
-                                                    }}
-                                                >
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setStudentToDelete(student);
-                                                        setCascadeWarnings([]);
-                                                    }}
-                                                    className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <PermissionGate permission="update:student">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            alert('Tahrirlash funksiyasi tez orada qo`shiladi');
+                                                        }}
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
+                                                <PermissionGate permission="delete:student">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setStudentToDelete(student);
+                                                            setCascadeWarnings([]);
+                                                        }}
+                                                        className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
                                             </div>
                                         </TableCell>
                                     </TableRow>

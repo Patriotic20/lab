@@ -18,6 +18,7 @@ import type { Teacher } from '@/services/teacherService';
 import { TeacherDetail } from '@/components/teachers/TeacherDetail';
 import { TeacherModal } from '@/components/teachers/TeacherModal';
 import { TeacherGroupModal } from '@/components/teachers/TeacherGroupModal';
+import { PermissionGate } from '@/components/auth/PermissionGate';
 import { TeacherSubjectModal } from '@/components/teachers/TeacherSubjectModal';
 
 const TeachersPage = () => {
@@ -133,10 +134,12 @@ const TeachersPage = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <Button onClick={() => { setSelectedTeacher(null); setIsModalOpen(true); }}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Qo'shish
-                    </Button>
+                    <PermissionGate permission="create:teacher">
+                        <Button onClick={() => { setSelectedTeacher(null); setIsModalOpen(true); }}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Qo'shish
+                        </Button>
+                    </PermissionGate>
                 </div>
             </div>
 
@@ -181,17 +184,21 @@ const TeachersPage = () => {
                                                 <Button variant="outline" size="sm" onClick={(e) => handleAssignSubjectsClick(teacher, e)}>
                                                     Fanlar
                                                 </Button>
-                                                <Button variant="ghost" size="sm" onClick={(e) => handleEditClick(teacher, e)}>
-                                                    <Pencil className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="text-destructive hover:text-destructive"
-                                                    onClick={(e) => handleDeleteClick(teacher, e)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <PermissionGate permission="update:teacher">
+                                                    <Button variant="ghost" size="sm" onClick={(e) => handleEditClick(teacher, e)}>
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
+                                                <PermissionGate permission="delete:teacher">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-destructive hover:text-destructive"
+                                                        onClick={(e) => handleDeleteClick(teacher, e)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </PermissionGate>
                                             </div>
                                         </TableCell>
                                     </TableRow>
