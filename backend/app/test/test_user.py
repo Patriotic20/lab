@@ -2,16 +2,16 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_create_user(async_client):
+async def test_create_user(auth_client):
     payload = {"name": "user"}
-    response = await async_client.post("/role/", json=payload)
+    response = await auth_client.post("/role/", json=payload)
     assert response.status_code == 201
     user_payload = {
         "username": "bezod",
         "password": "password123",
         "roles": [{"name": "user"}],
     }
-    response = await async_client.post("/user/", json=user_payload)
+    response = await auth_client.post("/user/", json=user_payload)
     assert response.status_code == 201
 
 

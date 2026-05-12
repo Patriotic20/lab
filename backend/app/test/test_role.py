@@ -2,27 +2,27 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_create_role(async_client):
+async def test_create_role(auth_client):
     payload = {"name": "user"}
-    response = await async_client.post("/role/", json=payload)
+    response = await auth_client.post("/role/", json=payload)
     assert response.status_code == 201
-    assert response.json()["id"] == 1
     assert response.json()["name"] == "user"
+    assert "id" in response.json()
     assert "created_at" in response.json()
     assert "updated_at" in response.json()
 
 
 @pytest.mark.asyncio
-async def test_create_role_duplicate(async_client):
+async def test_create_role_duplicate(auth_client):
     payload = {"name": "user"}
-    response = await async_client.post("/role/", json=payload)
+    response = await auth_client.post("/role/", json=payload)
     assert response.status_code == 201
-    assert response.json()["id"] == 1
     assert response.json()["name"] == "user"
+    assert "id" in response.json()
     assert "created_at" in response.json()
     assert "updated_at" in response.json()
 
-    response = await async_client.post("/role/", json=payload)
+    response = await auth_client.post("/role/", json=payload)
 
     assert response.status_code == 400
     assert response.json()["detail"] == f"Role '{payload['name']}' already exists"
