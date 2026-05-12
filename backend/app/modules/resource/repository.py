@@ -149,6 +149,7 @@ class ResourceRepository:
             group_id=target_group_id,
             lesson_id=data.lesson_id,
             sinf_id=sinf_id,
+            topic_id=data.topic_id,
             main_text=data.main_text,
             links=[link.model_dump() for link in data.links],
             files=[f.model_dump() for f in data.files],
@@ -242,6 +243,8 @@ class ResourceRepository:
             stmt = stmt.where(Resource.lesson_id == request.lesson_id)
         if request.sinf_id is not None:
             stmt = stmt.where(Resource.sinf_id == request.sinf_id)
+        if request.topic_id is not None:
+            stmt = stmt.where(Resource.topic_id == request.topic_id)
 
         stmt = stmt.order_by(desc(Resource.created_at))
         stmt = stmt.offset(request.offset).limit(request.limit)
@@ -260,6 +263,8 @@ class ResourceRepository:
             count_stmt = count_stmt.where(Resource.lesson_id == request.lesson_id)
         if request.sinf_id is not None:
             count_stmt = count_stmt.where(Resource.sinf_id == request.sinf_id)
+        if request.topic_id is not None:
+            count_stmt = count_stmt.where(Resource.topic_id == request.topic_id)
 
         total_result = await session.execute(count_stmt)
         total = total_result.scalar() or 0
@@ -333,6 +338,8 @@ class ResourceRepository:
             resource.lesson_id = data.lesson_id
         if data.sinf_id is not None:
             resource.sinf_id = data.sinf_id
+        if data.topic_id is not None:
+            resource.topic_id = data.topic_id
 
         try:
             await session.commit()

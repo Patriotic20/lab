@@ -68,6 +68,7 @@ class AssignmentResponse(BaseModel):
 class AssignmentListRequest(BaseModel):
     sinf_id: Optional[int] = None
     topic_id: Optional[int] = None
+    lesson_id: Optional[int] = None
     page: int = 1
     limit: int = 50
 

@@ -10,9 +10,12 @@ import { Input } from '@/components/ui/Input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { LessonResourceModal } from '@/components/LessonResourceModal';
-import { ArrowLeft, Loader2, Save, Plus, Pencil, Trash2, ExternalLink, FileText, Image as ImageIcon, Link2 } from 'lucide-react';
+import { AssignmentFormModal } from '@/components/AssignmentFormModal';
+import { useAssignments, useDeleteAssignment } from '@/hooks/useAssignments';
+import { ArrowLeft, Clock, Loader2, Save, Plus, Pencil, Trash2, ExternalLink, FileText, Image as ImageIcon, Link2 } from 'lucide-react';
 import type { LessonAttendance, LessonResultUpsertItem } from '@/services/lessonService';
 import type { ResourceResponse } from '@/services/resourceService';
+import type { Assignment } from '@/services/assignmentService';
 
 type Row = {
     user_id: number;
@@ -48,10 +51,17 @@ export default function LessonDetailPage() {
     const { data: resourcesData } = useResources(1, 100, undefined, undefined, lessonId);
     const lessonResources = resourcesData?.resources ?? [];
 
+    const { data: assignmentsData } = useAssignments(lessonId ? { lesson_id: lessonId, limit: 100 } : undefined);
+    const lessonAssignments = lessonId ? assignmentsData?.assignments ?? [] : [];
+    const deleteAssignmentMutation = useDeleteAssignment();
+
     const [rows, setRows] = useState<Row[]>([]);
     const [resourceModalOpen, setResourceModalOpen] = useState(false);
     const [editingResource, setEditingResource] = useState<ResourceResponse | null>(null);
     const [resourceToDelete, setResourceToDelete] = useState<ResourceResponse | null>(null);
+    const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
+    const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
+    const [assignmentToDelete, setAssignmentToDelete] = useState<Assignment | null>(null);
 
     const studentList = useMemo(() => studentsData?.students ?? [], [studentsData]);
     const resultByUserId = useMemo(() => {
@@ -222,6 +232,79 @@ export default function LessonDetailPage() {
                 </CardContent>
             </Card>
 
+            {lesson.sinf_id && (
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle>Topshiriqlar</CardTitle>
+                        {canEdit && (
+                            <Button
+                                size="sm"
+                                onClick={() => { setEditingAssignment(null); setAssignmentModalOpen(true); }}
+                            >
+                                <Plus className="h-4 w-4 mr-2" /> Topshiriq qo'shish
+                            </Button>
+                        )}
+                    </CardHeader>
+                    <CardContent>
+                        {lessonAssignments.length === 0 ? (
+                            <p className="py-6 text-center text-sm text-muted-foreground">
+                                Bu darsga hali topshiriq yo'q.
+                            </p>
+                        ) : (
+                            <div className="space-y-2">
+                                {lessonAssignments.map((a) => {
+                                    const dlDate = new Date(a.deadline);
+                                    const overdue = dlDate.getTime() < Date.now();
+                                    return (
+                                        <div
+                                            key={a.id}
+                                            className="rounded-xl border border-border bg-background p-3 flex items-center justify-between gap-3"
+                                        >
+                                            <div className="min-w-0 flex-1">
+                                                <p className="font-medium truncate">{a.title}</p>
+                                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                                                    <Clock className="h-3 w-3" />
+                                                    <span className={overdue ? 'text-destructive' : ''}>
+                                                        {dlDate.toLocaleString()}
+                                                    </span>
+                                                    <span>· max {a.max_grade}</span>
+                                                    {a.stats && (
+                                                        <span>· {a.stats.submitted}/{a.stats.total_students} topshirgan</span>
+                                                    )}
+                                                </div>
+                                                {a.description && (
+                                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                                        {a.description}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            {canEdit && (
+                                                <div className="flex gap-1 shrink-0">
+                                                    <button
+                                                        onClick={() => { setEditingAssignment(a); setAssignmentModalOpen(true); }}
+                                                        className="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                                                        title="Tahrirlash"
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setAssignmentToDelete(a)}
+                                                        className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                                        title="O'chirish"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
+
             <Card>
                 <CardHeader>
                     <CardTitle>Natijalar</CardTitle>
@@ -327,7 +410,7 @@ export default function LessonDetailPage() {
             <LessonResourceModal
                 isOpen={resourceModalOpen}
                 onClose={() => { setResourceModalOpen(false); setEditingResource(null); }}
-                lesson={lesson}
+                target={{ kind: 'lesson', lesson }}
                 editing={editingResource}
             />
 
@@ -342,6 +425,32 @@ export default function LessonDetailPage() {
                 }}
                 title="Resursni o'chirish"
                 description="Ushbu resursni o'chirmoqchimisiz?"
+                confirmText="O'chirish"
+                cancelText="Bekor qilish"
+            />
+
+            {lesson.sinf_id && (
+                <AssignmentFormModal
+                    isOpen={assignmentModalOpen}
+                    onClose={() => { setAssignmentModalOpen(false); setEditingAssignment(null); }}
+                    sinfId={lesson.sinf_id}
+                    lessonId={lesson.id}
+                    topicId={lesson.topic_id ?? null}
+                    editing={editingAssignment}
+                />
+            )}
+
+            <ConfirmDialog
+                isOpen={!!assignmentToDelete}
+                onClose={() => setAssignmentToDelete(null)}
+                onConfirm={() => {
+                    if (!assignmentToDelete) return;
+                    deleteAssignmentMutation.mutate(assignmentToDelete.id, {
+                        onSuccess: () => setAssignmentToDelete(null),
+                    });
+                }}
+                title="Topshiriqni o'chirish"
+                description={`"${assignmentToDelete?.title}" topshirig'ini o'chirmoqchimisiz?`}
                 confirmText="O'chirish"
                 cancelText="Bekor qilish"
             />

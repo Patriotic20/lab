@@ -23,14 +23,18 @@ const ALLOWED_MIME: Record<string, string> = {
 const IMAGE_MAX = 5 * 1024 * 1024;
 const DOC_MAX = 20 * 1024 * 1024;
 
+export type ResourceModalTarget =
+    | { kind: 'lesson'; lesson: Lesson }
+    | { kind: 'topic'; topicId: number; sinfId: number };
+
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    lesson: Lesson;
+    target: ResourceModalTarget;
     editing?: ResourceResponse | null;
 }
 
-export const LessonResourceModal = ({ isOpen, onClose, lesson, editing }: Props) => {
+export const LessonResourceModal = ({ isOpen, onClose, target, editing }: Props) => {
     const createMutation = useCreateResource();
     const updateMutation = useUpdateResource();
 
@@ -113,17 +117,27 @@ export const LessonResourceModal = ({ isOpen, onClose, lesson, editing }: Props)
                 { onSuccess: onClose, onError: () => setError('Xatolik yuz berdi') }
             );
         } else {
-            createMutation.mutate(
-                {
-                    subject_teacher_id: lesson.subject_teacher_id,
-                    group_id: lesson.group_id,
-                    lesson_id: lesson.id,
-                    main_text: mainText,
-                    links: cleanLinks,
-                    files,
-                },
-                { onSuccess: onClose, onError: () => setError('Xatolik yuz berdi') }
-            );
+            const payload =
+                target.kind === 'lesson'
+                    ? {
+                          subject_teacher_id: target.lesson.subject_teacher_id,
+                          group_id: target.lesson.group_id,
+                          lesson_id: target.lesson.id,
+                          main_text: mainText,
+                          links: cleanLinks,
+                          files,
+                      }
+                    : {
+                          sinf_id: target.sinfId,
+                          topic_id: target.topicId,
+                          main_text: mainText,
+                          links: cleanLinks,
+                          files,
+                      };
+            createMutation.mutate(payload, {
+                onSuccess: onClose,
+                onError: () => setError('Xatolik yuz berdi'),
+            });
         }
     };
 

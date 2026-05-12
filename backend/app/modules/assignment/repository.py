@@ -194,6 +194,9 @@ class AssignmentRepository:
         if request.topic_id:
             stmt = stmt.where(Assignment.topic_id == request.topic_id)
             count_stmt = count_stmt.where(Assignment.topic_id == request.topic_id)
+        if request.lesson_id:
+            stmt = stmt.where(Assignment.lesson_id == request.lesson_id)
+            count_stmt = count_stmt.where(Assignment.lesson_id == request.lesson_id)
 
         stmt = stmt.order_by(desc(Assignment.deadline)).offset(request.offset).limit(request.limit)
         items = (await session.execute(stmt)).scalars().all()

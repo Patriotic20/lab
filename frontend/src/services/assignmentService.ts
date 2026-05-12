@@ -103,7 +103,7 @@ export interface SubmissionGradeRequest {
 }
 
 export const assignmentService = {
-    list: async (params?: { sinf_id?: number; topic_id?: number; page?: number; limit?: number }) => {
+    list: async (params?: { sinf_id?: number; topic_id?: number; lesson_id?: number; page?: number; limit?: number }) => {
         const response = await api.get<AssignmentListResponse>('/assignment/', { params });
         return response.data;
     },

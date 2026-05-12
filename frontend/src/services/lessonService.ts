@@ -68,6 +68,7 @@ export interface LessonListParams {
     subject_teacher_id?: number;
     group_id?: number;
     sinf_id?: number;
+    topic_id?: number;
     date_from?: string;
     date_to?: string;
     page?: number;

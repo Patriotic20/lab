@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     ArrowLeft, BookOpen, CheckCircle2, ChevronDown, ChevronRight, ClipboardCheck, Clock, ExternalLink,
-    FileText, FolderTree, GraduationCap, Link2, Loader2, Pencil, Plus, Scroll, Send, Trash2, Users, X,
+    FileText, FolderTree, GraduationCap, Link2, Loader2, Pencil, Plus, Send, Trash2, Users, X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -14,10 +14,9 @@ import { useAuth } from '@/context/AuthContext';
 import { useSinf } from '@/hooks/useSinf';
 import {
     useLessons,
-    useCreateLesson,
-    useUpdateLesson,
     useDeleteLesson,
 } from '@/hooks/useLessons';
+import { LessonFormModal } from '@/components/LessonFormModal';
 import {
     useResources,
     useCreateResource,
@@ -34,8 +33,6 @@ import {
     useUpdateTopic,
 } from '@/hooks/useCourseStructure';
 import type { Module, Topic } from '@/services/courseStructureService';
-import { useSyllabus, useUpsertSyllabus } from '@/hooks/useSyllabus';
-import type { LiteratureItem } from '@/services/syllabusService';
 import {
     useAssignments,
     useCreateAssignment,
@@ -47,12 +44,7 @@ import {
     useUpdateAssignment,
 } from '@/hooks/useAssignments';
 import type { Assignment, Submission } from '@/services/assignmentService';
-import type {
-    Lesson,
-    LessonCreateRequest,
-    LessonType,
-    LessonUpdateRequest,
-} from '@/services/lessonService';
+import type { Lesson, LessonType } from '@/services/lessonService';
 
 const LESSON_TYPE_LABEL: Record<LessonType, string> = {
     lecture: 'Maʼruza',
@@ -82,7 +74,7 @@ const isValidUrl = (url: string) => {
     }
 };
 
-type Tab = 'lessons' | 'resources' | 'structure' | 'syllabus' | 'assignments';
+type Tab = 'lessons' | 'resources' | 'structure' | 'assignments';
 
 export default function SinfDetailPage() {
     const navigate = useNavigate();
@@ -222,17 +214,6 @@ export default function SinfDetailPage() {
                     <FileText className="mr-1.5 inline h-4 w-4" />
                     Resurslar
                 </button>
-                <button
-                    className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition ${
-                        tab === 'syllabus'
-                            ? 'border-primary text-primary'
-                            : 'border-transparent text-muted-foreground hover:text-foreground'
-                    }`}
-                    onClick={() => setTab('syllabus')}
-                >
-                    <Scroll className="mr-1.5 inline h-4 w-4" />
-                    Sillabus
-                </button>
             </div>
 
             {tab === 'structure' ? (
@@ -241,10 +222,8 @@ export default function SinfDetailPage() {
                 <LessonsTab sinfId={sinf.id} sinfGroupOptions={sinfGroupOptions} canManage={canManage} sinfGroupIds={sinfGroupIds} />
             ) : tab === 'assignments' ? (
                 <AssignmentsTab sinfId={sinf.id} canManage={canManage} />
-            ) : tab === 'resources' ? (
-                <ResourcesTab sinfId={sinf.id} sinfGroupOptions={sinfGroupOptions} canManage={canManage} sinfGroupIds={sinfGroupIds} />
             ) : (
-                <SyllabusTab sinfId={sinf.id} canManage={canManage} />
+                <ResourcesTab sinfId={sinf.id} sinfGroupOptions={sinfGroupOptions} canManage={canManage} sinfGroupIds={sinfGroupIds} />
             )}
         </div>
     );
@@ -252,6 +231,7 @@ export default function SinfDetailPage() {
 
 // ──────────────────────────────────────────────────────────────────────────
 function StructureTab({ sinfId, canManage }: { sinfId: number; canManage: boolean }) {
+    const navigate = useNavigate();
     const { data, isLoading } = useModules(sinfId);
     const createModule = useCreateModule(sinfId);
     const updateModule = useUpdateModule(sinfId);
@@ -460,7 +440,16 @@ function StructureTab({ sinfId, canManage }: { sinfId: number; canManage: boolea
                                                 m.topics.map((t) => (
                                                     <div
                                                         key={t.id}
-                                                        className="flex items-center gap-2 rounded border border-border px-2 py-1.5"
+                                                        role="button"
+                                                        tabIndex={0}
+                                                        onClick={() => navigate(`/sinfs/${sinfId}/mavzu/${t.id}`)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                                e.preventDefault();
+                                                                navigate(`/sinfs/${sinfId}/mavzu/${t.id}`);
+                                                            }
+                                                        }}
+                                                        className="flex items-center gap-2 rounded border border-border px-2 py-1.5 cursor-pointer hover:border-primary hover:bg-accent/50 transition"
                                                     >
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-sm font-medium truncate">{t.name}</p>
@@ -474,13 +463,13 @@ function StructureTab({ sinfId, canManage }: { sinfId: number; canManage: boolea
                                                         {canManage && (
                                                             <div className="flex gap-1">
                                                                 <button
-                                                                    onClick={() => openTopicEdit(t)}
+                                                                    onClick={(e) => { e.stopPropagation(); openTopicEdit(t); }}
                                                                     className="rounded p-1 text-muted-foreground hover:bg-accent"
                                                                 >
                                                                     <Pencil className="h-3.5 w-3.5" />
                                                                 </button>
                                                                 <button
-                                                                    onClick={() => setDeleteTopicTarget(t)}
+                                                                    onClick={(e) => { e.stopPropagation(); setDeleteTopicTarget(t); }}
                                                                     className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                                                                 >
                                                                     <Trash2 className="h-3.5 w-3.5" />
@@ -631,43 +620,19 @@ function LessonsTab({
         }
         return opts;
     }, [structureData]);
-    const createLesson = useCreateLesson();
-    const updateLesson = useUpdateLesson();
     const deleteLesson = useDeleteLesson();
 
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<Lesson | null>(null);
-    const [formGroupId, setFormGroupId] = useState('');
-    const [formTopicId, setFormTopicId] = useState('');
-    const [formLessonType, setFormLessonType] = useState<string>('');
-    const [formTopic, setFormTopic] = useState('');
-    const [formDate, setFormDate] = useState('');
-    const [formDescription, setFormDescription] = useState('');
-    const [formError, setFormError] = useState('');
-
     const [deleteTarget, setDeleteTarget] = useState<Lesson | null>(null);
 
     const openCreate = () => {
         setEditing(null);
-        setFormGroupId('');
-        setFormTopicId('');
-        setFormLessonType('lecture');
-        setFormTopic('');
-        setFormDate(new Date().toISOString().slice(0, 10));
-        setFormDescription('');
-        setFormError('');
         setModalOpen(true);
     };
 
     const openEdit = (lesson: Lesson) => {
         setEditing(lesson);
-        setFormGroupId(lesson.group_id.toString());
-        setFormTopicId(lesson.topic_id != null ? lesson.topic_id.toString() : '');
-        setFormLessonType(lesson.lesson_type ?? '');
-        setFormTopic(lesson.topic);
-        setFormDate(lesson.date);
-        setFormDescription(lesson.description ?? '');
-        setFormError('');
         setModalOpen(true);
     };
 
@@ -676,64 +641,10 @@ function LessonsTab({
         setEditing(null);
     };
 
-    const handleSubmit = () => {
-        if (!formGroupId) {
-            setFormError('Guruh tanlanmagan');
-            return;
-        }
-        if (!formTopic.trim()) {
-            setFormError('Mavzu bo\'sh bo\'lmasligi kerak');
-            return;
-        }
-        if (!formDate) {
-            setFormError('Sana tanlanmagan');
-            return;
-        }
-        const groupIdNum = parseInt(formGroupId, 10);
-        if (!sinfGroupIds.has(groupIdNum)) {
-            setFormError('Guruh sinfga tegishli emas');
-            return;
-        }
-
-        const lessonTypeValue = (formLessonType as LessonType) || null;
-        const topicIdValue = formTopicId ? parseInt(formTopicId, 10) : null;
-
-        if (editing) {
-            const payload: LessonUpdateRequest = {
-                group_id: groupIdNum,
-                topic_id: topicIdValue,
-                lesson_type: lessonTypeValue,
-                topic: formTopic.trim(),
-                date: formDate,
-                description: formDescription.trim() || null,
-            };
-            updateLesson.mutate(
-                { id: editing.id, data: payload },
-                { onSuccess: closeModal, onError: () => setFormError('Xatolik yuz berdi') },
-            );
-        } else {
-            const payload: LessonCreateRequest = {
-                sinf_id: sinfId,
-                group_id: groupIdNum,
-                topic_id: topicIdValue,
-                lesson_type: lessonTypeValue,
-                topic: formTopic.trim(),
-                date: formDate,
-                description: formDescription.trim() || null,
-            };
-            createLesson.mutate(payload, {
-                onSuccess: closeModal,
-                onError: () => setFormError('Xatolik yuz berdi'),
-            });
-        }
-    };
-
     const handleDelete = () => {
         if (!deleteTarget) return;
         deleteLesson.mutate(deleteTarget.id, { onSuccess: () => setDeleteTarget(null) });
     };
-
-    const isPending = createLesson.isPending || updateLesson.isPending;
 
     return (
         <div className="space-y-3">
@@ -807,75 +718,15 @@ function LessonsTab({
                 </div>
             )}
 
-            <Modal isOpen={modalOpen} onClose={closeModal} title={editing ? 'Darsni tahrirlash' : 'Yangi dars'}>
-                <div className="space-y-4">
-                    <div>
-                        <label className="text-sm font-medium block mb-1">Guruh</label>
-                        <Combobox
-                            options={sinfGroupOptions}
-                            value={formGroupId}
-                            onChange={setFormGroupId}
-                            placeholder="Guruh tanlang..."
-                        />
-                    </div>
-                    <div>
-                        <label className="text-sm font-medium block mb-1">Dars turi</label>
-                        <Combobox
-                            options={[
-                                { value: '', label: '—' },
-                                { value: 'lecture', label: "Ma'ruza" },
-                                { value: 'seminar', label: 'Seminar' },
-                                { value: 'independent', label: "Mustaqil ta'lim" },
-                                { value: 'lab', label: 'Laboratoriya' },
-                            ]}
-                            value={formLessonType}
-                            onChange={setFormLessonType}
-                            placeholder="Tur tanlang..."
-                        />
-                    </div>
-                    {topicOptions.length > 1 && (
-                        <div>
-                            <label className="text-sm font-medium block mb-1">Mavzu (modul ichidan)</label>
-                            <Combobox
-                                options={topicOptions}
-                                value={formTopicId}
-                                onChange={setFormTopicId}
-                                placeholder="Tanlang..."
-                            />
-                        </div>
-                    )}
-                    <div>
-                        <label className="text-sm font-medium block mb-1">Mavzu</label>
-                        <Input
-                            placeholder="Dars mavzusi"
-                            value={formTopic}
-                            onChange={(e) => setFormTopic(e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label className="text-sm font-medium block mb-1">Sana</label>
-                        <Input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
-                    </div>
-                    <div>
-                        <label className="text-sm font-medium block mb-1">Tavsif (ixtiyoriy)</label>
-                        <textarea
-                            className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                            value={formDescription}
-                            onChange={(e) => setFormDescription(e.target.value)}
-                        />
-                    </div>
-                    {formError && <p className="text-sm text-destructive">{formError}</p>}
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button variant="outline" onClick={closeModal} disabled={isPending}>
-                            Bekor qilish
-                        </Button>
-                        <Button onClick={handleSubmit} disabled={isPending}>
-                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {editing ? 'Saqlash' : 'Qo\'shish'}
-                        </Button>
-                    </div>
-                </div>
-            </Modal>
+            <LessonFormModal
+                isOpen={modalOpen}
+                onClose={closeModal}
+                sinfId={sinfId}
+                sinfGroupOptions={sinfGroupOptions}
+                sinfGroupIds={sinfGroupIds}
+                topicOptions={topicOptions}
+                editing={editing}
+            />
 
             <ConfirmDialog
                 isOpen={!!deleteTarget}
@@ -1156,323 +1007,6 @@ function ResourcesTab({
                 confirmText="O'chirish"
                 cancelText="Bekor qilish"
             />
-        </div>
-    );
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-function SyllabusTab({ sinfId, canManage }: { sinfId: number; canManage: boolean }) {
-    const { data: syllabus, isLoading } = useSyllabus(sinfId);
-    const upsert = useUpsertSyllabus(sinfId);
-
-    const [goals, setGoals] = useState('');
-    const [outcomes, setOutcomes] = useState('');
-    const [prerequisites, setPrerequisites] = useState('');
-    const [methodical, setMethodical] = useState('');
-    const [literature, setLiterature] = useState<LiteratureItem[]>([]);
-    const [grading, setGrading] = useState<Array<{ name: string; percent: string }>>([]);
-    const [competencies, setCompetencies] = useState<string[]>([]);
-    const [competencyInput, setCompetencyInput] = useState('');
-    const [error, setError] = useState('');
-    const [savedAt, setSavedAt] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (syllabus) {
-            setGoals(syllabus.goals ?? '');
-            setOutcomes(syllabus.learning_outcomes ?? '');
-            setPrerequisites(syllabus.prerequisites ?? '');
-            setMethodical(syllabus.methodical_recommendations ?? '');
-            setLiterature(syllabus.literature ?? []);
-            setGrading(
-                Object.entries(syllabus.grading_scheme ?? {}).map(([name, percent]) => ({
-                    name,
-                    percent: percent.toString(),
-                })),
-            );
-            setCompetencies(syllabus.competencies ?? []);
-        }
-    }, [syllabus]);
-
-    const totalPercent = grading.reduce((s, g) => s + (parseInt(g.percent, 10) || 0), 0);
-
-    const handleSave = () => {
-        if (totalPercent !== 0 && totalPercent !== 100) {
-            setError(`Baholash sxemasi 100% bo'lishi kerak, hozir ${totalPercent}%`);
-            return;
-        }
-        const scheme: Record<string, number> = {};
-        for (const g of grading) {
-            if (g.name.trim() && g.percent) {
-                scheme[g.name.trim()] = parseInt(g.percent, 10) || 0;
-            }
-        }
-        upsert.mutate(
-            {
-                goals: goals.trim() || null,
-                learning_outcomes: outcomes.trim() || null,
-                prerequisites: prerequisites.trim() || null,
-                methodical_recommendations: methodical.trim() || null,
-                literature: literature.filter((l) => l.title.trim()),
-                grading_scheme: scheme,
-                competencies: competencies.filter((c) => c.trim()),
-            },
-            {
-                onSuccess: () => {
-                    setError('');
-                    setSavedAt(new Date().toLocaleTimeString());
-                },
-                onError: () => setError('Saqlashda xatolik'),
-            },
-        );
-    };
-
-    if (isLoading) {
-        return (
-            <div className="flex h-32 items-center justify-center">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
-        );
-    }
-
-    return (
-        <div className="space-y-4">
-            <Card>
-                <CardContent className="pt-6 space-y-3">
-                    <h3 className="font-semibold text-foreground flex items-center gap-2">
-                        <Scroll className="h-4 w-4 text-primary" /> O'quv-uslubiy majmua (UMK)
-                    </h3>
-
-                    <div>
-                        <label className="text-sm font-medium block mb-1">Maqsadlar</label>
-                        <textarea
-                            className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-                            value={goals}
-                            onChange={(e) => setGoals(e.target.value)}
-                            disabled={!canManage}
-                            placeholder="Kursning umumiy maqsadlari..."
-                        />
-                    </div>
-
-                    <div>
-                        <label className="text-sm font-medium block mb-1">Kutilayotgan natijalar</label>
-                        <textarea
-                            className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-                            value={outcomes}
-                            onChange={(e) => setOutcomes(e.target.value)}
-                            disabled={!canManage}
-                        />
-                    </div>
-
-                    <div>
-                        <label className="text-sm font-medium block mb-1">Prerekvizitlar</label>
-                        <textarea
-                            className="w-full min-h-[60px] rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-                            value={prerequisites}
-                            onChange={(e) => setPrerequisites(e.target.value)}
-                            disabled={!canManage}
-                            placeholder="Kurs uchun zarur oldingi bilimlar..."
-                        />
-                    </div>
-
-                    <div>
-                        <label className="text-sm font-medium block mb-1">Uslubiy tavsiyalar</label>
-                        <textarea
-                            className="w-full min-h-[60px] rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-                            value={methodical}
-                            onChange={(e) => setMethodical(e.target.value)}
-                            disabled={!canManage}
-                        />
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardContent className="pt-6 space-y-3">
-                    <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-foreground">Baholash sxemasi (% jami 100)</h3>
-                        <span className={`text-xs ${totalPercent === 100 ? 'text-emerald-600' : 'text-muted-foreground'}`}>
-                            Jami: {totalPercent}%
-                        </span>
-                    </div>
-                    <div className="space-y-2">
-                        {grading.map((g, idx) => (
-                            <div key={idx} className="flex gap-2 items-center">
-                                <Input
-                                    placeholder="Nom (masalan: Joriy nazorat)"
-                                    value={g.name}
-                                    onChange={(e) =>
-                                        setGrading((prev) =>
-                                            prev.map((p, i) => (i === idx ? { ...p, name: e.target.value } : p)),
-                                        )
-                                    }
-                                    className="flex-1"
-                                    disabled={!canManage}
-                                />
-                                <Input
-                                    type="number"
-                                    min={0}
-                                    max={100}
-                                    placeholder="%"
-                                    value={g.percent}
-                                    onChange={(e) =>
-                                        setGrading((prev) =>
-                                            prev.map((p, i) => (i === idx ? { ...p, percent: e.target.value } : p)),
-                                        )
-                                    }
-                                    className="w-24"
-                                    disabled={!canManage}
-                                />
-                                {canManage && (
-                                    <button
-                                        onClick={() => setGrading((prev) => prev.filter((_, i) => i !== idx))}
-                                        className="text-destructive hover:text-destructive/80"
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-                        {canManage && (
-                            <button
-                                onClick={() => setGrading((prev) => [...prev, { name: '', percent: '' }])}
-                                className="flex items-center gap-1 text-xs text-primary hover:underline"
-                            >
-                                <Plus className="h-3.5 w-3.5" /> Qator qo'shish
-                            </button>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardContent className="pt-6 space-y-3">
-                    <h3 className="font-semibold text-foreground">Adabiyotlar</h3>
-                    <div className="space-y-2">
-                        {literature.map((l, idx) => (
-                            <div key={idx} className="flex gap-2 items-center">
-                                <Input
-                                    placeholder="Sarlavha"
-                                    value={l.title}
-                                    onChange={(e) =>
-                                        setLiterature((prev) =>
-                                            prev.map((p, i) => (i === idx ? { ...p, title: e.target.value } : p)),
-                                        )
-                                    }
-                                    className="flex-1"
-                                    disabled={!canManage}
-                                />
-                                <Input
-                                    placeholder="Muallif"
-                                    value={l.author ?? ''}
-                                    onChange={(e) =>
-                                        setLiterature((prev) =>
-                                            prev.map((p, i) => (i === idx ? { ...p, author: e.target.value } : p)),
-                                        )
-                                    }
-                                    className="flex-1"
-                                    disabled={!canManage}
-                                />
-                                <Input
-                                    type="number"
-                                    placeholder="Yil"
-                                    value={l.year ?? ''}
-                                    onChange={(e) =>
-                                        setLiterature((prev) =>
-                                            prev.map((p, i) =>
-                                                i === idx ? { ...p, year: e.target.value ? parseInt(e.target.value, 10) : null } : p,
-                                            ),
-                                        )
-                                    }
-                                    className="w-24"
-                                    disabled={!canManage}
-                                />
-                                {canManage && (
-                                    <button
-                                        onClick={() => setLiterature((prev) => prev.filter((_, i) => i !== idx))}
-                                        className="text-destructive hover:text-destructive/80"
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </button>
-                                )}
-                            </div>
-                        ))}
-                        {canManage && (
-                            <button
-                                onClick={() =>
-                                    setLiterature((prev) => [...prev, { title: '', author: '', year: null }])
-                                }
-                                className="flex items-center gap-1 text-xs text-primary hover:underline"
-                            >
-                                <Plus className="h-3.5 w-3.5" /> Adabiyot qo'shish
-                            </button>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardContent className="pt-6 space-y-3">
-                    <h3 className="font-semibold text-foreground">Kompetensiyalar</h3>
-                    <div className="flex flex-wrap gap-1.5">
-                        {competencies.map((c, idx) => (
-                            <span
-                                key={idx}
-                                className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs text-primary"
-                            >
-                                {c}
-                                {canManage && (
-                                    <button
-                                        onClick={() => setCompetencies((prev) => prev.filter((_, i) => i !== idx))}
-                                        className="hover:text-destructive"
-                                    >
-                                        <X className="h-3 w-3" />
-                                    </button>
-                                )}
-                            </span>
-                        ))}
-                    </div>
-                    {canManage && (
-                        <div className="flex gap-2">
-                            <Input
-                                placeholder="Yangi kompetensiya..."
-                                value={competencyInput}
-                                onChange={(e) => setCompetencyInput(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && competencyInput.trim()) {
-                                        setCompetencies((prev) => [...prev, competencyInput.trim()]);
-                                        setCompetencyInput('');
-                                    }
-                                }}
-                                className="flex-1"
-                            />
-                            <Button
-                                variant="outline"
-                                onClick={() => {
-                                    if (competencyInput.trim()) {
-                                        setCompetencies((prev) => [...prev, competencyInput.trim()]);
-                                        setCompetencyInput('');
-                                    }
-                                }}
-                            >
-                                <Plus className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-
-            {canManage && (
-                <div className="flex items-center justify-end gap-3">
-                    {error && <p className="text-sm text-destructive">{error}</p>}
-                    {savedAt && !error && (
-                        <p className="text-sm text-emerald-600">Saqlandi: {savedAt}</p>
-                    )}
-                    <Button onClick={handleSave} disabled={upsert.isPending}>
-                        {upsert.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Saqlash
-                    </Button>
-                </div>
-            )}
         </div>
     );
 }

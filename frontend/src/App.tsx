@@ -34,6 +34,7 @@ import LessonsPage from '@/pages/LessonsPage';
 import LessonDetailPage from '@/pages/LessonDetailPage';
 import SinfsPage from '@/pages/SinfsPage';
 import SinfDetailPage from '@/pages/SinfDetailPage';
+import MavzuDetailPage from '@/pages/MavzuDetailPage';
 import AcademicYearsPage from '@/pages/AcademicYearsPage';
 import RolesPage from '@/pages/RolesPage';
 import RolePermissionsPage from '@/pages/RolePermissionsPage';
@@ -140,6 +141,7 @@ function App() {
 
                 <Route path="/sinfs" element={<PermissionRoute permission="read:sinf"><SinfsPage /></PermissionRoute>} />
                 <Route path="/sinfs/:id" element={<PermissionRoute permission="read:sinf"><SinfDetailPage /></PermissionRoute>} />
+                <Route path="/sinfs/:sinfId/mavzu/:topicId" element={<PermissionRoute permission="read:sinf"><MavzuDetailPage /></PermissionRoute>} />
                 <Route path="/academic-years" element={<PermissionRoute permission="read:academic_year"><AcademicYearsPage /></PermissionRoute>} />
 
                 <Route path="/subjects" element={<PermissionRoute permission="read:subject"><SubjectsPage /></PermissionRoute>} />
