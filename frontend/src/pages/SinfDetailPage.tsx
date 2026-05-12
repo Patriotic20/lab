@@ -942,12 +942,15 @@ function ResourcesTab({
                             <label className="text-sm font-medium flex items-center gap-1">
                                 <Link2 className="h-3.5 w-3.5" /> Havolalar
                             </label>
-                            <button
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
                                 onClick={() => setFormLinks((prev) => [...prev, { title: '', url: '' }])}
-                                className="flex items-center gap-1 text-xs text-primary hover:underline"
+                                className="gap-1.5"
                             >
                                 <Plus className="h-3.5 w-3.5" /> Havola qo'shish
-                            </button>
+                            </Button>
                         </div>
                         <div className="space-y-2">
                             {formLinks.map((link, idx) => (

@@ -81,12 +81,14 @@ export default function PsychologyPage() {
                         <div className="flex flex-col items-center gap-2 py-12 text-center">
                             <Brain className="h-10 w-10 text-muted-foreground/30" />
                             <p className="text-sm text-muted-foreground">Metodlar mavjud emas</p>
-                            <button
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
                                 onClick={() => setMethodModal({ open: true, editing: null })}
-                                className="text-xs text-primary hover:underline"
                             >
                                 Birinchi metodni yarating
-                            </button>
+                            </Button>
                         </div>
                     ) : (
                         <>

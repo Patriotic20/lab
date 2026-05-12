@@ -1,7 +1,8 @@
+import { Button } from '@/components/ui/Button';
 import { Combobox } from '@/components/ui/Combobox';
 import { Input } from '@/components/ui/Input';
 import { ImageUploadField } from '@/components/ui/ImageUploadField';
-import { X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import type { QuestionType } from '@/services/psychologyService';
 import { QUESTION_TYPE_LABELS } from './constants';
 import type { OptionRow, QuestionFormState } from './questionFormHelpers';
@@ -68,7 +69,9 @@ export function QuestionForm({ form, onChange, methodCategories }: QuestionFormP
                 <div>
                     <div className="mb-2 flex items-center justify-between">
                         <label className="text-xs font-medium text-muted-foreground">Javob variantlari</label>
-                        <button type="button" onClick={addOption} className="text-xs text-primary hover:underline">+ Qo'shish</button>
+                        <Button type="button" variant="outline" size="sm" onClick={addOption} className="gap-1.5">
+                            <Plus className="h-3.5 w-3.5" /> Qo'shish
+                        </Button>
                     </div>
                     <div className="flex flex-col gap-2">
                         {form.options.map((opt, i) => (

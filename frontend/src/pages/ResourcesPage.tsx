@@ -418,13 +418,16 @@ export default function ResourcesPage() {
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <label className="text-sm font-medium">Havolalar</label>
-                            <button
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
                                 onClick={handleAddLink}
-                                className="flex items-center gap-1 text-xs text-primary hover:underline"
+                                className="gap-1.5"
                             >
                                 <Plus className="h-3.5 w-3.5" />
                                 Havola qo'shish
-                            </button>
+                            </Button>
                         </div>
                         <div className="space-y-2">
                             {formLinks.map((link, idx) => (

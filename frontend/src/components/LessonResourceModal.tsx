@@ -159,13 +159,15 @@ export const LessonResourceModal = ({ isOpen, onClose, target, editing }: Props)
                 <div>
                     <div className="flex items-center justify-between mb-1">
                         <label className="text-sm font-medium">Havolalar</label>
-                        <button
+                        <Button
                             type="button"
+                            variant="outline"
+                            size="sm"
                             onClick={() => setLinks(prev => [...prev, { title: '', url: '' }])}
-                            className="text-xs text-primary hover:underline flex items-center gap-1"
+                            className="gap-1.5"
                         >
-                            <Plus className="h-3 w-3" /> Havola qo'shish
-                        </button>
+                            <Plus className="h-3.5 w-3.5" /> Havola qo'shish
+                        </Button>
                     </div>
                     <div className="space-y-2">
                         {links.map((link, idx) => (
@@ -201,14 +203,16 @@ export const LessonResourceModal = ({ isOpen, onClose, target, editing }: Props)
                 <div>
                     <div className="flex items-center justify-between mb-1">
                         <label className="text-sm font-medium">Fayllar</label>
-                        <button
+                        <Button
                             type="button"
+                            variant="outline"
+                            size="sm"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={uploading.length > 0}
-                            className="text-xs text-primary hover:underline flex items-center gap-1 disabled:opacity-50"
+                            className="gap-1.5"
                         >
-                            <Paperclip className="h-3 w-3" /> Fayl biriktirish
-                        </button>
+                            <Paperclip className="h-3.5 w-3.5" /> Fayl biriktirish
+                        </Button>
                     </div>
                     <input
                         ref={fileInputRef}

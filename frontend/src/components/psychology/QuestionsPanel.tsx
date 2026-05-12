@@ -110,7 +110,7 @@ export function QuestionsPanel({ method, onClose }: QuestionsPanelProps) {
                         <div className="flex flex-col items-center gap-2 py-12 text-center text-muted-foreground">
                             <ListOrdered className="h-8 w-8 opacity-30" />
                             <p className="text-sm">Savollar mavjud emas</p>
-                            <button onClick={() => openCreate()} className="text-xs text-primary hover:underline">Birinchi savolni qo'shing</button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => openCreate()}>Birinchi savolni qo'shing</Button>
                         </div>
                     ) : grouped ? (
                         <div className="flex flex-col gap-5">
