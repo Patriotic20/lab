@@ -55,7 +55,7 @@ class ResourceRepository:
         result = await session.execute(stmt)
         return result.scalar_one_or_none() is not None
 
-    async def upload_file(self, file: UploadFile) -> dict:
+    async def _save_file(self, file: UploadFile) -> tuple[str, str]:
         if not file.filename:
             raise HTTPException(status_code=400, detail="Fayl nomi bo'sh")
         ext = file.filename.rsplit(".", 1)[-1].lower()
@@ -71,11 +71,19 @@ class ResourceRepository:
         filename = f"{uuid.uuid4()}.{ext}"
         with open(f"{settings.file_url.upload_dir}/{filename}", "wb") as buf:
             buf.write(content)
+        return filename, ext
+
+    async def upload_file(self, file: UploadFile) -> dict:
+        filename, ext = await self._save_file(file)
         return {
             "url": f"{settings.file_url.http}/{filename}",
             "name": file.filename,
             "type": "image" if ext in _IMAGE_EXTS else ext,
         }
+
+    async def upload_file_only(self, file: UploadFile) -> dict:
+        filename, _ = await self._save_file(file)
+        return {"url": f"{settings.file_url.http}/{filename}"}
 
     async def create_resource(
         self,

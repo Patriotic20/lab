@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Search } from 'lucide-react';
 import { useGroups } from '@/hooks/useGroups';
 import { useAssignGroups } from '@/hooks/useTeachers';
+import { useAuth } from '@/context/AuthContext';
 import type { Teacher } from '@/services/teacherService';
 
 interface TeacherGroupModalProps {
@@ -24,7 +25,15 @@ export const TeacherGroupModal = ({ isOpen, onClose, teacher }: TeacherGroupModa
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    const { data: groupsData } = useGroups(1, 100, debouncedSearch);
+    const { hasPermission } = useAuth();
+    const { data: groupsData } = useGroups(
+        1,
+        100,
+        debouncedSearch,
+        undefined,
+        undefined,
+        hasPermission('read:group'),
+    );
     const assignGroupsMutation = useAssignGroups();
     const groups = groupsData?.groups || [];
 

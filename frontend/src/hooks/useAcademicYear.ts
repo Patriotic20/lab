@@ -5,11 +5,15 @@ import {
     type AcademicYearUpdateRequest,
 } from '@/services/academicYearService';
 
-export const useAcademicYears = (params?: { is_active?: boolean; page?: number; limit?: number }) =>
+export const useAcademicYears = (
+    params?: { is_active?: boolean; page?: number; limit?: number },
+    enabled: boolean = true,
+) =>
     useQuery({
         queryKey: ['academic-years', params],
         queryFn: () => academicYearService.list(params),
         placeholderData: (previousData) => previousData,
+        enabled,
     });
 
 export const useAcademicYear = (id: number | undefined) =>

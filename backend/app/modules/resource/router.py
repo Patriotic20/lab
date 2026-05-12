@@ -64,6 +64,18 @@ async def upload_resource_file(
     return await get_resource_repository.upload_file(file=file)
 
 
+@router.post(
+    "/file-upload",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(RateLimiter(times=10, seconds=60))],
+)
+async def upload_file_generic(
+    file: UploadFile = File(...),
+    _: "User" = Depends(PermissionRequired("upload:file")),
+):
+    return await get_resource_repository.upload_file_only(file=file)
+
+
 @router.get("/{resource_id}", response_model=ResourceResponse)
 async def get_resource(
     resource_id: int,

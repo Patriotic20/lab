@@ -3,6 +3,8 @@ import { useMyResults, useMethods, useDeleteResult } from '@/hooks/usePsychology
 import { useFaculties } from '@/hooks/useReferenceData';
 import { useGroups } from '@/hooks/useGroups';
 import { useTutors } from '@/hooks/useTutors';
+import { useAuth } from '@/context/AuthContext';
+import PermissionGate from '@/components/auth/PermissionGate';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Pagination } from '@/components/ui/Pagination';
 import { Modal } from '@/components/ui/Modal';
@@ -84,17 +86,19 @@ export default function PsychologyResultsPage() {
     const [selected, setSelected] = useState<TestResultResponse | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const deleteResult = useDeleteResult();
+    const { hasPermission } = useAuth();
 
     const { data: methodsData } = useMethods(1, 100);
-    const { data: facultiesData } = useFaculties(1, 100);
+    const { data: facultiesData } = useFaculties(1, 100, undefined, hasPermission('read:faculty'));
     const { data: groupsData } = useGroups(
         1,
         100,
         '',
         undefined,
         facultyFilter ? Number(facultyFilter) : undefined,
+        hasPermission('read:group'),
     );
-    const { data: tutorsData } = useTutors(1, 100, '');
+    const { data: tutorsData } = useTutors(1, 100, '', hasPermission('read:tutor'));
 
     const facultyOptions = facultiesData?.faculties.map(f => ({ value: String(f.id), label: f.name })) ?? [];
     const groupOptions = groupsData?.groups.map(g => ({ value: String(g.id), label: g.name })) ?? [];
@@ -145,36 +149,42 @@ export default function PsychologyResultsPage() {
                         </select>
                     </div>
 
-                    <div className="w-[200px]">
-                        <Combobox
-                            options={facultyOptions}
-                            value={facultyFilter}
-                            onChange={value => {
-                                setFacultyFilter(value);
-                                setGroupFilter('');
-                                setPage(1);
-                            }}
-                            placeholder="Barcha fakultetlar"
-                        />
-                    </div>
+                    <PermissionGate permission="read:faculty">
+                        <div className="w-[200px]">
+                            <Combobox
+                                options={facultyOptions}
+                                value={facultyFilter}
+                                onChange={value => {
+                                    setFacultyFilter(value);
+                                    setGroupFilter('');
+                                    setPage(1);
+                                }}
+                                placeholder="Barcha fakultetlar"
+                            />
+                        </div>
+                    </PermissionGate>
 
-                    <div className="w-[200px]">
-                        <Combobox
-                            options={groupOptions}
-                            value={groupFilter}
-                            onChange={value => { setGroupFilter(value); setPage(1); }}
-                            placeholder="Barcha guruhlar"
-                        />
-                    </div>
+                    <PermissionGate permission="read:group">
+                        <div className="w-[200px]">
+                            <Combobox
+                                options={groupOptions}
+                                value={groupFilter}
+                                onChange={value => { setGroupFilter(value); setPage(1); }}
+                                placeholder="Barcha guruhlar"
+                            />
+                        </div>
+                    </PermissionGate>
 
-                    <div className="w-[200px]">
-                        <Combobox
-                            options={tutorOptions}
-                            value={tutorFilter}
-                            onChange={value => { setTutorFilter(value); setPage(1); }}
-                            placeholder="Barcha tyutorlar"
-                        />
-                    </div>
+                    <PermissionGate permission="read:tutor">
+                        <div className="w-[200px]">
+                            <Combobox
+                                options={tutorOptions}
+                                value={tutorFilter}
+                                onChange={value => { setTutorFilter(value); setPage(1); }}
+                                placeholder="Barcha tyutorlar"
+                            />
+                        </div>
+                    </PermissionGate>
 
                     {hasActiveFilter && (
                         <Button

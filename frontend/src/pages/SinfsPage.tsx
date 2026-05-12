@@ -9,6 +9,7 @@ import { Combobox } from '@/components/ui/Combobox';
 import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/context/AuthContext';
+import PermissionGate from '@/components/auth/PermissionGate';
 import {
     useSinfs,
     useCreateSinf,
@@ -25,7 +26,7 @@ const PAGE_SIZE = 12;
 
 export default function SinfsPage() {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     const isAdmin = user?.roles?.some((r) => r.name.toLowerCase() === 'admin');
 
     const [page, setPage] = useState(1);
@@ -35,10 +36,10 @@ export default function SinfsPage() {
     const updateMutation = useUpdateSinf();
     const deleteMutation = useDeleteSinf();
 
-    const { data: teachersData } = useTeachers(1, 500, undefined, true);
-    const { data: subjectsData } = useSubjects(1, 500, '');
-    const { data: groupsData } = useGroups(1, 1000, '', undefined, undefined);
-    const { data: yearsData } = useAcademicYears();
+    const { data: teachersData } = useTeachers(1, 500, undefined, hasPermission('read:teacher'));
+    const { data: subjectsData } = useSubjects(1, 500, '', undefined, hasPermission('read:subject'));
+    const { data: groupsData } = useGroups(1, 1000, '', undefined, undefined, hasPermission('read:group'));
+    const { data: yearsData } = useAcademicYears(undefined, hasPermission('read:academic_year'));
 
     const yearOptions = useMemo(
         () =>
@@ -330,34 +331,40 @@ export default function SinfsPage() {
                             onChange={(e) => setFormName(e.target.value)}
                         />
                     </div>
-                    <div>
-                        <label className="text-sm font-medium block mb-1">Fan</label>
-                        <Combobox
-                            options={subjectOptions}
-                            value={formSubjectId}
-                            onChange={setFormSubjectId}
-                            placeholder="Fan tanlang..."
-                        />
-                    </div>
-                    <div>
-                        <label className="text-sm font-medium block mb-1">O'qituvchi</label>
-                        <Combobox
-                            options={teacherOptions}
-                            value={formTeacherId}
-                            onChange={setFormTeacherId}
-                            placeholder="O'qituvchi tanlang..."
-                        />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <PermissionGate permission="read:subject">
                         <div>
-                            <label className="text-sm font-medium block mb-1">O'quv yili</label>
+                            <label className="text-sm font-medium block mb-1">Fan</label>
                             <Combobox
-                                options={[{ value: '', label: '—' }, ...yearOptions]}
-                                value={formYearId}
-                                onChange={setFormYearId}
-                                placeholder="Tanlang"
+                                options={subjectOptions}
+                                value={formSubjectId}
+                                onChange={setFormSubjectId}
+                                placeholder="Fan tanlang..."
                             />
                         </div>
+                    </PermissionGate>
+                    <PermissionGate permission="read:teacher">
+                        <div>
+                            <label className="text-sm font-medium block mb-1">O'qituvchi</label>
+                            <Combobox
+                                options={teacherOptions}
+                                value={formTeacherId}
+                                onChange={setFormTeacherId}
+                                placeholder="O'qituvchi tanlang..."
+                            />
+                        </div>
+                    </PermissionGate>
+                    <div className="grid grid-cols-2 gap-2">
+                        <PermissionGate permission="read:academic_year">
+                            <div>
+                                <label className="text-sm font-medium block mb-1">O'quv yili</label>
+                                <Combobox
+                                    options={[{ value: '', label: '—' }, ...yearOptions]}
+                                    value={formYearId}
+                                    onChange={setFormYearId}
+                                    placeholder="Tanlang"
+                                />
+                            </div>
+                        </PermissionGate>
                         <div>
                             <label className="text-sm font-medium block mb-1">Semestr</label>
                             <Combobox
@@ -372,6 +379,7 @@ export default function SinfsPage() {
                             />
                         </div>
                     </div>
+                    <PermissionGate permission="read:group">
                     <div>
                         <label className="text-sm font-medium block mb-1">Guruhlar</label>
                         <div className="max-h-48 overflow-y-auto rounded-md border border-border p-2 space-y-1">
@@ -404,6 +412,7 @@ export default function SinfsPage() {
                             </p>
                         )}
                     </div>
+                    </PermissionGate>
                     <div>
                         <label className="text-sm font-medium block mb-1">Tavsif (ixtiyoriy)</label>
                         <textarea

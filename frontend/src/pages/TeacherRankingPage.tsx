@@ -15,6 +15,8 @@ import { teacherService } from '@/services/teacherService';
 import { Input } from '@/components/ui/Input';
 import { Pagination } from '@/components/ui/Pagination';
 import { useFaculties, useKafedras } from '@/hooks/useReferenceData';
+import { useAuth } from '@/context/AuthContext';
+import PermissionGate from '@/components/auth/PermissionGate';
 import { Combobox } from '@/components/ui/Combobox';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -162,8 +164,9 @@ const TeachersPanel = () => {
         return () => clearTimeout(timer);
     }, [search]);
 
-    const { data: facultiesData } = useFaculties(1, 100);
-    const { data: kafedrasData } = useKafedras(1, 100);
+    const { hasPermission } = useAuth();
+    const { data: facultiesData } = useFaculties(1, 100, undefined, hasPermission('read:faculty'));
+    const { data: kafedrasData } = useKafedras(1, 100, undefined, undefined, hasPermission('read:kafedra'));
 
     const facultyOptions = facultiesData?.faculties.map(f => ({ value: f.id.toString(), label: f.name })) || [];
     const kafedraOptions = kafedrasData?.kafedras
@@ -276,30 +279,34 @@ const TeachersPanel = () => {
                     )}
                 </div>
 
-                <Combobox
-                    options={facultyOptions}
-                    value={facultyId}
-                    onChange={(val) => {
-                        setFacultyId(val);
-                        setKafedraId('');
-                        setPage(1);
-                    }}
-                    placeholder="Fakultetni tanlang"
-                    searchPlaceholder="Fakultet qidirish..."
-                    className="w-full sm:max-w-[250px]"
-                />
+                <PermissionGate permission="read:faculty">
+                    <Combobox
+                        options={facultyOptions}
+                        value={facultyId}
+                        onChange={(val) => {
+                            setFacultyId(val);
+                            setKafedraId('');
+                            setPage(1);
+                        }}
+                        placeholder="Fakultetni tanlang"
+                        searchPlaceholder="Fakultet qidirish..."
+                        className="w-full sm:max-w-[250px]"
+                    />
+                </PermissionGate>
 
-                <Combobox
-                    options={kafedraOptions}
-                    value={kafedraId}
-                    onChange={(val) => {
-                        setKafedraId(val);
-                        setPage(1);
-                    }}
-                    placeholder="Kafedrani tanlang"
-                    searchPlaceholder="Kafedra qidirish..."
-                    className="w-full sm:max-w-[250px]"
-                />
+                <PermissionGate permission="read:kafedra">
+                    <Combobox
+                        options={kafedraOptions}
+                        value={kafedraId}
+                        onChange={(val) => {
+                            setKafedraId(val);
+                            setPage(1);
+                        }}
+                        placeholder="Kafedrani tanlang"
+                        searchPlaceholder="Kafedra qidirish..."
+                        className="w-full sm:max-w-[250px]"
+                    />
+                </PermissionGate>
 
                 {(search || facultyId || kafedraId) && (
                     <Button 

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Search } from 'lucide-react';
 import { useSubjects } from '@/hooks/useSubjects';
 import { useAssignSubjects } from '@/hooks/useTeachers';
+import { useAuth } from '@/context/AuthContext';
 import type { Teacher } from '@/services/teacherService';
 
 interface TeacherSubjectModalProps {
@@ -24,7 +25,8 @@ export const TeacherSubjectModal = ({ isOpen, onClose, teacher }: TeacherSubject
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    const { data: subjectsData } = useSubjects(1, 100, debouncedSearch);
+    const { hasPermission } = useAuth();
+    const { data: subjectsData } = useSubjects(1, 100, debouncedSearch, undefined, hasPermission('read:subject'));
     const assignSubjectsMutation = useAssignSubjects();
     const subjects = subjectsData?.subjects || [];
 

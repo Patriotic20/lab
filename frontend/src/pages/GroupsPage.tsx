@@ -16,6 +16,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useGroups, useCreateGroup, useUpdateGroup, useDeleteGroup } from '@/hooks/useGroups';
 import { useFaculties } from '@/hooks/useReferenceData';
+import { useAuth } from '@/context/AuthContext';
 import { Combobox } from '@/components/ui/Combobox';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 
@@ -46,9 +47,12 @@ const GroupsPage = () => {
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
+    const { hasPermission } = useAuth();
+    const canReadFaculty = hasPermission('read:faculty');
+
     const facultyIdParam = selectedFacultyFilter === 'all' ? undefined : Number(selectedFacultyFilter);
     const { data: groupsData, isLoading: isGroupsLoading } = useGroups(currentPage, pageSize, debouncedSearch, undefined, facultyIdParam);
-    const { data: facultiesData } = useFaculties();
+    const { data: facultiesData } = useFaculties(1, 100, undefined, canReadFaculty);
     const deleteGroupMutation = useDeleteGroup();
 
     const groups = groupsData?.groups || [];
@@ -128,17 +132,19 @@ const GroupsPage = () => {
                         />
                     </div>
                     
-                    <div className="w-full sm:w-[300px]">
-                        <Combobox
-                            options={facultyOptions}
-                            value={selectedFacultyFilter}
-                            onChange={(val: string) => {
-                                setSelectedFacultyFilter(val);
-                                setCurrentPage(1);
-                            }}
-                            placeholder="Fakultet bo'yicha saralash"
-                        />
-                    </div>
+                    <PermissionGate permission="read:faculty">
+                        <div className="w-full sm:w-[300px]">
+                            <Combobox
+                                options={facultyOptions}
+                                value={selectedFacultyFilter}
+                                onChange={(val: string) => {
+                                    setSelectedFacultyFilter(val);
+                                    setCurrentPage(1);
+                                }}
+                                placeholder="Fakultet bo'yicha saralash"
+                            />
+                        </div>
+                    </PermissionGate>
                 </div>
             </div>
 

@@ -5,10 +5,11 @@ import { roleService } from '@/services/roleService';
 import { permissionService } from '@/services/permissionService';
 
 // Faculties
-export const useFaculties = (page = 1, limit = 100, name?: string) => {
+export const useFaculties = (page = 1, limit = 100, name?: string, enabled: boolean = true) => {
     return useQuery({
         queryKey: ['faculties', page, limit, name],
         queryFn: () => facultyService.getFaculties(page, limit, name),
+        enabled,
     });
 };
 
@@ -43,10 +44,17 @@ export const useDeleteFaculty = () => {
 };
 
 // Kafedras
-export const useKafedras = (page = 1, limit = 100, name?: string, faculty_id?: number) => {
+export const useKafedras = (
+    page = 1,
+    limit = 100,
+    name?: string,
+    faculty_id?: number,
+    enabled: boolean = true,
+) => {
     return useQuery({
         queryKey: ['kafedras', page, limit, name, faculty_id],
         queryFn: () => kafedraService.getKafedras(page, limit, name, faculty_id),
+        enabled,
     });
 };
 

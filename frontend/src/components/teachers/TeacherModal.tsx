@@ -8,6 +8,7 @@ import { Combobox } from '@/components/ui/Combobox';
 import { useKafedras } from '@/hooks/useReferenceData';
 import { useUsers } from '@/hooks/useUsers';
 import { useCreateTeacherWithUser, useUpdateTeacher } from '@/hooks/useTeachers';
+import { useAuth } from '@/context/AuthContext';
 import type { Teacher, TeacherFullCreateRequest } from '@/services/teacherService';
 import {
     teacherCreateSchema,
@@ -24,7 +25,8 @@ interface TeacherModalProps {
 }
 
 export const TeacherModal = ({ isOpen, onClose, teacher, onSuccess }: TeacherModalProps) => {
-    const { data: kafedrasData } = useKafedras();
+    const { hasPermission } = useAuth();
+    const { data: kafedrasData } = useKafedras(1, 100, undefined, undefined, hasPermission('read:kafedra'));
     const { data: usersData } = useUsers(1, 100);
     const kafedras = kafedrasData?.kafedras || [];
     const users = usersData?.users || [];

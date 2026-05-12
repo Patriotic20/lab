@@ -55,10 +55,10 @@ export const RESOURCES: Record<string, ResourceMeta> = {
     question:      { label: 'Savollar',         href: '/questions',   icon: FileQuestion,  section: 'Testlar' },
     result:        { label: 'Natijalar',        href: '/results',     icon: FileText,      section: 'Testlar' },
     yakuniy:       { label: 'Yakuniy',          href: '/yakuniy',     icon: ClipboardList, section: 'Testlar' },
-    lesson:        { label: 'Darslar',          href: '/lessons',     icon: BookOpen,      section: 'Testlar' },
+    lesson:        { label: 'Darslar',          href: '/lessons',     icon: BookOpen },
     psychology:    { label: 'Psixologiya',      href: '/psychology',  icon: Brain,         section: 'Testlar' },
     psychology_results: { label: 'Psixologiya natijalari', href: '/psychology/results', icon: ClipboardList, section: 'Testlar' },
-    resource:      { label: 'Resurslar',        href: '/resources',   icon: BookOpen,      section: 'Testlar' },
+    resource:      { label: 'Resurslar',        href: '/resources',   icon: BookOpen },
 
     me:            { label: 'Profil' },
     statistics:    { label: 'Statistika', href: '/statistics', icon: LineChart, section: 'Umumiy' },
@@ -113,7 +113,6 @@ const STUDENT_SECTIONS: SidebarSection[] = [
         items: [
             { name: 'Test ishlash', href: '/quiz-test', icon: PlayCircle },
             { name: 'Natijalar', href: '/results', icon: FileText },
-            { name: 'Darslar', href: '/lessons', icon: BookOpen },
             { name: 'Psixologiya', href: '/psychology/student', icon: Brain },
         ],
     },

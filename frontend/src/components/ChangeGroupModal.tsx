@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Combobox } from '@/components/ui/Combobox';
 import { useGroups } from '@/hooks/useGroups';
 import { useUpdateStudentGroup } from '@/hooks/useStudents';
+import { useAuth } from '@/context/AuthContext';
 import type { Student } from '@/services/studentService';
 
 interface ChangeGroupModalProps {
@@ -15,7 +16,15 @@ interface ChangeGroupModalProps {
 }
 
 export const ChangeGroupModal: React.FC<ChangeGroupModalProps> = ({ isOpen, onClose, student, onSuccess }) => {
-    const { data: groupsData, isLoading: isGroupsLoading } = useGroups(1, 100, '');
+    const { hasPermission } = useAuth();
+    const { data: groupsData, isLoading: isGroupsLoading } = useGroups(
+        1,
+        100,
+        '',
+        undefined,
+        undefined,
+        hasPermission('read:group'),
+    );
     const updateGroupMutation = useUpdateStudentGroup();
     const [selectedGroupId, setSelectedGroupId] = useState<string>('');
 

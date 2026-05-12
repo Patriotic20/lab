@@ -28,6 +28,7 @@ import {
     useUpdateTutor,
 } from '@/hooks/useTutors';
 import { useGroups } from '@/hooks/useGroups';
+import { useAuth } from '@/context/AuthContext';
 import type {
     Tutor,
     TutorFullCreateRequest,
@@ -468,7 +469,15 @@ const TutorGroupModal = ({
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    const { data: groupsData } = useGroups(1, 100, debouncedSearch);
+    const { hasPermission } = useAuth();
+    const { data: groupsData } = useGroups(
+        1,
+        100,
+        debouncedSearch,
+        undefined,
+        undefined,
+        hasPermission('read:group'),
+    );
     const assignMutation = useAssignTutorGroups();
     const groups = groupsData?.groups || [];
 

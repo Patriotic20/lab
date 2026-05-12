@@ -6,11 +6,12 @@ import {
     type SinfUpdateRequest,
 } from '@/services/sinfService';
 
-export const useSinfs = (params?: SinfListParams) => {
+export const useSinfs = (params?: SinfListParams, enabled: boolean = true) => {
     return useQuery({
         queryKey: ['sinfs', params],
         queryFn: () => sinfService.list(params),
         placeholderData: (previousData) => previousData,
+        enabled,
     });
 };
 

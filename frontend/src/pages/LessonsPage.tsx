@@ -18,7 +18,7 @@ import type { Lesson, LessonCreateRequest, LessonUpdateRequest } from '@/service
 
 export default function LessonsPage() {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     const isAdmin = user?.roles?.some(r => r.name.toLowerCase() === 'admin');
     const isTeacher = user?.roles?.some(r => r.name.toLowerCase() === 'teacher');
 
@@ -33,8 +33,8 @@ export default function LessonsPage() {
     const updateMutation = useUpdateLesson();
     const deleteMutation = useDeleteLesson();
 
-    const { data: teachersData } = useTeachers(1, 500, undefined, isAdmin);
-    const { data: allGroupsData } = useGroups(1, 1000, '', undefined, undefined);
+    const { data: teachersData } = useTeachers(1, 500, undefined, !!isAdmin && hasPermission('read:teacher'));
+    const { data: allGroupsData } = useGroups(1, 1000, '', undefined, undefined, hasPermission('read:group'));
 
     const { data: assignedSubjectsData } = useTeacherAssignedSubjects(
         isTeacher && user?.id ? user.id : undefined

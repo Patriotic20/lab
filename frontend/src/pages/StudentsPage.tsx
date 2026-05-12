@@ -18,6 +18,7 @@ import { Combobox } from '@/components/ui/Combobox';
 import { useStudents, useDeleteStudent } from '@/hooks/useStudents';
 import { useUserResults } from '@/hooks/useResults';
 import { useGroups } from '@/hooks/useGroups';
+import { useAuth } from '@/context/AuthContext';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { HemisImportModal } from '@/components/HemisImportModal';
 import { ChangeGroupModal } from '@/components/ChangeGroupModal';
@@ -49,8 +50,11 @@ const StudentsPage = () => {
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
+    const { hasPermission } = useAuth();
+    const canReadGroup = hasPermission('read:group');
+
     const { data: studentsData, isLoading: isStudentsLoading } = useStudents(currentPage, pageSize, debouncedSearch, undefined, parsedGroup);
-    const { data: groupsData } = useGroups(1, 100, '');
+    const { data: groupsData } = useGroups(1, 100, '', undefined, undefined, canReadGroup);
 
     const groupOptions = groupsData?.groups.map(g => ({ value: String(g.id), label: g.name })) || [];
 
@@ -103,14 +107,16 @@ const StudentsPage = () => {
                         <Download className="mr-2 h-4 w-4" />
                         Hemisdan Import
                     </Button>
-                    <div className="w-[180px]">
-                        <Combobox
-                            options={groupOptions}
-                            value={selectedGroup}
-                            onChange={setSelectedGroup}
-                            placeholder="Barcha guruhlar"
-                        />
-                    </div>
+                    <PermissionGate permission="read:group">
+                        <div className="w-[180px]">
+                            <Combobox
+                                options={groupOptions}
+                                value={selectedGroup}
+                                onChange={setSelectedGroup}
+                                placeholder="Barcha guruhlar"
+                            />
+                        </div>
+                    </PermissionGate>
                     <div className="relative">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input

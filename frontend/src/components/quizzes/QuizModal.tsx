@@ -24,7 +24,7 @@ interface QuizModalProps {
 }
 
 export const QuizModal = ({ isOpen, onClose, quiz, teachers, onSuccess }: QuizModalProps) => {
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     const isTeacher = user?.roles?.some(r => r.name.toLowerCase() === 'teacher');
 
     const [teacherSearch, setTeacherSearch] = useState('');
@@ -59,9 +59,9 @@ export const QuizModal = ({ isOpen, onClose, quiz, teachers, onSuccess }: QuizMo
 
     const effectiveUserId = isTeacher ? user?.id?.toString() : selectedUserId;
 
-    const { data: allSubjectsData } = useSubjects(1, 1000);
-    const { data: allGroupsData } = useGroups(1, 1000, '');
-    const { data: searchTeachersData } = useTeachers(1, 100, debouncedTeacherSearch);
+    const { data: allSubjectsData } = useSubjects(1, 1000, '', undefined, hasPermission('read:subject'));
+    const { data: allGroupsData } = useGroups(1, 1000, '', undefined, undefined, hasPermission('read:group'));
+    const { data: searchTeachersData } = useTeachers(1, 100, debouncedTeacherSearch, hasPermission('read:teacher'));
     const { data: assignedSubjectsData } = useTeacherAssignedSubjects(
         effectiveUserId ? parseInt(effectiveUserId) : undefined
     );

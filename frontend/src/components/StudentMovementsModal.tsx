@@ -39,11 +39,11 @@ interface Props {
 }
 
 export function StudentMovementsModal({ student, onClose }: Props) {
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     const isAdmin = user?.roles?.some((r) => r.name.toLowerCase() === 'admin');
 
     const { data, isLoading } = useStudentMovements(student?.id);
-    const { data: groupsData } = useGroups(1, 500, '');
+    const { data: groupsData } = useGroups(1, 500, '', undefined, undefined, hasPermission('read:group'));
     const createMut = useCreateStudentMovement();
     const deleteMut = useDeleteStudentMovement();
 

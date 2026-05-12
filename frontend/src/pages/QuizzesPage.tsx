@@ -18,7 +18,7 @@ import { QuizModal } from '@/components/quizzes/QuizModal';
 import { RepeatedQuizSuccessModal } from '@/components/quizzes/RepeatedQuizSuccessModal';
 
 const QuizzesPage = () => {
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     const isTeacher = user?.roles?.some(r => r.name.toLowerCase() === 'teacher');
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -61,9 +61,9 @@ const QuizzesPage = () => {
         sortDir,
     );
 
-    const { data: allSubjectsData } = useSubjects(1, 1000);
-    const { data: allGroupsData } = useGroups(1, 1000, '');
-    const { data: allTeachersData } = useTeachers(1, 1000);
+    const { data: allSubjectsData } = useSubjects(1, 1000, '', undefined, hasPermission('read:subject'));
+    const { data: allGroupsData } = useGroups(1, 1000, '', undefined, undefined, hasPermission('read:group'));
+    const { data: allTeachersData } = useTeachers(1, 1000, undefined, hasPermission('read:teacher'));
 
     const updateQuizMutation = useUpdateQuiz();
     const deleteQuizMutation = useDeleteQuiz();
