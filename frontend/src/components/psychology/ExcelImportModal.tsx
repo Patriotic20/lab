@@ -5,114 +5,24 @@ import { AlertCircle, CheckCircle2, FileSpreadsheet, Loader2, Upload, X } from '
 
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { psychologyService, type QuestionCreateRequest, type QuestionType } from '@/services/psychologyService';
+import { psychologyService, type QuestionType } from '@/services/psychologyService';
 
-type RawRow = Record<string, unknown>;
+import {
+    TYPE_DISPLAY_LABEL,
+    buildPayload,
+    buildTemplateWorkbook,
+    readSheet,
+    type ParsedRow,
+} from './excelIO';
 
-interface ParsedRow {
-    rowNumber: number; // 1-based, matches Excel row (header is row 1, data starts row 2)
-    payload?: QuestionCreateRequest;
-    error?: string;
-}
-
-const TYPE_SYNONYMS: Record<string, QuestionType> = {
-    matnli: 'text',
-    matn: 'text',
-    text: 'text',
-    ha_yoq: 'true_false',
-    'ha-yoq': 'true_false',
-    haqiqiy: 'true_false',
-    true_false: 'true_false',
-    shkala: 'scale',
-    scale: 'scale',
-};
-
-// Column-name lookup: try Uzbek key first, fall back to legacy English.
-function pick(row: RawRow, ...keys: string[]): unknown {
-    for (const k of keys) {
-        if (row[k] !== undefined && row[k] !== '') return row[k];
-    }
-    return undefined;
-}
-
-function asString(v: unknown): string {
-    if (v === null || v === undefined) return '';
-    return String(v).trim();
-}
-
-function asNumber(v: unknown): number | null {
-    if (v === null || v === undefined || v === '') return null;
-    const n = typeof v === 'number' ? v : Number(String(v).trim());
-    return Number.isFinite(n) ? n : null;
-}
-
-interface BuildContext {
-    methodId: number;
-    rowNumber: number;
-    order: number;
-    category: string | null;
-}
-
-function buildPayload(row: RawRow, ctx: BuildContext): ParsedRow {
-    const rawType = asString(pick(row, 'savol_turi', 'question_type')).toLowerCase();
-    if (!rawType) return { rowNumber: ctx.rowNumber, error: "savol_turi bo'sh" };
-    const type = TYPE_SYNONYMS[rawType];
-    if (!type) {
-        return { rowNumber: ctx.rowNumber, error: `savol_turi='${rawType}' qo'llab-quvvatlanmaydi (matnli / ha_yoq / shkala)` };
-    }
-
-    const text = asString(pick(row, 'matn', 'text'));
-    if (!text) return { rowNumber: ctx.rowNumber, error: "matn ustuni bo'sh" };
-
-    let content: Record<string, unknown> = {};
-    let options: Array<Record<string, unknown>> | null = null;
-
-    if (type === 'true_false') {
-        content = { text };
-    } else if (type === 'scale') {
-        const min = asNumber(pick(row, 'shkala_min', 'scale_min'));
-        const max = asNumber(pick(row, 'shkala_max', 'scale_max'));
-        if (min === null || max === null) {
-            return { rowNumber: ctx.rowNumber, error: 'shkala uchun shkala_min va shkala_max majburiy' };
-        }
-        if (min >= max) {
-            return { rowNumber: ctx.rowNumber, error: 'shkala_min < shkala_max bo\'lishi kerak' };
-        }
-        content = { text, min, max };
-        const minLabel = asString(pick(row, 'shkala_min_belgi', 'scale_min_label'));
-        const maxLabel = asString(pick(row, 'shkala_max_belgi', 'scale_max_label'));
-        if (minLabel) content.min_label = minLabel;
-        if (maxLabel) content.max_label = maxLabel;
-    } else if (type === 'text') {
-        content = { text };
-        const opts: Array<Record<string, unknown>> = [];
-        for (let i = 1; i <= 10; i++) {
-            const t = asString(pick(row, `variant_${i}_matn`, `option_${i}_text`));
-            const v = asNumber(pick(row, `variant_${i}_qiymat`, `option_${i}_value`));
-            if (!t && v === null) continue;
-            if (!t) {
-                return { rowNumber: ctx.rowNumber, error: `variant_${i}_matn bo'sh, lekin qiymat berilgan` };
-            }
-            opts.push({ text: t, value: v ?? 0 });
-        }
-        if (opts.length < 2) {
-            return { rowNumber: ctx.rowNumber, error: 'matnli turi uchun kamida 2 ta variant kerak' };
-        }
-        options = opts;
-    }
-
-    return {
-        rowNumber: ctx.rowNumber,
-        payload: {
-            method_id: ctx.methodId,
-            question_type: type,
-            content,
-            options,
-            order: ctx.order,
-            category: ctx.category,
-        },
-    };
-}
+const ALL_TYPES: QuestionType[] = [
+    'text',
+    'true_false',
+    'scale',
+    'image_stimulus',
+    'image_choice',
+    'multi_choice',
+];
 
 export function ExcelImportModal({
     open,
@@ -163,20 +73,19 @@ export function ExcelImportModal({
         setFileName(file.name);
         try {
             const buf = await file.arrayBuffer();
-            const wb = XLSX.read(buf, { type: 'array' });
-            const sheetName = wb.SheetNames.includes('Savollar') ? 'Savollar' : wb.SheetNames[0];
-            const sheet = wb.Sheets[sheetName];
-            if (!sheet) {
-                setParseError("Excel ichida hech qanday list topilmadi.");
+            const { rows: raw, error } = readSheet(buf);
+            if (error) {
+                setParseError(error);
                 return;
             }
-            const raw = XLSX.utils.sheet_to_json<RawRow>(sheet, { defval: '' });
-            const parsed = raw.map((r, i) => buildPayload(r, {
-                methodId,
-                rowNumber: i + 2,
-                order: nextOrder + i,
-                category,
-            }));
+            const parsed = raw.map((r, i) =>
+                buildPayload(r, {
+                    methodId,
+                    rowNumber: i + 2,
+                    order: nextOrder + i,
+                    category,
+                }),
+            );
             setRows(parsed);
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
@@ -184,13 +93,24 @@ export function ExcelImportModal({
         }
     };
 
-    const validRows = useMemo(() => rows.filter(r => r.payload), [rows]);
-    const invalidRows = useMemo(() => rows.filter(r => r.error), [rows]);
+    const handleTemplateDownload = () => {
+        XLSX.writeFile(buildTemplateWorkbook(), 'psychology-template.xlsx');
+    };
+
+    const validRows = useMemo(() => rows.filter((r) => r.payload), [rows]);
+    const invalidRows = useMemo(() => rows.filter((r) => r.error), [rows]);
 
     const counts = useMemo(() => {
-        const c: Record<string, number> = { text: 0, true_false: 0, scale: 0 };
+        const c: Record<QuestionType, number> = {
+            text: 0,
+            true_false: 0,
+            scale: 0,
+            image_stimulus: 0,
+            image_choice: 0,
+            multi_choice: 0,
+        };
         for (const r of validRows) {
-            if (r.payload) c[r.payload.question_type] = (c[r.payload.question_type] ?? 0) + 1;
+            if (r.payload) c[r.payload.question_type] += 1;
         }
         return c;
     }, [validRows]);
@@ -204,10 +124,10 @@ export function ExcelImportModal({
             if (!row.payload) continue;
             try {
                 await psychologyService.createQuestion(row.payload);
-                setProgress(p => ({ ...p, done: p.done + 1 }));
+                setProgress((p) => ({ ...p, done: p.done + 1 }));
             } catch (err) {
                 const reason = err instanceof Error ? err.message : String(err);
-                setProgress(p => ({ ...p, failed: [...p.failed, { row: row.rowNumber, reason }] }));
+                setProgress((p) => ({ ...p, failed: [...p.failed, { row: row.rowNumber, reason }] }));
             }
         }
 
@@ -228,14 +148,16 @@ export function ExcelImportModal({
 
                 {!fileName && !parseError && (
                     <div className="flex flex-col gap-3">
-                        <a
-                            href="/templates/psychology-import-template.xlsx"
-                            download
-                            className="flex items-center gap-2 self-start text-xs font-medium text-primary hover:underline"
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleTemplateDownload}
+                            className="self-start gap-1.5"
                         >
                             <FileSpreadsheet className="h-3.5 w-3.5" />
                             Shablon yuklab olish
-                        </a>
+                        </Button>
                         <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border bg-muted/20 px-4 py-8 text-center transition-colors hover:border-primary/50 hover:bg-primary/5">
                             <Upload className="h-6 w-6 text-muted-foreground" />
                             <span className="text-sm font-medium text-foreground">Excel faylni tanlang</span>
@@ -251,6 +173,10 @@ export function ExcelImportModal({
                                 }}
                             />
                         </label>
+                        <p className="text-[11px] text-muted-foreground">
+                            Eslatma: import yangi savollarni qo'shadi va mavjudlarini o'zgartirmaydi. Aynan
+                            shu fayl ikki marta yuklansa, savollar takrorlanadi.
+                        </p>
                     </div>
                 )}
 
@@ -276,10 +202,10 @@ export function ExcelImportModal({
                         </div>
 
                         {/* Summary */}
-                        <div className="grid grid-cols-3 gap-2 text-xs">
-                            <SummaryCell label="Matnli" value={counts.text} />
-                            <SummaryCell label="Ha / Yo'q" value={counts.true_false} />
-                            <SummaryCell label="Shkala" value={counts.scale} />
+                        <div className="grid grid-cols-3 gap-2 text-xs sm:grid-cols-6">
+                            {ALL_TYPES.map((t) => (
+                                <SummaryCell key={t} label={TYPE_DISPLAY_LABEL[t]} value={counts[t]} />
+                            ))}
                         </div>
 
                         <div className="flex items-center justify-between text-[11px] text-muted-foreground">
@@ -293,7 +219,7 @@ export function ExcelImportModal({
                         {invalidRows.length > 0 && !finished && (
                             <div className="max-h-32 overflow-y-auto rounded-lg border border-border bg-destructive/5 p-2">
                                 <ul className="space-y-1 text-[11px] text-destructive">
-                                    {invalidRows.map(r => (
+                                    {invalidRows.map((r) => (
                                         <li key={r.rowNumber}>Qator {r.rowNumber}: {r.error}</li>
                                     ))}
                                 </ul>
@@ -319,7 +245,7 @@ export function ExcelImportModal({
                                 </div>
                                 {progress.failed.length > 0 && (
                                     <ul className="mt-2 max-h-24 space-y-1 overflow-y-auto text-[11px] text-destructive">
-                                        {progress.failed.map(f => (
+                                        {progress.failed.map((f) => (
                                             <li key={f.row}>Qator {f.row}: {f.reason}</li>
                                         ))}
                                     </ul>

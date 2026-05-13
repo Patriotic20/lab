@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { ListOrdered, Loader2, Plus, Upload, X } from 'lucide-react';
+import { Download, ListOrdered, Loader2, Plus, Upload, X } from 'lucide-react';
 import { useCreateQuestion, useDeleteQuestion, useUpdateQuestion } from '@/hooks/usePsychology';
 import type { MethodResponse, QuestionResponse, QuestionType } from '@/services/psychologyService';
 import { ExcelImportModal } from './ExcelImportModal';
+import { buildExportWorkbook, sanitizeFilename } from './excelIO';
 import { QuestionForm } from './QuestionForm';
 import { QuestionRow } from './QuestionRow';
 import {
@@ -91,6 +93,18 @@ export function QuestionsPanel({ method, onClose }: QuestionsPanelProps) {
                         <p className="text-xs text-muted-foreground">{method.questions.length} ta savol</p>
                     </div>
                     <div className="flex items-center gap-2">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                                const wb = buildExportWorkbook(method);
+                                XLSX.writeFile(wb, `${sanitizeFilename(method.name)}.xlsx`);
+                            }}
+                            disabled={method.questions.length === 0}
+                            title="Excel yuklab olish"
+                        >
+                            <Download className="mr-1.5 h-3.5 w-3.5" /> Yuklab olish
+                        </Button>
                         {!grouped && (
                             <>
                                 <Button size="sm" variant="outline" onClick={() => setImportTarget({ category: null })}>
