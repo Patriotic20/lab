@@ -17,12 +17,13 @@ interface QuizFiltersProps {
     onGroupChange: (id: number | undefined) => void;
     filterUserId: number | undefined;
     onUserChange: (id: number | undefined) => void;
-    filterIsActive: boolean | undefined;
-    onIsActiveChange: (val: boolean | undefined) => void;
+    filterIsActive?: boolean | undefined;
+    onIsActiveChange?: (val: boolean | undefined) => void;
     sortDir: 'desc' | 'asc';
     onSortDirChange: (dir: 'desc' | 'asc') => void;
     hasActiveFilters: boolean;
     onClearFilters: () => void;
+    hideStatusFilter?: boolean;
 }
 
 const selectClassName =
@@ -44,6 +45,7 @@ export const QuizFilters = ({
     onSortDirChange,
     hasActiveFilters,
     onClearFilters,
+    hideStatusFilter,
 }: QuizFiltersProps) => {
     return (
         <Card>
@@ -85,21 +87,23 @@ export const QuizFilters = ({
                             />
                         </div>
                     </PermissionGate>
-                    <div className="flex flex-col gap-2 w-[150px]">
-                        <label className="text-sm font-medium">Holat</label>
-                        <select
-                            className={selectClassName}
-                            value={filterIsActive === undefined ? 'all' : filterIsActive.toString()}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                onIsActiveChange(val === 'all' ? undefined : val === 'true');
-                            }}
-                        >
-                            <option value="all">Barchasi</option>
-                            <option value="true">Faol</option>
-                            <option value="false">Faol emas</option>
-                        </select>
-                    </div>
+                    {!hideStatusFilter && (
+                        <div className="flex flex-col gap-2 w-[150px]">
+                            <label className="text-sm font-medium">Holat</label>
+                            <select
+                                className={selectClassName}
+                                value={filterIsActive === undefined ? 'all' : filterIsActive.toString()}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    onIsActiveChange?.(val === 'all' ? undefined : val === 'true');
+                                }}
+                            >
+                                <option value="all">Barchasi</option>
+                                <option value="true">Faol</option>
+                                <option value="false">Faol emas</option>
+                            </select>
+                        </div>
+                    )}
                     <div className="flex flex-col gap-2 w-[150px]">
                         <label className="text-sm font-medium">Sana bo'yicha</label>
                         <select

@@ -44,6 +44,16 @@ async def create_quiz(
     return result
 
 
+@router.get("/active", response_model=QuizListResponse)
+async def list_active_quizzes(
+    data: QuizListRequest = Depends(),
+    session: AsyncSession = Depends(db_helper.session_getter),
+    current_user: User = Depends(PermissionRequired("read:active_quiz")),
+):
+    data.is_active = True
+    return await get_quiz_repository.list_quizzes(session=session, request=data, current_user=current_user)
+
+
 @router.get("/{quiz_id}", response_model=QuizCreateResponse)
 # @cache(expire=60, key_builder=custom_key_builder)
 async def get_quiz(

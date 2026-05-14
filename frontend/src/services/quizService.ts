@@ -42,6 +42,13 @@ export const quizService = {
         return response.data;
     },
 
+    getActiveQuizzes: async (page = 1, limit = 10, title?: string, user_id?: number, group_id?: number, subject_id?: number, sort_dir?: string) => {
+        const response = await api.get<QuizListResponse>('/quiz/active', {
+            params: { page, limit, title, user_id, group_id, subject_id, sort_dir },
+        });
+        return response.data;
+    },
+
     getQuizById: async (id: number): Promise<Quiz> => {
         const response = await api.get<Quiz>(`/quiz/${id}`);
         return response.data;

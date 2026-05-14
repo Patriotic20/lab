@@ -7,6 +7,7 @@ import Dashboard from '@/pages/Dashboard';
 import ProfilePage from '@/pages/ProfilePage';
 import UsersPage from '@/pages/UsersPage';
 import QuizzesPage from '@/pages/QuizzesPage';
+import ActiveQuizzesPage from '@/pages/ActiveQuizzesPage';
 import ResultsPage from '@/pages/ResultsPage';
 import TeachersPage from '@/pages/TeachersPage';
 import TutorsPage from '@/pages/TutorsPage';
@@ -151,6 +152,7 @@ function App() {
                 <Route path="/questions/create" element={<PermissionRoute permission="create:question"><QuestionFormPage /></PermissionRoute>} />
                 <Route path="/questions/:id/edit" element={<PermissionRoute permission="update:question"><QuestionFormPage /></PermissionRoute>} />
                 <Route path="/quizzes" element={<PermissionRoute permission="read:quiz"><QuizzesPage /></PermissionRoute>} />
+                <Route path="/active-quizzes" element={<PermissionRoute permission="read:active_quiz"><ActiveQuizzesPage /></PermissionRoute>} />
 
                 <Route path="/quiz-test" element={<PermissionRoute permission="quiz_process:start_quiz"><QuizTestPage /></PermissionRoute>} />
                 <Route path="/results" element={<PermissionRoute permission="read:result"><ResultsPage /></PermissionRoute>} />

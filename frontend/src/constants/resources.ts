@@ -52,6 +52,7 @@ export const RESOURCES: Record<string, ResourceMeta> = {
     academic_year: { label: "O'quv yili",       href: '/academic-years', icon: Calendar,   section: 'Boshqaruv' },
 
     quiz:          { label: 'Testlar',          href: '/quizzes',     icon: BookOpen,      section: 'Testlar' },
+    active_quiz:   { label: 'Faol testlar',     href: '/active-quizzes', icon: PlayCircle, section: 'Testlar' },
     question:      { label: 'Savollar',         href: '/questions',   icon: FileQuestion,  section: 'Testlar' },
     result:        { label: 'Natijalar',        href: '/results',     icon: FileText,      section: 'Testlar' },
     yakuniy:       { label: 'Yakuniy',          href: '/yakuniy',     icon: ClipboardList, section: 'Testlar' },

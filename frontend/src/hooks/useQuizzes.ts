@@ -9,6 +9,14 @@ export const useQuizzes = (page = 1, limit = 10, title?: string, is_active?: boo
     });
 };
 
+export const useActiveQuizzes = (page = 1, limit = 10, title?: string, user_id?: number, group_id?: number, subject_id?: number, sort_dir?: string) => {
+    return useQuery({
+        queryKey: ['active-quizzes', page, limit, title, user_id, group_id, subject_id, sort_dir],
+        queryFn: () => quizService.getActiveQuizzes(page, limit, title, user_id, group_id, subject_id, sort_dir),
+        placeholderData: (previousData) => previousData,
+    });
+};
+
 export const useQuiz = (id: number) => {
     return useQuery({
         queryKey: ['quiz', id],
