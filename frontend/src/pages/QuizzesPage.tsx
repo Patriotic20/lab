@@ -145,6 +145,7 @@ const QuizzesPage = () => {
             group_id: quiz.group_id ?? null,
             subject_id: quiz.subject_id ?? null,
             is_active: !quiz.is_active,
+            proctoring_mode: quiz.proctoring_mode,
         };
 
         updateQuizMutation.mutate({ id: quiz.id, data: payload }, {
