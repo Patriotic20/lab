@@ -118,7 +118,11 @@ const ActiveQuizzesPage = () => {
                 isRepeatPending={false}
                 getSubjectName={getSubjectName}
                 getGroupName={getGroupName}
-                onStart={(quiz) => navigate(`/quiz-test?quizId=${quiz.id}`)}
+                onStart={(quiz, modeOverride) => {
+                    const params = new URLSearchParams({ quizId: String(quiz.id) });
+                    if (modeOverride) params.set('mode', modeOverride);
+                    navigate(`/quiz-test?${params.toString()}`);
+                }}
                 readOnly
             />
 

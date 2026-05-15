@@ -9,8 +9,8 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/Table';
-import { BookOpen, Loader2, Pencil, PlayCircle, RotateCcw, Trash2 } from 'lucide-react';
-import type { Quiz } from '@/services/quizService';
+import { BookOpen, Camera, Loader2, Pencil, PlayCircle, RotateCcw, Trash2 } from 'lucide-react';
+import type { ProctoringMode, Quiz } from '@/services/quizService';
 
 interface QuizTableProps {
     quizzes: Quiz[];
@@ -26,7 +26,7 @@ interface QuizTableProps {
     onEdit?: (quiz: Quiz) => void;
     onDelete?: (quiz: Quiz) => void;
     onRepeat?: (quiz: Quiz) => void;
-    onStart?: (quiz: Quiz) => void;
+    onStart?: (quiz: Quiz, modeOverride?: ProctoringMode) => void;
     readOnly?: boolean;
 }
 
@@ -131,15 +131,28 @@ export const QuizTable = ({
                                 <TableCell className="capitalize">{getGroupName(quiz.group_id)}</TableCell>
                                 {hideActions && showStart && (
                                     <TableCell className="text-right">
-                                        <Button
-                                            size="sm"
-                                            variant={quiz.is_active ? 'primary' : 'outline'}
-                                            onClick={() => onStart?.(quiz)}
-                                            disabled={!quiz.is_active}
-                                        >
-                                            <PlayCircle className="mr-2 h-4 w-4" />
-                                            Boshlash
-                                        </Button>
+                                        <div className="flex justify-end gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant={quiz.is_active ? 'primary' : 'outline'}
+                                                onClick={() => onStart?.(quiz, 'standard')}
+                                                disabled={!quiz.is_active}
+                                                title="Standart rejimda boshlash"
+                                            >
+                                                <PlayCircle className="mr-2 h-4 w-4" />
+                                                Standart
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant={quiz.is_active ? 'primary' : 'outline'}
+                                                onClick={() => onStart?.(quiz, 'face')}
+                                                disabled={!quiz.is_active}
+                                                title="Kamera (face check) bilan boshlash"
+                                            >
+                                                <Camera className="mr-2 h-4 w-4" />
+                                                Kamera
+                                            </Button>
+                                        </div>
                                     </TableCell>
                                 )}
                                 {!hideActions && (

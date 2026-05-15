@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { type StartQuizResponse, type EndQuizResponse, type AnswerDTO } from '@/services/quizProcessService';
+import type { ProctoringMode } from '@/services/quizService';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -84,6 +85,8 @@ const QuizTestPage = () => {
 
     const [searchParams, setSearchParams] = useSearchParams();
     const quizIdParam = searchParams.get('quizId');
+    const modeParam = searchParams.get('mode');
+    const [proctoringOverride, setProctoringOverride] = useState<ProctoringMode | null>(null);
     const autoOpenedRef = useRef(false);
     useEffect(() => {
         if (autoOpenedRef.current || !quizIdParam) return;
@@ -91,16 +94,21 @@ const QuizTestPage = () => {
         if (quiz) {
             autoOpenedRef.current = true;
             handleOpenStartModal({ id: quiz.id, title: quiz.title });
+            if (modeParam === 'face' || modeParam === 'standard') {
+                setProctoringOverride(modeParam);
+            }
             searchParams.delete('quizId');
+            searchParams.delete('mode');
             setSearchParams(searchParams, { replace: true });
         }
-    }, [quizIdParam, quizzesData, searchParams, setSearchParams]);
+    }, [quizIdParam, modeParam, quizzesData, searchParams, setSearchParams]);
 
     const handleCloseStartModal = () => {
         setIsModalOpen(false);
         setSelectedQuiz(null);
         setPin('');
         setStartError('');
+        setProctoringOverride(null);
     };
 
     const handleStartQuiz = () => {
@@ -507,7 +515,8 @@ const QuizTestPage = () => {
 
     const timeWarning = timeLeft < 60;
 
-    const shouldProctor = quizData.proctoring_mode === 'face';
+    const effectiveProctoringMode = proctoringOverride ?? quizData.proctoring_mode;
+    const shouldProctor = effectiveProctoringMode === 'face';
 
     return (
         <div className="space-y-6 max-w-4xl mx-auto">
