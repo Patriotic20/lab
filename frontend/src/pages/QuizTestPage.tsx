@@ -80,6 +80,7 @@ const QuizTestPage = () => {
         setSelectedQuiz(quiz);
         setPin('');
         setStartError('');
+        setProctoringOverride(null);
         setIsModalOpen(true);
     };
 
@@ -108,7 +109,6 @@ const QuizTestPage = () => {
         setSelectedQuiz(null);
         setPin('');
         setStartError('');
-        setProctoringOverride(null);
     };
 
     const handleStartQuiz = () => {
