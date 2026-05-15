@@ -5,7 +5,13 @@
       "Bash(uv --version)",
       "Bash(npx tsc *)",
       "Bash(python3 -c \"import ast; [ast.parse\\(open\\(p\\).read\\(\\)\\) for p in ['app/modules/quiz/models/quiz.py','app/modules/quiz/schemas.py','app/modules/quiz/repository.py','app/modules/quiz_process/schemas.py','app/modules/quiz_process/repository.py','app/migrations/versions/d2e8f4a9b1c3_add_proctoring_mode_to_quizzes.py']]; print\\('OK'\\)\")",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(identify frontend/public/logo.png)",
+      "Read(//tmp/pptx_preview/**)",
+      "Bash(rm -rf /tmp/pptx_preview)"
+    ],
+    "additionalDirectories": [
+      "/tmp/pptx_preview"
     ]
   }
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { type StartQuizResponse, type EndQuizResponse, type AnswerDTO } from '@/services/quizProcessService';
 import { Button } from '@/components/ui/Button';
@@ -80,6 +81,20 @@ const QuizTestPage = () => {
         setStartError('');
         setIsModalOpen(true);
     };
+
+    const [searchParams, setSearchParams] = useSearchParams();
+    const quizIdParam = searchParams.get('quizId');
+    const autoOpenedRef = useRef(false);
+    useEffect(() => {
+        if (autoOpenedRef.current || !quizIdParam) return;
+        const quiz = quizzesData?.quizzes.find((q) => q.id === Number(quizIdParam));
+        if (quiz) {
+            autoOpenedRef.current = true;
+            handleOpenStartModal({ id: quiz.id, title: quiz.title });
+            searchParams.delete('quizId');
+            setSearchParams(searchParams, { replace: true });
+        }
+    }, [quizIdParam, quizzesData, searchParams, setSearchParams]);
 
     const handleCloseStartModal = () => {
         setIsModalOpen(false);

@@ -9,7 +9,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/Table';
-import { BookOpen, Loader2, Pencil, RotateCcw, Trash2 } from 'lucide-react';
+import { BookOpen, Loader2, Pencil, PlayCircle, RotateCcw, Trash2 } from 'lucide-react';
 import type { Quiz } from '@/services/quizService';
 
 interface QuizTableProps {
@@ -26,6 +26,7 @@ interface QuizTableProps {
     onEdit?: (quiz: Quiz) => void;
     onDelete?: (quiz: Quiz) => void;
     onRepeat?: (quiz: Quiz) => void;
+    onStart?: (quiz: Quiz) => void;
     readOnly?: boolean;
 }
 
@@ -43,9 +44,11 @@ export const QuizTable = ({
     onEdit,
     onDelete,
     onRepeat,
+    onStart,
     readOnly,
 }: QuizTableProps) => {
     const hideActions = Boolean(isTeacher) || Boolean(readOnly);
+    const showStart = Boolean(onStart);
     if (isLoading) {
         return (
             <Card>
@@ -85,7 +88,7 @@ export const QuizTable = ({
                             <TableHead>Rejim</TableHead>
                             <TableHead>Fan</TableHead>
                             <TableHead>Guruh</TableHead>
-                            {!hideActions && <TableHead className="text-right">Amallar</TableHead>}
+                            {(!hideActions || showStart) && <TableHead className="text-right">Amallar</TableHead>}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -126,9 +129,33 @@ export const QuizTable = ({
                                 </TableCell>
                                 <TableCell className="capitalize">{getSubjectName(quiz.subject_id)}</TableCell>
                                 <TableCell className="capitalize">{getGroupName(quiz.group_id)}</TableCell>
+                                {hideActions && showStart && (
+                                    <TableCell className="text-right">
+                                        <Button
+                                            size="sm"
+                                            variant={quiz.is_active ? 'primary' : 'outline'}
+                                            onClick={() => onStart?.(quiz)}
+                                            disabled={!quiz.is_active}
+                                        >
+                                            <PlayCircle className="mr-2 h-4 w-4" />
+                                            Boshlash
+                                        </Button>
+                                    </TableCell>
+                                )}
                                 {!hideActions && (
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
+                                            {showStart && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    title="Testni boshlash"
+                                                    onClick={() => onStart?.(quiz)}
+                                                    disabled={!quiz.is_active}
+                                                >
+                                                    <PlayCircle className="h-4 w-4 text-green-600" />
+                                                </Button>
+                                            )}
                                             <Button
                                                 variant="ghost"
                                                 size="sm"

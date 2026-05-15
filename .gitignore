@@ -95,3 +95,7 @@ examples/
 
 .pptx
 *.pptx
+
+*.png
+
+scripts/_assets/

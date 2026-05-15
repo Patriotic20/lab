@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Pagination } from '@/components/ui/Pagination';
 import { Input } from '@/components/ui/Input';
@@ -14,6 +15,7 @@ import { QuizTable } from '@/components/quizzes/QuizTable';
 
 const ActiveQuizzesPage = () => {
     const { hasPermission } = useAuth();
+    const navigate = useNavigate();
 
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 10;
@@ -116,6 +118,7 @@ const ActiveQuizzesPage = () => {
                 isRepeatPending={false}
                 getSubjectName={getSubjectName}
                 getGroupName={getGroupName}
+                onStart={(quiz) => navigate(`/quiz-test?quizId=${quiz.id}`)}
                 readOnly
             />
 
