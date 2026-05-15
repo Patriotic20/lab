@@ -47,7 +47,7 @@ export const QuizModal = ({ isOpen, onClose, quiz, teachers, onSuccess }: QuizMo
         formState: { errors },
     } = useForm<QuizFormValues>({
         resolver: zodResolver(quizSchema),
-        defaultValues: { title: '', is_active: false },
+        defaultValues: { title: '', is_active: false, proctoring_mode: 'standard' },
     });
 
     const createMutation = useCreateQuiz();
@@ -55,6 +55,7 @@ export const QuizModal = ({ isOpen, onClose, quiz, teachers, onSuccess }: QuizMo
     const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
     const isActive = watch('is_active');
+    const proctoringMode = watch('proctoring_mode');
     const selectedUserId = watch('user_id');
 
     const effectiveUserId = isTeacher ? user?.id?.toString() : selectedUserId;
@@ -97,6 +98,7 @@ export const QuizModal = ({ isOpen, onClose, quiz, teachers, onSuccess }: QuizMo
                 group_id: quiz.group_id ? quiz.group_id.toString() : '',
                 subject_id: quiz.subject_id ? quiz.subject_id.toString() : '',
                 is_active: quiz.is_active,
+                proctoring_mode: quiz.proctoring_mode ?? 'standard',
             });
         } else {
             reset({
@@ -108,6 +110,7 @@ export const QuizModal = ({ isOpen, onClose, quiz, teachers, onSuccess }: QuizMo
                 group_id: '',
                 subject_id: '',
                 is_active: false,
+                proctoring_mode: 'standard',
             });
         }
     }, [quiz, reset, isOpen, isTeacher, user]);
@@ -133,6 +136,7 @@ export const QuizModal = ({ isOpen, onClose, quiz, teachers, onSuccess }: QuizMo
             group_id: data.group_id && data.group_id !== '' ? parseInt(data.group_id, 10) : null,
             subject_id: data.subject_id && data.subject_id !== '' ? parseInt(data.subject_id, 10) : null,
             is_active: data.is_active,
+            proctoring_mode: data.proctoring_mode,
         };
 
         if (quiz) {
@@ -176,6 +180,39 @@ export const QuizModal = ({ isOpen, onClose, quiz, teachers, onSuccess }: QuizMo
                             Faol
                         </label>
                     </div>
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-sm font-medium">Test rejimi</label>
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setValue('proctoring_mode', 'standard')}
+                            className={`text-left rounded-lg border px-3 py-2 transition ${
+                                proctoringMode === 'standard'
+                                    ? 'border-primary ring-2 ring-primary/30 bg-primary/5'
+                                    : 'border-input hover:border-primary/50'
+                            }`}
+                        >
+                            <div className="text-sm font-medium">Standart</div>
+                            <div className="text-xs text-muted-foreground">Kamerasiz oddiy test</div>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setValue('proctoring_mode', 'face')}
+                            className={`text-left rounded-lg border px-3 py-2 transition ${
+                                proctoringMode === 'face'
+                                    ? 'border-primary ring-2 ring-primary/30 bg-primary/5'
+                                    : 'border-input hover:border-primary/50'
+                            }`}
+                        >
+                            <div className="text-sm font-medium">Kamera bilan</div>
+                            <div className="text-xs text-muted-foreground">Yuz orqali kuzatuv</div>
+                        </button>
+                    </div>
+                    {errors.proctoring_mode && (
+                        <p className="text-sm text-red-500">{errors.proctoring_mode.message}</p>
+                    )}
                 </div>
 
                 {isTeacher ? (

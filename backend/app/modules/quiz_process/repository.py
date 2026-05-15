@@ -113,6 +113,7 @@ class QuizProcessRepository:
             quiz_id=quiz.id,
             title=quiz.title,
             duration=quiz.duration,
+            proctoring_mode=quiz.proctoring_mode,
             questions=question_dtos,
             image_url=student_image_url,
         )

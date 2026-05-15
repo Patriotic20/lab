@@ -1,6 +1,8 @@
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel
+
+ProctoringMode = Literal["face", "standard"]
 
 
 class StartQuizRequest(BaseModel):
@@ -21,6 +23,7 @@ class StartQuizResponse(BaseModel):
     quiz_id: int
     title: str
     duration: int
+    proctoring_mode: ProctoringMode
     questions: list[QuestionDTO]
     image_url: Optional[str] = None
 

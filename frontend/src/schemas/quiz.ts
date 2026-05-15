@@ -15,6 +15,7 @@ export const quizSchema = z.object({
     group_id: z.string().optional(),
     subject_id: z.string().optional(),
     is_active: z.boolean(),
+    proctoring_mode: z.enum(['face', 'standard']),
 });
 
 export type QuizFormValues = z.infer<typeof quizSchema>;

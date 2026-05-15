@@ -20,7 +20,7 @@ import { useStartQuiz, useEndQuiz } from '@/hooks/useQuizProcess';
 import { useQuizzes } from '@/hooks/useQuizzes';
 import { Modal } from '@/components/ui/Modal';
 import { QuizVideoMonitoring } from '@/components/QuizVideoMonitoring';
-import { FACE_DETECTION_SERVICE_URL, ENABLE_QUIZ_PROCTORING } from '@/config/env';
+import { FACE_DETECTION_SERVICE_URL } from '@/config/env';
 import { cheatingImageService } from '@/services/cheatingImageService';
 import {
     Table,
@@ -68,9 +68,7 @@ const QuizTestPage = () => {
     // Results phase
     const [results, setResults] = useState<EndQuizResponse | null>(null);
 
-    // Admin controls
     const isAdmin = user?.roles?.some(role => role.name.toLowerCase() === 'admin');
-    const [adminProctoringEnabled, setAdminProctoringEnabled] = useState(false);
 
     const startQuizMutation = useStartQuiz();
     const endQuizMutation = useEndQuiz();
@@ -494,8 +492,7 @@ const QuizTestPage = () => {
 
     const timeWarning = timeLeft < 60;
 
-    const isMasofaviy = user?.student?.education_form?.toLowerCase().includes('masofaviy');
-    const shouldProctor = isAdmin ? adminProctoringEnabled : (ENABLE_QUIZ_PROCTORING && isMasofaviy);
+    const shouldProctor = quizData.proctoring_mode === 'face';
 
     return (
         <div className="space-y-6 max-w-4xl mx-auto">
@@ -522,24 +519,11 @@ const QuizTestPage = () => {
                 </div>
                 
                 <div className="flex items-center gap-4">
-                    {/* Admin Proctoring Toggle */}
                     {isAdmin && (
                         <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">
-                            <span className="text-[10px] font-bold text-primary uppercase leading-none">Admin Nazorat:</span>
-                            <button
-                                onClick={() => setAdminProctoringEnabled(!adminProctoringEnabled)}
-                                className={cn(
-                                    "relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none",
-                                    adminProctoringEnabled ? "bg-primary" : "bg-gray-200"
-                                )}
-                            >
-                                <span
-                                    className={cn(
-                                        "inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform",
-                                        adminProctoringEnabled ? "translate-x-5" : "translate-x-1"
-                                    )}
-                                />
-                            </button>
+                            <span className="text-[10px] font-bold text-primary uppercase leading-none">
+                                Rejim: {shouldProctor ? 'Kamera bilan' : 'Standart'}
+                            </span>
                         </div>
                     )}
 

@@ -1,7 +1,9 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, field_validator
+
+ProctoringMode = Literal["face", "standard"]
 
 
 class QuizCreateRequest(BaseModel):
@@ -13,6 +15,7 @@ class QuizCreateRequest(BaseModel):
     group_id: Optional[int] = None
     subject_id: Optional[int] = None
     is_active: bool = False
+    proctoring_mode: ProctoringMode = "standard"
 
     @field_validator("title", "pin", mode="before")
     @classmethod
@@ -29,6 +32,7 @@ class QuizCreateResponse(BaseModel):
     duration: int
     pin: str
     is_active: bool
+    proctoring_mode: ProctoringMode
     attempt: Optional[int] = 1
     user_id: Optional[int]
     group_id: Optional[int]
@@ -47,6 +51,7 @@ class QuizListRequest(BaseModel):
     group_id: Optional[int] = None
     subject_id: Optional[int] = None
     is_active: Optional[bool] = None
+    proctoring_mode: Optional[ProctoringMode] = None
 
     page: int = 1
 

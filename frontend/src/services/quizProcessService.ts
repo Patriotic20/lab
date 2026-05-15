@@ -1,4 +1,5 @@
 import api from './api';
+import type { ProctoringMode } from './quizService';
 
 export interface QuestionDTO {
     id: number;
@@ -18,6 +19,7 @@ export interface StartQuizResponse {
     quiz_id: number;
     title: string;
     duration: number;
+    proctoring_mode: ProctoringMode;
     questions: QuestionDTO[];
     image_url?: string;
 }

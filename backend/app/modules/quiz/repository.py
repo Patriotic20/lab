@@ -32,6 +32,7 @@ class QuizRepository:
             duration=data.duration,
             pin=data.pin,
             is_active=data.is_active,
+            proctoring_mode=data.proctoring_mode,
             user_id=data.user_id,
             group_id=data.group_id,
             subject_id=data.subject_id,
@@ -200,6 +201,7 @@ class QuizRepository:
         quiz.duration = data.duration
         quiz.pin = data.pin
         quiz.is_active = data.is_active
+        quiz.proctoring_mode = data.proctoring_mode
         quiz.user_id = data.user_id
         quiz.group_id = data.group_id
         quiz.subject_id = data.subject_id
@@ -260,6 +262,7 @@ class QuizRepository:
             duration=quiz.duration,
             pin=str(random.randint(1000, 9999)),  # Generate a new 4-digit PIN
             is_active=quiz.is_active,
+            proctoring_mode=quiz.proctoring_mode,
             user_id=quiz.user_id,
             group_id=quiz.group_id,
             subject_id=quiz.subject_id,

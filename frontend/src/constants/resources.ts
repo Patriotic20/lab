@@ -62,7 +62,7 @@ export const RESOURCES: Record<string, ResourceMeta> = {
     resource:      { label: 'Resurslar',        href: '/resources',   icon: BookOpen },
 
     me:            { label: 'Profil' },
-    statistics:    { label: 'Statistika', href: '/statistics', icon: LineChart, section: 'Umumiy' },
+    statistics:    { label: 'Statistika', icon: LineChart },
     quiz_process:  { label: 'Test jarayoni' },
     user_answers:  { label: 'Foydalanuvchi javoblari' },
     lesson_result: { label: 'Dars natijalari' },
@@ -103,7 +103,6 @@ const ALWAYS_VISIBLE: SidebarSection = {
     label: 'Umumiy',
     items: [
         { name: 'Dashboard', href: '/', icon: BarChart2 },
-        { name: 'Statistika', href: '/statistics', icon: LineChart },
         { name: 'Reyting', href: '/teacher-ranking', icon: Trophy },
     ],
 };

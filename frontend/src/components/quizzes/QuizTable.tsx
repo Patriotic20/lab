@@ -82,6 +82,7 @@ export const QuizTable = ({
                             <TableHead>Davomiyligi</TableHead>
                             <TableHead>PIN</TableHead>
                             <TableHead>Faol</TableHead>
+                            <TableHead>Rejim</TableHead>
                             <TableHead>Fan</TableHead>
                             <TableHead>Guruh</TableHead>
                             {!hideActions && <TableHead className="text-right">Amallar</TableHead>}
@@ -111,6 +112,17 @@ export const QuizTable = ({
                                             </span>
                                         </div>
                                     )}
+                                </TableCell>
+                                <TableCell>
+                                    <span
+                                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                                            quiz.proctoring_mode === 'face'
+                                                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                                : 'bg-muted text-muted-foreground'
+                                        }`}
+                                    >
+                                        {quiz.proctoring_mode === 'face' ? 'Kamera' : 'Standart'}
+                                    </span>
                                 </TableCell>
                                 <TableCell className="capitalize">{getSubjectName(quiz.subject_id)}</TableCell>
                                 <TableCell className="capitalize">{getGroupName(quiz.group_id)}</TableCell>

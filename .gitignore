@@ -92,3 +92,6 @@ screenshot*.png
 image*.png
 
 examples/
+
+.pptx
+*.pptx
