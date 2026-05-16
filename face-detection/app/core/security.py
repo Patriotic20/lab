@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import secrets
 
+import jwt
 from fastapi import Header, HTTPException, WebSocket, status
 
 from app.core.config import settings
@@ -23,13 +24,22 @@ def verify_internal_token(x_internal_token: str | None = Header(default=None)) -
 
 
 async def verify_ws_token(websocket: WebSocket, token: str | None) -> bool:
-    """Validate a WebSocket connection's token before accepting it.
+    """Validate a WebSocket connection's signed JWT before accepting it.
 
-    Returns True if valid; otherwise closes the socket with 1008 and returns False.
-    Callers must short-circuit on False.
+    The main backend issues a short-lived JWT (signed with the shared
+    ``INTERNAL_SERVICE_TOKEN``) when a quiz starts; browsers pass it as
+    ``?token=<jwt>``. Closes the socket with 1008 and returns False on failure.
     """
-    expected = settings.internal_service_token
-    if not token or not secrets.compare_digest(token, expected):
+    if not token:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return False
+    try:
+        jwt.decode(
+            token,
+            settings.internal_service_token,
+            algorithms=["HS256"],
+        )
+    except jwt.PyJWTError:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return False
     return True

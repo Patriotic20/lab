@@ -7,6 +7,7 @@ export interface QuizVideoMonitoringProps {
     onCheatingDetected: (imageData: string) => void;
     onDifferentPersonDetected: (imageData: string) => void;
     faceDetectionServiceUrl: string;
+    token?: string;
     imageUrl?: string;
 }
 
@@ -15,6 +16,7 @@ export function QuizVideoMonitoring({
     onCheatingDetected,
     onDifferentPersonDetected,
     faceDetectionServiceUrl,
+    token,
     imageUrl,
 }: QuizVideoMonitoringProps) {
     const [warnings, setWarnings] = useState(0);
@@ -45,6 +47,7 @@ export function QuizVideoMonitoring({
 
     const { state, startMonitoring, stopMonitoring, videoRef } = useVideoMonitoring({
         faceDetectionServiceUrl,
+        token,
         onMultipleFacesDetected: (img) => handleViolation(img, 'multiple'),
         onDifferentPersonDetected: (img) => handleViolation(img, 'different'),
         frameInterval: 500,

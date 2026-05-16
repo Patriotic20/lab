@@ -22,6 +22,7 @@ export interface StartQuizResponse {
     proctoring_mode: ProctoringMode;
     questions: QuestionDTO[];
     image_url?: string;
+    face_ws_token?: string;
 }
 
 export interface AnswerDTO {

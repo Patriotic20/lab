@@ -527,6 +527,7 @@ const QuizTestPage = () => {
                     onCheatingDetected={handleDifferentPersonDetected}
                     onDifferentPersonDetected={handleDifferentPersonDetected}
                     faceDetectionServiceUrl={FACE_DETECTION_SERVICE_URL}
+                    token={quizData.face_ws_token}
                     imageUrl={quizData.image_url}
                 />
             )}

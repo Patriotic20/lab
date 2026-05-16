@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 export interface VideoMonitoringConfig {
     faceDetectionServiceUrl: string;
+    token?: string;
     onMultipleFacesDetected: (imageData: string) => void;
     onDifferentPersonDetected?: (imageData: string) => void;
     onError?: (error: string) => void;
@@ -110,6 +111,9 @@ export function useVideoMonitoring(config: VideoMonitoringConfig) {
 
             // Establish WebSocket connection
             const wsUrl = new URL(config.faceDetectionServiceUrl);
+            if (config.token) {
+                wsUrl.searchParams.append('token', config.token);
+            }
             if (config.imageUrl) {
                 wsUrl.searchParams.append('image_url', config.imageUrl);
             }

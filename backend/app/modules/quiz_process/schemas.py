@@ -26,6 +26,7 @@ class StartQuizResponse(BaseModel):
     proctoring_mode: ProctoringMode
     questions: list[QuestionDTO]
     image_url: Optional[str] = None
+    face_ws_token: Optional[str] = None
 
 
 class AnswerDTO(BaseModel):

@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.security import create_face_ws_token
 from app.modules.question.model import Question
 from app.modules.quiz.models.quiz import Quiz
 from app.modules.quiz.models.quiz_questions import QuizQuestion
@@ -109,6 +110,14 @@ class QuizProcessRepository:
                 )
             )
 
+        face_ws_token = None
+        if quiz.proctoring_mode == "face":
+            face_ws_token = create_face_ws_token(
+                user_id=user.id,
+                quiz_id=quiz.id,
+                ttl_minutes=quiz.duration + 5,
+            )
+
         return StartQuizResponse(
             quiz_id=quiz.id,
             title=quiz.title,
@@ -116,6 +125,7 @@ class QuizProcessRepository:
             proctoring_mode=quiz.proctoring_mode,
             questions=question_dtos,
             image_url=student_image_url,
+            face_ws_token=face_ws_token,
         )
 
     async def end_quiz(self, session: AsyncSession, data: EndQuizRequest, user: User) -> EndQuizResponse:
