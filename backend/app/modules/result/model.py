@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from app.modules.quiz.models.quiz import Quiz
     from app.modules.subject.models.subject import Subject
     from app.modules.user.models.user import User
+    from app.modules.user_answers.model import UserAnswers
 
 
 class Result(Base, IdIntPk, TimestampMixin):
@@ -34,6 +35,9 @@ class Result(Base, IdIntPk, TimestampMixin):
     quiz: Mapped["Quiz"] = relationship("Quiz", back_populates="results")
     subject: Mapped["Subject"] = relationship("Subject", back_populates="results")
     group: Mapped["Group"] = relationship("Group", back_populates="results")
+    user_answers: Mapped[list["UserAnswers"]] = relationship(
+        "UserAnswers", back_populates="result", cascade="all, delete-orphan"
+    )
 
     def __str__(self):
         return f"Result {self.id} - Grade: {self.grade}"

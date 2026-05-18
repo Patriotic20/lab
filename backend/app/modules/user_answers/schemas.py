@@ -36,6 +36,7 @@ class UserAnswersListRequest(BaseModel):
     user_id: Optional[int] = None
     quiz_id: Optional[int] = None
     question_id: Optional[int] = None
+    result_id: Optional[int] = None
 
     @property
     def offset(self) -> int:

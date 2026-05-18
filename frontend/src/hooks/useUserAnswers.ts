@@ -6,11 +6,12 @@ export const useUserAnswers = (params: {
     limit?: number;
     user_id?: number;
     quiz_id?: number;
+    result_id?: number;
 }) => {
     return useQuery({
         queryKey: ['userAnswers', params],
         queryFn: () => userAnswerService.getUserAnswers(params),
-        enabled: !!(params.user_id || params.quiz_id),
+        enabled: !!(params.result_id || params.user_id || params.quiz_id),
         placeholderData: (previousData) => previousData,
     });
 };

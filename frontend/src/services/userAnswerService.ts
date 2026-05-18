@@ -35,6 +35,7 @@ export const userAnswerService = {
         limit?: number;
         user_id?: number;
         quiz_id?: number;
+        result_id?: number;
     }) => {
         const response = await api.get<UserAnswerListResponse>('/user_answers/', {
             params,

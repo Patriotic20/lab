@@ -18,10 +18,16 @@ class UserAnswersRepository:
         )
 
         filters = []
-        if data.user_id is not None:
-            filters.append(UserAnswers.user_id == data.user_id)
-        if data.quiz_id is not None:
-            filters.append(UserAnswers.quiz_id == data.quiz_id)
+        if data.result_id is not None:
+            # Strict path: a specific attempt was requested — scope to its UserAnswers only.
+            filters.append(UserAnswers.result_id == data.result_id)
+        else:
+            # Legacy path: callers that only know (user_id, quiz_id) get all rows,
+            # including historical entries written before result_id existed.
+            if data.user_id is not None:
+                filters.append(UserAnswers.user_id == data.user_id)
+            if data.quiz_id is not None:
+                filters.append(UserAnswers.quiz_id == data.quiz_id)
         if data.question_id is not None:
             filters.append(UserAnswers.question_id == data.question_id)
 

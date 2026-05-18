@@ -312,6 +312,7 @@ const ResultsPage = () => {
 
     const handleViewAnswers = (result: Result) => {
         const params = new URLSearchParams();
+        if (result.id) params.set('result_id', String(result.id));
         if (result.user_id) params.set('user_id', String(result.user_id));
         if (result.quiz_id) params.set('quiz_id', String(result.quiz_id));
         navigate(`/results/answers?${params.toString()}`);

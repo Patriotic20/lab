@@ -20,11 +20,18 @@ const UserAnswersPage = () => {
 
     const userId = searchParams.get('user_id') ? Number(searchParams.get('user_id')) : undefined;
     const quizId = searchParams.get('quiz_id') ? Number(searchParams.get('quiz_id')) : undefined;
+    const resultId = searchParams.get('result_id') ? Number(searchParams.get('result_id')) : undefined;
 
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 50;
 
-    const { data, isLoading } = useUserAnswers({ page: currentPage, limit: pageSize, user_id: userId, quiz_id: quizId });
+    const { data, isLoading } = useUserAnswers({
+        page: currentPage,
+        limit: pageSize,
+        user_id: userId,
+        quiz_id: quizId,
+        result_id: resultId,
+    });
 
     const answers = data?.answers || [];
     const totalPages = data ? Math.ceil(data.total / pageSize) : 1;

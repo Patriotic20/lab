@@ -18,6 +18,7 @@ from app.modules.user.models.user import User
 from app.modules.user_answers.model import UserAnswers
 
 from .schemas import (
+    AnswerDTO,
     EndQuizRequest,
     EndQuizResponse,
     QuestionDTO,
@@ -159,6 +160,7 @@ class QuizProcessRepository:
                     detail=f"Invalid question_id: {ans.question_id}",
                 )
 
+        scored_answers: list[tuple[AnswerDTO, Question | None, bool]] = []
         for ans in data.answers:
             question = questions_map.get(ans.question_id)
             is_correct = False
@@ -171,17 +173,7 @@ class QuizProcessRepository:
                     wrong_count += 1
             else:
                 wrong_count += 1
-
-            # Save user answer
-            user_answer = UserAnswers(
-                user_id=user.id,
-                quiz_id=data.quiz_id,
-                question_id=ans.question_id,
-                answer=ans.answer,
-                correct_answer=question.option_a if question else None,
-                is_correct=is_correct,
-            )
-            session.add(user_answer)
+            scored_answers.append((ans, question, is_correct))
 
         total_questions = len(data.answers)
 
@@ -200,7 +192,7 @@ class QuizProcessRepository:
         else:
             grade = 2
 
-        # Create Result
+        # Create Result first so we can link each UserAnswer to this specific attempt
         result = Result(
             user_id=user.id,
             quiz_id=quiz.id,
@@ -216,6 +208,21 @@ class QuizProcessRepository:
         session.add(result)
 
         try:
+            await session.flush()
+
+            for ans, question, is_correct in scored_answers:
+                session.add(
+                    UserAnswers(
+                        user_id=user.id,
+                        quiz_id=data.quiz_id,
+                        question_id=ans.question_id,
+                        result_id=result.id,
+                        answer=ans.answer,
+                        correct_answer=question.option_a if question else None,
+                        is_correct=is_correct,
+                    )
+                )
+
             await session.commit()
             await session.refresh(result)
         except Exception as e:
