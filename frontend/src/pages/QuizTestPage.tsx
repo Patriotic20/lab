@@ -320,8 +320,8 @@ const QuizTestPage = () => {
                                             <TableCell>
                                                 <span className={cn(
                                                     "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
-                                                    quiz.is_active 
-                                                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                                    quiz.is_active
+                                                        ? "bg-green-600 text-white dark:bg-green-500 dark:text-white"
                                                         : "bg-muted text-muted-foreground"
                                                 )}>
                                                     {quiz.is_active ? 'Faol' : 'Faol emas'}

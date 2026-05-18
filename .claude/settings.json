@@ -12,7 +12,9 @@
       "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
       "Bash(echo \"exit=$?\")",
       "Bash(echo \"tsc exit=$?\")",
-      "Bash(python3 -m py_compile backend/app/modules/quiz_process/repository.py backend/app/modules/user_answers/model.py backend/app/modules/user_answers/repository.py backend/app/modules/user_answers/schemas.py backend/app/modules/result/model.py backend/app/migrations/versions/e4b1f7c92a08_add_result_id_to_user_answers.py)"
+      "Bash(python3 -m py_compile backend/app/modules/quiz_process/repository.py backend/app/modules/user_answers/model.py backend/app/modules/user_answers/repository.py backend/app/modules/user_answers/schemas.py backend/app/modules/result/model.py backend/app/migrations/versions/e4b1f7c92a08_add_result_id_to_user_answers.py)",
+      "Bash(cat)",
+      "Read(//tmp/**)"
     ],
     "additionalDirectories": [
       "/tmp/pptx_preview"
