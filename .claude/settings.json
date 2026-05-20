@@ -14,7 +14,22 @@
       "Bash(echo \"tsc exit=$?\")",
       "Bash(python3 -m py_compile backend/app/modules/quiz_process/repository.py backend/app/modules/user_answers/model.py backend/app/modules/user_answers/repository.py backend/app/modules/user_answers/schemas.py backend/app/modules/result/model.py backend/app/migrations/versions/e4b1f7c92a08_add_result_id_to_user_answers.py)",
       "Bash(cat)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(git log *)",
+      "Bash(curl -s -o /dev/null -w \"frontend root: %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"frontend /api/health: %{http_code}\\\\n\" http://localhost:3000/api/health)",
+      "Bash(curl -s -o /dev/null -w \"backend /health: %{http_code}\\\\n\" http://localhost:8000/health)",
+      "Bash(curl -s -o /dev/null -w \"backend /api: %{http_code}\\\\n\" http://localhost:8000/api/)",
+      "Bash(curl -s http://localhost:3000/api/health)",
+      "Bash(curl -s -X POST http://localhost:3000/api/auth/login -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(docker exec *)",
+      "Bash(docker compose *)",
+      "Bash(curl -s -i http://localhost:3000/api/health)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}, content-type: %{content_type}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -i -X POST http://localhost:3000/api/user/login -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(curl -s http://localhost:8000/health)",
+      "Bash(curl -s -i http://localhost:3000/api/user/me)",
+      "Bash(curl -s -i -N -H \"Connection: Upgrade\" -H \"Upgrade: websocket\" -H \"Sec-WebSocket-Version: 13\" -H \"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\" \"http://localhost:3000/v1/video/stream\" --max-time 3)"
     ],
     "additionalDirectories": [
       "/tmp/pptx_preview"
